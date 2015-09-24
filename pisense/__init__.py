@@ -30,12 +30,13 @@ class SenseFont(object):
         char = None
         lines = []
         for line in f:
+            line = line.rstrip()
             if line.endswith(':'):
                 if char is not None:
                     self._chars[char] = self._make_array(char, lines)
                 char = line[:-1]
                 lines = []
-            elif line.strip():
+            elif line:
                 lines.append(line)
 
     def _make_array(self, char, lines):
@@ -47,7 +48,24 @@ class SenseFont(object):
         cols = cols[0]
         return np.fromiter(
             (c == '#' for line in lines for c in line),
-            dtype=np.bool)
+            dtype=np.bool).reshape((rows, cols))
+
+    def render(self, text, space=1):
+        w = 0
+        h = 0
+        for c in text:
+            try:
+                w += self._chars[c].shape[1] + space
+                h = max(h, self._chars[c].shape[0])
+            except KeyError:
+                raise ValueError('Character "%s" does not exist in font' % c)
+        result = np.zeros((h, w), dtype=np.bool)
+        x = 0
+        for c in text:
+            c_h, c_w = self._chars[c].shape
+            result[0:c_h, x:x + c_w] = self._chars[c]
+            x += c_w + space
+        return result
 
 
 class SenseScreen(object):
@@ -57,6 +75,7 @@ class SenseScreen(object):
         self._fb_file = io.open(self._fb_device(), 'wb+')
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
+        self._fonts = {}
 
     def close(self):
         self._fb_array = None
@@ -86,18 +105,23 @@ class SenseScreen(object):
         self._fb_array[:] = value
     raw = property(_get_raw, _set_raw)
 
-    def _get_cooked(self):
+    def _get_pixels(self):
         result = np.empty((8, 8, 3), dtype=np.uint8)
         result[..., 0] = ((self.raw & 0xF800) >> 8).astype(np.uint8)
         result[..., 1] = ((self.raw & 0x07E0) >> 3).astype(np.uint8)
         result[..., 2] = ((self.raw & 0x001F) << 3).astype(np.uint8)
         return result
-    def _set_cooked(self, value):
+    def _set_pixels(self, value):
         r, g, b = (value[..., plane] for plane in range(3))
         self.raw = (
                 ((r & 0xF8).astype(np.uint16) << 8) |
                 ((g & 0xFC).astype(np.uint16) << 3) |
                 ((b & 0xF8).astype(np.uint16) >> 3)
                 )
-    cooked = property(_get_cooked, _set_cooked)
+    pixels = property(_get_pixels, _set_pixels)
+
+    def draw(self, image):
+        if image.size != (8, 8):
+            raise ValueError('image must have dimensions 8x8')
+        self.pixels = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape((8, 8, 3))
 
