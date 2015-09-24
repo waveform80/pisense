@@ -14,6 +14,42 @@ import errno
 
 import numpy as np
 
+
+class SenseFont(object):
+    def __init__(self, filename_or_obj):
+        if isinstance(filename_or_obj, bytes):
+            filename_or_obj = filename_or_obj.decode('utf-8')
+        if isinstance(filename_or_obj, str):
+            with io.open(filename_or_obj, 'r') as font_file:
+                self._parse_font(font_file)
+        else:
+            self._parse_font(font_file)
+
+    def _parse_font(self, f):
+        self._chars = {}
+        char = None
+        lines = []
+        for line in f:
+            if line.endswith(':'):
+                if char is not None:
+                    self._chars[char] = self._make_array(char, lines)
+                char = line[:-1]
+                lines = []
+            elif line.strip():
+                lines.append(line)
+
+    def _make_array(self, char, lines):
+        rows = len(lines)
+        cols = [len(line) for line in lines]
+        if cols != [cols[0]] * rows:
+            raise ValueError(
+                'irregular number of columns in definition of char "%s"' % char)
+        cols = cols[0]
+        return np.fromiter(
+            (c == '#' for line in lines for c in line),
+            dtype=np.bool)
+
+
 class SenseScreen(object):
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
