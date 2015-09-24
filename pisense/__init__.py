@@ -121,7 +121,16 @@ class SenseScreen(object):
     pixels = property(_get_pixels, _set_pixels)
 
     def draw(self, image):
-        if image.size != (8, 8):
-            raise ValueError('image must have dimensions 8x8')
-        self.pixels = np.frombuffer(image.tobytes(), dtype=np.uint8).reshape((8, 8, 3))
+        if not isinstance(image, np.ndarray):
+            try:
+                buf = image.tobytes()
+            except AttributeError:
+                buf = image.tostring()
+            array = np.frombuffer(buf, dtype=np.uint8)
+            if len(array) == 192:
+                array = array.reshape((8, 8, 3))
+            elif len(array) == 64:
+                array = array.reshape((8, 8))
+                array = np.dstack((array, array, array))
+        self.pixels = array
 
