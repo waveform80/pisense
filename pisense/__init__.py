@@ -37,7 +37,7 @@ class SenseScreen(object):
         for device in glob.glob('/sys/class/graphics/fb*'):
             try:
                 with io.open(os.path.join(device, 'name'), 'r') as f:
-                    if f.read() == self.SENSE_HAT_FB_NAME:
+                    if f.read().strip() == self.SENSE_HAT_FB_NAME:
                         return os.path.join('/dev', os.path.basename(device))
             except IOError as e:
                 if e.errno != errno.ENOENT:
