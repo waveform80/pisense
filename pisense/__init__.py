@@ -38,8 +38,9 @@ class SenseScreen(object):
                 with io.open(os.path.join(device, 'name'), 'r') as f:
                     if f.read() == self.SENSE_HAT_FB_NAME:
                         return os.path.join('/dev', os.path.basename(device))
-            except IOError:
-                pass
+            except IOError as e:
+                if e.errno != errno.ENOENT:
+                    raise
         raise RuntimeError('unable to locate SenseHAT framebuffer device')
 
     def _get_raw(self):
