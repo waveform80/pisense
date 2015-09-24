@@ -48,7 +48,7 @@ class SenseScreen(object):
         return self._fb_array
     def _set_raw(self, value):
         self._fb_array[:] = value
-    pixels_raw = property(_get_raw, _set_raw)
+    raw = property(_get_raw, _set_raw)
 
     def _get_cooked(self):
         result = np.empty((8, 8, 3), dtype=np.uint8)
@@ -63,4 +63,5 @@ class SenseScreen(object):
                 ((g & 0xFC).astype(np.uint16) << 3) |
                 ((b & 0xF8).astype(np.uint16) >> 3)
                 )
+    cooked = property(_get_cooked, _set_cooked)
 
