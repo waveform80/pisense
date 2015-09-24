@@ -126,11 +126,13 @@ class SenseScreen(object):
                 buf = image.tobytes()
             except AttributeError:
                 buf = image.tostring()
-            array = np.frombuffer(buf, dtype=np.uint8)
-            if len(array) == 192:
-                array = array.reshape((8, 8, 3))
-            elif len(array) == 64:
-                array = array.reshape((8, 8))
-                array = np.dstack((array, array, array))
-        self.pixels = array
+            image = np.frombuffer(buf, dtype=np.uint8)
+            if len(image) == 192:
+                image = image.reshape((8, 8, 3))
+            elif len(image) == 64:
+                image = image.reshape((8, 8))
+                image = np.dstack((image, image, image))
+            else:
+                raise ValueError('image must be 8x8 pixels in size')
+        self.pixels = image
 
