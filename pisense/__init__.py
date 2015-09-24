@@ -10,6 +10,7 @@ import io
 import os
 import glob
 import mmap
+import errno
 
 import numpy as np
 
