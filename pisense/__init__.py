@@ -180,7 +180,7 @@ class SenseIMU(object):
         try:
             self._units = {
                 'radians': lambda x: Orientation(*x),
-                'degrees': lambda x: Orientation(*(math.degrees[e] for e in x)),
+                'degrees': lambda x: Orientation(*(math.degrees(e) for e in x)),
                 }[units]
         except KeyError:
             raise ValueError('invalid units: %s' % units)
