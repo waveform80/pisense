@@ -15,6 +15,7 @@ import math
 import time
 import errno
 import struct
+import select
 from collections import namedtuple
 from threading import Thread, Event
 
