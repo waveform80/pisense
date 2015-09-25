@@ -165,26 +165,20 @@ Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
 
 class SenseIMU(object):
-    def __init__(self, imu_settings='RTIMULib', poll_interval=None):
+    def __init__(self, imu_settings='RTIMULib'):
         self._settings = RTIMU.Settings(imu_settings)
         self._imu = RTIMU.RTIMU(self._settings)
         if not self._imu.IMUInit():
             raise RuntimeError('IMU initialization failed')
-        if poll_interval is None:
-            poll_interval = self._imu.IMUGetPollInterval() / 1000.0 # seconds
-        self._interval = poll_interval
+        self._interval = self._imu.IMUGetPollInterval() / 1000.0 # seconds
         self._compass = None
         self._gyroscope = None
         self._accel = None
         self._fusion = None
-        self._stopping = Event()
-        self._read_thread = Thread(target=self._read)
-        self._read_thread.daemon = True
-        self._read_thread.start()
+        self._last_read = None
 
     def close(self):
-        self._stopping.set()
-        self._read_thread.join()
+        pass
 
     def __enter__(self):
         return self
@@ -198,30 +192,37 @@ class SenseIMU(object):
 
     @property
     def compass(self):
+        self._refresh()
         return self._compass
 
     @property
     def gyroscope(self):
+        self._refresh()
         return self._gyroscope
 
     @property
     def accel(self):
+        self._refresh()
         return self._accel
 
     @property
     def fusion(self):
+        self._refresh()
         return self._fusion
 
-    def _read(self):
-        while not self._stopping.wait(self._interval):
-            if self._imu.IMURead():
-                d = self._imu.getIMUData()
-                if d.get('compassValid', False):
-                    self._compass = Orientation(*d['compass'])
-                if d.get('gyroValid', False):
-                    self._gyroscope = Orientation(*d['gyro'])
-                if d.get('accelValid', False):
-                    self._accel = Orientation(*d['accel'])
-                if d.get('fusionValid', False):
-                    self._fusion = Orientation(*d['fusion'])
+    def _refresh(self):
+        now = time.time()
+        if self._last_read is None or now - self._last_read > self._interval:
+            if not self._imu.IMURead():
+                raise RuntimeError('Failed to read IMU')
+            d = self._imu.getIMUData()
+            if d.get('compassValid', False):
+                self._compass = Orientation(*d['compass'])
+            if d.get('gyroValid', False):
+                self._gyroscope = Orientation(*d['gyro'])
+            if d.get('accelValid', False):
+                self._accel = Orientation(*d['accel'])
+            if d.get('fusionValid', False):
+                self._fusion = Orientation(*d['fusion'])
+            self._last_read = now
 
