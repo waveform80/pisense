@@ -135,10 +135,12 @@ class SenseStick(object):
         raise RuntimeError('unable to locate SenseHAT joystick device')
 
     def read(self):
-        return next(self)
+        return next(iter(self))
 
     def wait(self, timeout=None):
-        pass
+        # XXX Use poll() instead?
+        r, w, x = select.select([self._stick_file], [], [], timeout)
+        return bool(r)
 
     def __iter__(self):
         while True:
