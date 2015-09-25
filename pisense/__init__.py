@@ -10,6 +10,7 @@ import io
 import os
 import glob
 import mmap
+import math
 import time
 import errno
 from collections import namedtuple
@@ -165,7 +166,7 @@ Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
 
 class SenseIMU(object):
-    def __init__(self, imu_settings='RTIMULib'):
+    def __init__(self, imu_settings='RTIMULib', units='radians'):
         self._settings = RTIMU.Settings(imu_settings)
         self._imu = RTIMU.RTIMU(self._settings)
         if not self._imu.IMUInit():
@@ -176,6 +177,13 @@ class SenseIMU(object):
         self._accel = None
         self._fusion = None
         self._last_read = None
+        try:
+            self._units = {
+                'radians': lambda x: Orientation(*x),
+                'degress': lambda x: Orientation(*(math.degrees[e] for e in x)),
+                }[units]
+        except KeyError:
+            raise ValueError('invalid units: %s' % units)
 
     def close(self):
         pass
@@ -217,12 +225,12 @@ class SenseIMU(object):
                 raise RuntimeError('Failed to read IMU')
             d = self._imu.getIMUData()
             if d.get('compassValid', False):
-                self._compass = Orientation(*d['compass'])
+                self._compass = self._units(*d['compass'])
             if d.get('gyroValid', False):
-                self._gyroscope = Orientation(*d['gyro'])
+                self._gyroscope = self._units(*d['gyro'])
             if d.get('accelValid', False):
-                self._accel = Orientation(*d['accel'])
+                self._accel = self._units(*d['accel'])
             if d.get('fusionValid', False):
-                self._fusion = Orientation(*d['fusion'])
+                self._fusion = self._units(*d['fusion'])
             self._last_read = now
 
