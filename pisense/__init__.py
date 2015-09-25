@@ -4,6 +4,7 @@ from __future__ import (
     print_function,
     division,
     )
+native_str = str
 str = type('')
 
 import io
@@ -13,6 +14,7 @@ import mmap
 import math
 import time
 import errno
+import struct
 from collections import namedtuple
 from threading import Thread, Event
 
@@ -91,6 +93,46 @@ class SenseFont(object):
             image[y:y + line.shape[0], 0:line.shape[1], :] = line
             y += line.shape[0] + line_space
         return image
+
+
+class SenseStick(object):
+    SENSE_HAT_EVDEV_NAME = 'Raspberry Pi Sense HAT Joystick'
+    EVENT_FORMAT = native_str('llHHI')
+    EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
+
+    def __init__(self):
+        self._stick_file = io.open(self._stick_device(), 'rb')
+
+    def close(self):
+        self._stick_file.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.close()
+
+    def _stick_device(self):
+        for evdev in glob.glob('/sys/class/input/event*'):
+            try:
+                with io.open(os.path.join(evdev, 'device', 'name'), 'r'):
+                    if f.read().strip() == self.SENSE_HAT_EVDEV_NAME:
+                        return os.path.join('/dev', 'input', os.path.basename(evdev))
+            except IOError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+        raise RuntimeError('unable to locate SenseHAT joystick device')
+
+    def _read(self):
+        event = self._stick_file.read(struct.calcsize(self.EVENT_SIZE))
+        (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
+        return (type, code, value)
+
+    def wait(self, timeout=None):
+        pass
+
+    def __iter__(self):
+        pass
 
 
 class SenseScreen(object):
@@ -234,4 +276,3 @@ class SenseIMU(object):
                 if d.get('fusionPoseValid', False):
                     self._fusion = self._units(d['fusionPose'])
                 self._last_read = now
-
