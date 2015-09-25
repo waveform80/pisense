@@ -115,7 +115,7 @@ class SenseStick(object):
     def _stick_device(self):
         for evdev in glob.glob('/sys/class/input/event*'):
             try:
-                with io.open(os.path.join(evdev, 'device', 'name'), 'r'):
+                with io.open(os.path.join(evdev, 'device', 'name'), 'r') as f:
                     if f.read().strip() == self.SENSE_HAT_EVDEV_NAME:
                         return os.path.join('/dev', 'input', os.path.basename(evdev))
             except IOError as e:
