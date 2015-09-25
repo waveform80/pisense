@@ -223,16 +223,15 @@ class SenseIMU(object):
     def _refresh(self):
         now = time.time()
         if self._last_read is None or now - self._last_read > self._interval:
-            if not self._imu.IMURead():
-                raise RuntimeError('Failed to read IMU')
-            d = self._imu.getIMUData()
-            if d.get('compassValid', False):
-                self._compass = Readings(*d['compass'])
-            if d.get('gyroValid', False):
-                self._gyroscope = Readings(*d['gyro'])
-            if d.get('accelValid', False):
-                self._accelerometer = Readings(*d['accel'])
-            if d.get('fusionPoseValid', False):
-                self._fusion = self._units(d['fusionPose'])
-            self._last_read = now
+            if self._imu.IMURead():
+                d = self._imu.getIMUData()
+                if d.get('compassValid', False):
+                    self._compass = Readings(*d['compass'])
+                if d.get('gyroValid', False):
+                    self._gyroscope = Readings(*d['gyro'])
+                if d.get('accelValid', False):
+                    self._accelerometer = Readings(*d['accel'])
+                if d.get('fusionPoseValid', False):
+                    self._fusion = self._units(d['fusionPose'])
+                self._last_read = now
 
