@@ -165,12 +165,14 @@ Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
 
 class SenseIMU(object):
-    def __init__(self, imu_settings='RTIMULib'):
+    def __init__(self, imu_settings='RTIMULib', poll_interval=None):
         self._settings = RTIMU.Settings(imu_settings)
         self._imu = RTIMU.RTIMU(self._settings)
         if not self._imu.IMUInit():
             raise RuntimeError('IMU initialization failed')
-        self._interval = self._imu.IMUGetPollInterval() / 1000.0 # seconds
+        if poll_interval is None:
+            poll_interval = self._imu.IMUGetPollInterval() / 1000.0 # seconds
+        self._interval = poll_interval
         self._compass = None
         self._gyroscope = None
         self._accel = None
