@@ -232,7 +232,7 @@ class SenseIMU(object):
                 self._gyroscope = Readings(*d['gyro'])
             if d.get('accelValid', False):
                 self._accelerometer = Readings(*d['accel'])
-            if d.get('fusionValid', False):
-                self._fusion = self._units(d['fusion'])
+            if d.get('fusionPoseValid', False):
+                self._fusion = self._units(d['fusionPose'])
             self._last_read = now
 
