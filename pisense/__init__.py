@@ -95,10 +95,21 @@ class SenseFont(object):
         return image
 
 
+InputEvent = namedtuple('InputEvent', ('timestamp', 'type', 'code', 'value'))
+
+
 class SenseStick(object):
     SENSE_HAT_EVDEV_NAME = 'Raspberry Pi Sense HAT Joystick'
     EVENT_FORMAT = native_str('llHHI')
     EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
+
+    EV_KEY = 0x01
+
+    KEY_UP = 103
+    KEY_LEFT = 105
+    KEY_RIGHT = 106
+    KEY_DOWN = 108
+    KEY_ENTER = 28
 
     def __init__(self):
         self._stick_file = io.open(self._stick_device(), 'rb')
@@ -123,16 +134,18 @@ class SenseStick(object):
                     raise
         raise RuntimeError('unable to locate SenseHAT joystick device')
 
-    def _read(self):
-        event = self._stick_file.read(self.EVENT_SIZE)
-        (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
-        return (type, code, value)
+    def read(self):
+        return next(self)
 
     def wait(self, timeout=None):
         pass
 
     def __iter__(self):
-        pass
+        while True:
+            event = self._stick_file.read(self.EVENT_SIZE)
+            (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
+            if type == self.EV_KEY:
+                yield InputEvent(tv_sec + (tv_usec / 1000000), type, code, value)
 
 
 class SenseScreen(object):
