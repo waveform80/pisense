@@ -162,6 +162,7 @@ class SenseScreen(object):
         self.pixels = image
 
 
+Readings = namedtuple('Readings', ('x', 'y', 'z'))
 Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
 
@@ -184,15 +185,7 @@ class SenseIMU(object):
                 }[units]
         except KeyError:
             raise ValueError('invalid units: %s' % units)
-
-    def close(self):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        self.close()
+        self.orientation_sensors = {'compass', 'gyroscope', 'accelerometer'}
 
     @property
     def name(self):
@@ -209,14 +202,23 @@ class SenseIMU(object):
         return self._gyroscope
 
     @property
-    def accel(self):
+    def accelerometer(self):
         self._refresh()
-        return self._accel
+        return self._accelerometer
 
     @property
-    def fusion(self):
+    def orientation(self):
         self._refresh()
         return self._fusion
+
+    def _get_sensors(self):
+        return self._sensors
+    def _set_sensors(self, value):
+        self._sensors = frozenset(value)
+        self._imu.setCompassEnable('compass' in self._sensors)
+        self._imu.setGyroEnable('gyroscope' in self._sensors)
+        self._imu.setAccelEnable('accelerometer' in self._sensors)
+    orientation_sensors = property(_get_sensors, _set_sensors)
 
     def _refresh(self):
         now = time.time()
@@ -225,11 +227,11 @@ class SenseIMU(object):
                 raise RuntimeError('Failed to read IMU')
             d = self._imu.getIMUData()
             if d.get('compassValid', False):
-                self._compass = self._units(d['compass'])
+                self._compass = Readings(*d['compass'])
             if d.get('gyroValid', False):
-                self._gyroscope = self._units(d['gyro'])
+                self._gyroscope = Readings(*d['gyro'])
             if d.get('accelValid', False):
-                self._accel = self._units(d['accel'])
+                self._accelerometer = Readings(*d['accel'])
             if d.get('fusionValid', False):
                 self._fusion = self._units(d['fusion'])
             self._last_read = now
