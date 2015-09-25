@@ -180,7 +180,7 @@ class SenseIMU(object):
         try:
             self._units = {
                 'radians': lambda x: Orientation(*x),
-                'degress': lambda x: Orientation(*(math.degrees[e] for e in x)),
+                'degrees': lambda x: Orientation(*(math.degrees[e] for e in x)),
                 }[units]
         except KeyError:
             raise ValueError('invalid units: %s' % units)
@@ -225,12 +225,12 @@ class SenseIMU(object):
                 raise RuntimeError('Failed to read IMU')
             d = self._imu.getIMUData()
             if d.get('compassValid', False):
-                self._compass = self._units(*d['compass'])
+                self._compass = self._units(d['compass'])
             if d.get('gyroValid', False):
-                self._gyroscope = self._units(*d['gyro'])
+                self._gyroscope = self._units(d['gyro'])
             if d.get('accelValid', False):
-                self._accel = self._units(*d['accel'])
+                self._accel = self._units(d['accel'])
             if d.get('fusionValid', False):
-                self._fusion = self._units(*d['fusion'])
+                self._fusion = self._units(d['fusion'])
             self._last_read = now
 
