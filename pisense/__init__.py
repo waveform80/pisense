@@ -10,8 +10,12 @@ import io
 import os
 import glob
 import mmap
+import time
 import errno
+from collections import namedtuple
+from threading import Thread, Event
 
+import RTIMU
 import numpy as np
 
 
@@ -50,22 +54,42 @@ class SenseFont(object):
             (c == '#' for line in lines for c in line),
             dtype=np.bool).reshape((rows, cols))
 
-    def render(self, text, space=1):
+    def __getitem__(self, key):
+        return self._chars[key]
+
+    def render_line(
+            self, text, color=(255, 255, 255), letter_space=1):
         w = 0
         h = 0
         for c in text:
             try:
-                w += self._chars[c].shape[1] + space
-                h = max(h, self._chars[c].shape[0])
+                w += self[c].shape[1] + letter_space
+                h = max(h, self[c].shape[0])
             except KeyError:
                 raise ValueError('Character "%s" does not exist in font' % c)
-        result = np.zeros((h, w), dtype=np.bool)
+        result = np.zeros((h, w, 3), dtype=np.uint8)
         x = 0
         for c in text:
             c_h, c_w = self._chars[c].shape
-            result[0:c_h, x:x + c_w] = self._chars[c]
-            x += c_w + space
+            for i, c in enumerate(color):
+                result[0:c_h, x:x + c_w, i] = self[c] * c
+            x += c_w + letter_space
         return result
+
+    def render_text(
+            self, text, color=(255, 255, 255), line_space=2, letter_space=1):
+        lines = [
+            self.render_line(line, color, letter_space=letter_space)
+            for line in text.splitlines()
+            ]
+        height = sum(line.shape[0] for line in lines) + line_space * len(lines)
+        width = max(line.shape[1] for line in lines)
+        image = np.zeros((height, width, 3), dtype=np.uint8)
+        y = 0
+        for line in lines:
+            image[y:y + line.shape[0], 0:line.shape[1], :] = line
+            y += line.shape[0] + line_space
+        return image
 
 
 class SenseScreen(object):
@@ -135,4 +159,67 @@ class SenseScreen(object):
             else:
                 raise ValueError('image must be 8x8 pixels in size')
         self.pixels = image
+
+
+Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
+
+
+class SenseIMU(object):
+    def __init__(self, imu_settings='RTIMULib'):
+        self._settings = RTIMU.Settings(imu_settings)
+        self._imu = RTIMU.RTIMU(self._settings)
+        if not self._imu.IMUInit():
+            raise RuntimeError('IMU initialization failed')
+        self._interval = self._imu.IMUGetPollInterval() / 1000.0 # seconds
+        self._compass = None
+        self._gyroscope = None
+        self._accel = None
+        self._fusion = None
+        self._stopping = Event()
+        self._read_thread = Thread(target=self._read)
+        self._read_thread.daemon = True
+        self._read_thread.start()
+
+    def close(self):
+        self._stopping.set()
+        self._read_thread.join()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.close()
+
+    @property
+    def name(self):
+        return self._imu.IMUName()
+
+    @property
+    def compass(self):
+        return self._compass
+
+    @property
+    def gyroscope(self):
+        return self._gyroscope
+
+    @property
+    def accel(self):
+        return self._accel
+
+    @property
+    def fusion(self):
+        return self._fusion
+
+    def _read(self):
+        while not self._stopping.wait(self._interval):
+            if self._imu.IMURead():
+                d = self._imu.getIMUData()
+                if d.get('compassValid', False):
+                    self._compass = Orientation(*d['compass'])
+                if d.get('gyroValid', False):
+                    self._gyroscope = Orientation(*d['gyro'])
+                if d.get('accelValid', False):
+                    self._accel = Orientation(*d['accel'])
+                if d.get('fusionValid', False):
+                    self._fusion = Orientation(*d['fusion'])
 
