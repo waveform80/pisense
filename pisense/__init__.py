@@ -96,7 +96,7 @@ class SenseFont(object):
         return image
 
 
-InputEvent = namedtuple('InputEvent', ('timestamp', 'type', 'code', 'value'))
+InputEvent = namedtuple('InputEvent', ('timestamp', 'key', 'state'))
 
 
 class SenseStick(object):
@@ -105,6 +105,10 @@ class SenseStick(object):
     EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
     EV_KEY = 0x01
+
+    STATE_RELEASE = 0
+    STATE_PRESS = 1
+    STATE_HOLD = 2
 
     KEY_UP = 103
     KEY_LEFT = 105
@@ -148,7 +152,7 @@ class SenseStick(object):
             event = self._stick_file.read(self.EVENT_SIZE)
             (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
             if type == self.EV_KEY:
-                yield InputEvent(tv_sec + (tv_usec / 1000000), type, code, value)
+                yield InputEvent(tv_sec + (tv_usec / 1000000), code, value)
 
 
 class SenseScreen(object):
