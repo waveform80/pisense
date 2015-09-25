@@ -124,7 +124,7 @@ class SenseStick(object):
         raise RuntimeError('unable to locate SenseHAT joystick device')
 
     def _read(self):
-        event = self._stick_file.read(struct.calcsize(self.EVENT_SIZE))
+        event = self._stick_file.read(self.EVENT_SIZE)
         (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
         return (type, code, value)
 
