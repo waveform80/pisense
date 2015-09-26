@@ -25,9 +25,9 @@ color_dtype = np.dtype([
 
 
 class SensePixels(np.ndarray):
-    def __new__(cls, screen):
+    def __new__(cls):
         result = np.ndarray.__new__(cls, shape=(8, 8), dtype=color_dtype)
-        result._screen = screen
+        result._screen = None
         return result
 
     def __array_finalize__(self, obj):
@@ -84,7 +84,7 @@ class SenseScreen(object):
     raw = property(_get_raw, _set_raw)
 
     def _get_pixels(self):
-        result = SensePixels(self)
+        result = SensePixels()
         result['red']   = ((self.raw & 0xF800) >> 8).astype(np.uint8)
         result['green'] = ((self.raw & 0x07E0) >> 3).astype(np.uint8)
         result['blue']  = ((self.raw & 0x001F) << 3).astype(np.uint8)
@@ -92,6 +92,9 @@ class SenseScreen(object):
         result['red']   |= result['red']   >> 5
         result['green'] |= result['green'] >> 6
         result['blue']  |= result['blue']  >> 5
+        # Activate callbacks on modification by giving the array a reference
+        # to ourselves
+        result._screen = self
         return result
     def _set_pixels(self, value):
         value = value.view(color_dtype).reshape((8, 8))
