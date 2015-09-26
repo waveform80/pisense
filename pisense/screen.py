@@ -97,6 +97,8 @@ class SenseScreen(object):
         result._screen = self
         return result
     def _set_pixels(self, value):
+        while value.base:
+            value = value.base
         value = value.view(color_dtype).reshape((8, 8))
         self.raw = (
                 ((value['red']   & 0xF8).astype(np.uint16) << 8) |
