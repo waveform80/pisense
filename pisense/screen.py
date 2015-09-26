@@ -97,9 +97,12 @@ class SenseScreen(object):
         result._screen = self
         return result
     def _set_pixels(self, value):
-        while value.base is not None:
-            value = value.base
-        value = value.view(color_dtype).reshape((8, 8))
+        if isinstance(value, np.ndarray):
+            while value.base is not None:
+                value = value.base
+            value = value.view(color_dtype).reshape((8, 8))
+        else:
+            value = np.array(value, dtype=color_dtype).reshape((8, 8))
         self.raw = (
                 ((value['red']   & 0xF8).astype(np.uint16) << 8) |
                 ((value['green'] & 0xFC).astype(np.uint16) << 3) |
