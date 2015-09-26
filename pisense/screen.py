@@ -25,17 +25,25 @@ color_dtype = np.dtype([
 
 
 class SensePixels(np.ndarray):
-    def __init__(self, screen):
-        super(SensePixels, self).__init__((8, 8), dtype=color_dtype)
-        self._screen = screen
+    def __new__(cls, screen):
+        result = np.ndarray.__new__(cls, shape=(8, 8), dtype=color_dtype)
+        result._screen = screen
+        return result
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        self._screen = getattr(obj, '_screen', None)
 
     def __setitem__(self, index, value):
         super(SensePixels, self).__setitem__(index, value)
-        self._screen._set_pixels(self)
+        if self._screen:
+            self._screen._set_pixels(self)
 
     def __setslice__(self, a, b, c, v):
         super(SensePixels, self).__setslice__(a, b, c, v)
-        self._screen._set_pixels(self)
+        if self._screen:
+            self._screen._set_pixels(self)
 
 
 class SenseScreen(object):
