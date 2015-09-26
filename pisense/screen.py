@@ -40,8 +40,8 @@ class SensePixels(np.ndarray):
         if self._screen:
             self._screen._set_pixels(self)
 
-    def __setslice__(self, a, b, c, v):
-        super(SensePixels, self).__setslice__(a, b, c, v)
+    def __setslice__(self, i, j, sequence)
+        super(SensePixels, self).__setslice__(i, j, sequence)
         if self._screen:
             self._screen._set_pixels(self)
 
