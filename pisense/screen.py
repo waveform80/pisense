@@ -17,6 +17,27 @@ import RTIMU
 import numpy as np
 
 
+color_dtype = np.dtype([
+    ('red',   np.uint8),
+    ('green', np.uint8),
+    ('blue',  np.uint8),
+    ])
+
+
+class SensePixels(np.ndarray):
+    def __init__(self, screen):
+        super(SensePixels, self).__init__((8, 8), dtype=color_dtype)
+        self._screen = screen
+
+    def __setitem__(self, index, value):
+        super(SensePixels, self).__setitem__(index, value)
+        self._screen._set_pixels(self)
+
+    def __setslice__(self, a, b, c, v):
+        super(SensePixels, self).__setslice__(a, b, c, v)
+        self._screen._set_pixels(self)
+
+
 class SenseScreen(object):
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
@@ -55,26 +76,36 @@ class SenseScreen(object):
     raw = property(_get_raw, _set_raw)
 
     def _get_pixels(self):
-        result = np.empty((8, 8, 3), dtype=np.uint8)
-        result[..., 0] = ((self.raw & 0xF800) >> 8).astype(np.uint8)
-        result[..., 1] = ((self.raw & 0x07E0) >> 3).astype(np.uint8)
-        result[..., 2] = ((self.raw & 0x001F) << 3).astype(np.uint8)
+        result = SensePixels(self)
+        result['red']   = ((self.raw & 0xF800) >> 8).astype(np.uint8)
+        result['green'] = ((self.raw & 0x07E0) >> 3).astype(np.uint8)
+        result['blue']  = ((self.raw & 0x001F) << 3).astype(np.uint8)
+        # Fill the bottom bits
+        result['red']   |= result['red']   >> 5
+        result['green'] |= result['green'] >> 6
+        result['blue']  |= result['blue']  >> 5
         return result
     def _set_pixels(self, value):
-        r, g, b = (value[..., plane] for plane in range(3))
+        value = value.view(color_dtype).reshape((8, 8))
         self.raw = (
-                ((r & 0xF8).astype(np.uint16) << 8) |
-                ((g & 0xFC).astype(np.uint16) << 3) |
-                ((b & 0xF8).astype(np.uint16) >> 3)
+                ((value['red']   & 0xF8).astype(np.uint16) << 8) |
+                ((value['green'] & 0xFC).astype(np.uint16) << 3) |
+                ((value['blue']  & 0xF8).astype(np.uint16) >> 3)
                 )
     pixels = property(_get_pixels, _set_pixels)
+
+    def clear(self):
+        self.raw = 0
 
     def draw(self, image):
         if not isinstance(image, np.ndarray):
             try:
                 buf = image.tobytes()
             except AttributeError:
-                buf = image.tostring()
+                try:
+                    buf = image.tostring()
+                except AttributeError:
+                    raise ValueError('image must be an 8x8 PIL image or numpy array')
             image = np.frombuffer(buf, dtype=np.uint8)
             if len(image) == 192:
                 image = image.reshape((8, 8, 3))
