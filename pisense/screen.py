@@ -11,6 +11,7 @@ import os
 import glob
 import mmap
 import errno
+import time
 
 import RTIMU
 import numpy as np
