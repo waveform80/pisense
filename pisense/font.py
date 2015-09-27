@@ -53,7 +53,7 @@ class SenseFont(object):
 
     def render_line(
             self, text, foreground=(255, 255, 255), background=(0, 0, 0),
-            letter_space=1):
+            letter_space=1, padding=(0, 0, 0, 0)):
         w = 0
         h = 0
         for c in text:
@@ -62,26 +62,35 @@ class SenseFont(object):
                 h = max(h, self[c].shape[0])
             except KeyError:
                 raise ValueError('Character "%s" does not exist in font' % c)
+        w += padding[0] + padding[2]
+        h += padding[1] + padding[3]
         result = np.empty((h, w), dtype=color_dtype)
         result[:] = background
-        x = 0
+        x = padding[0]
         for c in text:
             c_h, c_w = self._chars[c].shape
-            result[0:c_h, x:x + c_w][self[c]] = foreground
+            result[padding[1]:padding[1] + c_h,
+                   padding[0] + x:padding[0] + x + c_w][self[c]] = foreground
             x += c_w + letter_space
         return result
 
     def render_text(
             self, text, foreground=(255, 255, 255), background=(0, 0, 0),
-            line_space=2, letter_space=1):
+            line_space=2, letter_space=1, padding=(0, 0, 0, 0)):
         lines = [
             self.render_line(line, foreground, background, letter_space)
             for line in text.splitlines()
             ]
-        height = sum(line.shape[0] for line in lines) + line_space * (len(lines) - 1)
-        width = max(line.shape[1] for line in lines)
+        height = (
+                sum(line.shape[0] for line in lines) +
+                line_space * (len(lines) - 1) +
+                padding[1] + padding[3])
+        width = (
+                max(line.shape[1] for line in lines) +
+                padding[0] + padding[2])
         image = np.zeros((height, width), dtype=color_dtype)
-        y = 0
+        image[:] = background
+        y = padding[1]
         for line in lines:
             image[y:y + line.shape[0], 0:line.shape[1]] = line
             y += line.shape[0] + line_space
