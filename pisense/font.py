@@ -52,7 +52,8 @@ class SenseFont(object):
         return self._chars[key]
 
     def render_line(
-            self, text, color=(255, 255, 255), letter_space=1):
+            self, text, foreground=(255, 255, 255), background=(0, 0, 0),
+            letter_space=1):
         w = 0
         h = 0
         for c in text:
@@ -61,18 +62,20 @@ class SenseFont(object):
                 h = max(h, self[c].shape[0])
             except KeyError:
                 raise ValueError('Character "%s" does not exist in font' % c)
-        result = np.zeros((h, w), dtype=color_dtype)
+        result = np.empty((h, w), dtype=color_dtype)
+        result[:] = background
         x = 0
         for c in text:
             c_h, c_w = self._chars[c].shape
-            result[0:c_h, x:x + c_w][self[c]] = color
+            result[0:c_h, x:x + c_w][self[c]] = foreground
             x += c_w + letter_space
         return result
 
     def render_text(
-            self, text, color=(255, 255, 255), line_space=2, letter_space=1):
+            self, text, foreground=(255, 255, 255), background=(0, 0, 0),
+            line_space=2, letter_space=1):
         lines = [
-            self.render_line(line, color, letter_space=letter_space)
+            self.render_line(line, foreground, background, letter_space)
             for line in text.splitlines()
             ]
         height = sum(line.shape[0] for line in lines) + line_space * (len(lines) - 1)
