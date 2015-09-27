@@ -22,6 +22,11 @@ class SenseFont(object):
                 self._parse_font(font_file)
         else:
             self._parse_font(font_file)
+        self._max_height = max(c.shape[0] for c in self._chars.values())
+
+    @property
+    def max_height(self):
+        return self._max_height
 
     def _parse_font(self, f):
         self._chars = {}
@@ -55,11 +60,10 @@ class SenseFont(object):
             self, text, foreground=(255, 255, 255), background=(0, 0, 0),
             letter_space=1, padding=(0, 0, 0, 0)):
         w = 0
-        h = 0
+        h = self.max_height
         for c in text:
             try:
                 w += self[c].shape[1] + letter_space
-                h = max(h, self[c].shape[0])
             except KeyError:
                 raise ValueError('Character "%s" does not exist in font' % c)
         w += padding[0] + padding[2]

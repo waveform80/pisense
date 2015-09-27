@@ -179,7 +179,9 @@ class SenseScreen(object):
         if font is None:
             # XXX Replace this with pkg_resources.resource_stream
             font = SenseFont(os.path.join(os.path.dirname(__file__), 'small.dat'))
-        image = font.render_line(text, foreground, background, letter_space)
+        image = font.render_line(
+                text, foreground, background, letter_space,
+                padding=(0, 0, 8, max(0, 8 - font.max_height)))
         for x in range(image.shape[1] - 8):
             self.pixels = image[:8, x:x + 8]
             time.sleep(0.1)
