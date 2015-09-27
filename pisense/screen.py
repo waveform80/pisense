@@ -54,6 +54,9 @@ class SenseScreen(object):
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
         self._fonts = {}
+        self._hflip = False
+        self._vflip = False
+        self._rotate = 0
 
     def close(self):
         self._fb_array = None
@@ -92,6 +95,12 @@ class SenseScreen(object):
         result['red']   |= result['red']   >> 5
         result['green'] |= result['green'] >> 6
         result['blue']  |= result['blue']  >> 5
+        # Undo rotations and flips
+        result = np.rot90(result, (360 - self._rotate) // 90)
+        if self._hflip:
+            result = np.fliplr(result)
+        if self._vflip:
+            result = np.flipud(result)
         # Activate callbacks on modification by giving the array a reference
         # to ourselves
         result._screen = self
@@ -103,12 +112,37 @@ class SenseScreen(object):
             value = value.view(color_dtype).reshape((8, 8))
         else:
             value = np.array(value, dtype=color_dtype).reshape((8, 8))
+        if self._vflip:
+            value = np.flipud(value)
+        if self._hflip:
+            value = np.fliplr(value)
+        value = np.rot90(value, self._rotate // 90)
         self.raw = (
                 ((value['red']   & 0xF8).astype(np.uint16) << 8) |
                 ((value['green'] & 0xFC).astype(np.uint16) << 3) |
                 ((value['blue']  & 0xF8).astype(np.uint16) >> 3)
                 )
     pixels = property(_get_pixels, _set_pixels)
+
+    def _get_vflip(self):
+        return self._vflip
+    def _set_vflip(self, value):
+        self._vflip = bool(value)
+    vflip = property(_get_vflip, _set_vflip)
+
+    def _get_hflip(self):
+        return self._hflip
+    def _set_hflip(self, value):
+        self._hflip = bool(value)
+    hflip = property(_get_hflip, _set_hflip)
+
+    def _get_rotate(self):
+        return self._rotate
+    def _set_rotate(self, value):
+        if value not in (0, 90, 180, 270):
+            raise ValueError('rotate must be 0, 90, 180, or 270')
+        self._rotate = value
+    rotate = property(_get_rotate, _set_rotate)
 
     def clear(self):
         self.raw = 0
