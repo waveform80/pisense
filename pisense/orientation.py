@@ -18,7 +18,7 @@ Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
 
 class SenseOrientation(object):
-    def __init__(self, imu_settings='RTIMULib'):
+    def __init__(self, imu_settings='/etc/RTIMULib.ini'):
         self._settings = RTIMU.Settings(imu_settings)
         self._imu = RTIMU.RTIMU(self._settings)
         if not self._imu.IMUInit():
