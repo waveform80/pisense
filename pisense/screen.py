@@ -41,7 +41,7 @@ class SensePixels(np.ndarray):
             # If we're a slice of the original pixels value, find the parent
             # that contains the complete array and send that to _set_pixels
             a = self
-            while a.shape != (8, 8) and a.base:
+            while a.shape != (8, 8) and a.base is not None:
                 a = a.base
             self._screen._set_pixels(a)
 
@@ -49,7 +49,7 @@ class SensePixels(np.ndarray):
         super(SensePixels, self).__setslice__(i, j, sequence)
         if self._screen:
             a = self
-            while a.shape != (8, 8) and a.base:
+            while a.shape != (8, 8) and a.base is not None:
                 a = a.base
             self._screen._set_pixels(a)
 
