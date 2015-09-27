@@ -89,6 +89,6 @@ class SenseOrientation(object):
                 if d.get('accelValid', False):
                     self._accelerometer = Readings(*d['accel'])
                 if d.get('fusionPoseValid', False):
-                    self._fusion = Orientation(d['fusionPose'])
+                    self._fusion = Orientation(*d['fusionPose'])
                 self._last_read = now
 
