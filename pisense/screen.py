@@ -38,12 +38,20 @@ class SensePixels(np.ndarray):
     def __setitem__(self, index, value):
         super(SensePixels, self).__setitem__(index, value)
         if self._screen:
-            self._screen._set_pixels(self)
+            # If we're a slice of the original pixels value, find the parent
+            # that contains the complete array and send that to _set_pixels
+            a = self
+            while a.shape != (8, 8) and a.base:
+                a = a.base
+            self._screen._set_pixels(a)
 
     def __setslice__(self, i, j, sequence):
         super(SensePixels, self).__setslice__(i, j, sequence)
         if self._screen:
-            self._screen._set_pixels(self)
+            a = self
+            while a.shape != (8, 8) and a.base:
+                a = a.base
+            self._screen._set_pixels(a)
 
 
 class SenseScreen(object):
@@ -107,8 +115,6 @@ class SenseScreen(object):
         return result
     def _set_pixels(self, value):
         if isinstance(value, np.ndarray):
-            while value.base is not None:
-                value = value.base
             value = value.view(color_dtype).reshape((8, 8))
         else:
             value = np.array(value, dtype=color_dtype).reshape((8, 8))
