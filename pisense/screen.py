@@ -127,13 +127,17 @@ class SenseScreen(object):
     def _get_vflip(self):
         return self._vflip
     def _set_vflip(self, value):
+        p = self.pixels
         self._vflip = bool(value)
+        self.pixels = p
     vflip = property(_get_vflip, _set_vflip)
 
     def _get_hflip(self):
         return self._hflip
     def _set_hflip(self, value):
+        p = self.pixels
         self._hflip = bool(value)
+        self.pixels = p
     hflip = property(_get_hflip, _set_hflip)
 
     def _get_rotate(self):
@@ -141,7 +145,9 @@ class SenseScreen(object):
     def _set_rotate(self, value):
         if value not in (0, 90, 180, 270):
             raise ValueError('rotate must be 0, 90, 180, or 270')
+        p = self.pixels
         self._rotate = value
+        self.pixels = p
     rotate = property(_get_rotate, _set_rotate)
 
     def clear(self):
