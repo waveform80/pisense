@@ -4,7 +4,6 @@ from __future__ import (
     print_function,
     division,
     )
-native_str = str
 str = type('')
 
 import io
