@@ -16,12 +16,8 @@ import errno
 import RTIMU
 import numpy as np
 
-
-color_dtype = np.dtype([
-    (native_str('red'),   np.uint8),
-    (native_str('green'), np.uint8),
-    (native_str('blue'),  np.uint8),
-    ])
+from .common import color_dtype
+from .font import SenseFont
 
 
 class SensePixels(np.ndarray):
@@ -177,4 +173,16 @@ class SenseScreen(object):
             else:
                 raise ValueError('image must be 8x8 pixels in size')
         self.pixels = image
+
+    def marquee(
+            self, text, font=None, foreground=(255, 255, 255),
+            background=(0, 0, 0), letter_space=1):
+        if font is None:
+            # XXX Replace this with pkg_resources.resource_stream
+            font = SenseFont(os.path.join(os.path.dirname(__file__), 'small.dat'))
+        image = font.render_line(text, foreground, background, letter_space)
+        image.resize((min(8, image.shape[0]), image.shape[1] + 8))
+        for x in range(image.shape[1] - 8):
+            self.pixels = image[:8, x:x + 8]
+            time.sleep(0.1)
 

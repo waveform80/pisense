@@ -10,7 +10,7 @@ import io
 
 import numpy as np
 
-from .screen import color_dtype
+from .common import color_dtype
 
 
 class SenseFont(object):
