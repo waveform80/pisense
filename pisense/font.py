@@ -75,12 +75,12 @@ class SenseFont(object):
             self.render_line(line, color, letter_space=letter_space)
             for line in text.splitlines()
             ]
-        height = sum(line.shape[0] for line in lines) + line_space * len(lines)
+        height = sum(line.shape[0] for line in lines) + line_space * (len(lines) - 1)
         width = max(line.shape[1] for line in lines)
-        image = np.zeros((height, width, 3), dtype=np.uint8)
+        image = np.zeros((height, width), dtype=color_dtype)
         y = 0
         for line in lines:
-            image[y:y + line.shape[0], 0:line.shape[1], :] = line
+            image[y:y + line.shape[0], 0:line.shape[1]] = line
             y += line.shape[0] + line_space
         return image
 
