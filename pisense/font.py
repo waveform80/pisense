@@ -10,6 +10,8 @@ import io
 
 import numpy as np
 
+from .screen import color_dtype
+
 
 class SenseFont(object):
     def __init__(self, filename_or_obj):
@@ -59,12 +61,11 @@ class SenseFont(object):
                 h = max(h, self[c].shape[0])
             except KeyError:
                 raise ValueError('Character "%s" does not exist in font' % c)
-        result = np.zeros((h, w, 3), dtype=np.uint8)
+        result = np.zeros((h, w), dtype=color_dtype)
         x = 0
         for c in text:
             c_h, c_w = self._chars[c].shape
-            for i, c in enumerate(color):
-                result[0:c_h, x:x + c_w, i] = self[c] * c
+            result[0:c_h, x:x + c_w][self[c]] = color
             x += c_w + letter_space
         return result
 
