@@ -74,7 +74,7 @@ class SenseFont(object):
         for c in text:
             c_h, c_w = self._chars[c].shape
             result[padding[1]:padding[1] + c_h,
-                   padding[0] + x:padding[0] + x + c_w][self[c]] = foreground
+                   x:x + c_w][self[c]] = foreground
             x += c_w + letter_space
         return result
 
