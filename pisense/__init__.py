@@ -7,7 +7,7 @@ from __future__ import (
 str = type('')
 
 from .font import SenseFont
-from .screen import SenseScreen
+from .screen import SenseScreen, color_dtype
 from .stick import SenseStick, InputEvent
 from .orientation import SenseOrientation, Readings, Orientation
 
