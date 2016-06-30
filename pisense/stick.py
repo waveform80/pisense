@@ -13,17 +13,23 @@ import glob
 import errno
 import struct
 import select
-from collections import namedtuple
-from threading import Thread, Event
+import warnings
+from collections import namedtuple, deque
+from threading import Thread, Event, Lock, RLock
 
 
-InputEvent = namedtuple('InputEvent', ('timestamp', 'key', 'state'))
+InputEvent = namedtuple('InputEvent', ('timestamp', 'direction', 'action'))
+
+
+class SenseStickBufferFull(Warning):
+    "Warning raised when the joystick's event buffer fills"
 
 
 class SenseStick(object):
     SENSE_HAT_EVDEV_NAME = 'Raspberry Pi Sense HAT Joystick'
     EVENT_FORMAT = native_str('llHHI')
     EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
+    EVENT_BUFFER = 100
 
     EV_KEY = 0x01
 
@@ -38,23 +44,37 @@ class SenseStick(object):
     KEY_ENTER = 28
 
     def __init__(self):
-        self._stick_file = io.open(self._stick_device(), 'rb')
+        self._callbacks_lock = RLock()
+        self._callbacks_close = Event()
+        self._callbacks = {}
+        self._callbacks_thread = None
+        self._closing = Event()
+        self._buffer_lock = Lock()
+        self._buffer_avail = Event()
+        self._buffer = []
+        self._read_thread = Thread(
+            target=self._read_stick,
+            args=(io.open(self._stick_device(), 'rb', buffering=0),))
+        self._read_thread.daemon = True
+        self._read_thread.start()
 
     def close(self):
-        self._stick_file.close()
+        if self._read_thread:
+            self._closing.set()
+            self._read_thread.join()
+            if self._callbacks_thread:
+                self._callbacks_thread.join()
+            self._read_thread = None
+            self._callbacks_thread = None
+
+    def __del__(self):
+        self.close()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.close()
-
-    def __iter__(self):
-        while True:
-            event = self._stick_file.read(self.EVENT_SIZE)
-            (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
-            if type == self.EV_KEY:
-                yield InputEvent(tv_sec + (tv_usec / 1000000), code, value)
 
     def _stick_device(self):
         for evdev in glob.glob('/sys/class/input/event*'):
@@ -67,12 +87,150 @@ class SenseStick(object):
                     raise
         raise RuntimeError('unable to locate SenseHAT joystick device')
 
+    def _read_stick(self, stick_file):
+        try:
+            while not self._closing.wait(0):
+                if select.select([stick_file], [], [], 0.1)[0]:
+                    event = stick_file.read(self.EVENT_SIZE)
+                    (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
+                    if type == self.EV_KEY:
+                        with self._buffer_lock:
+                            self._buffer.append(InputEvent(
+                                timestamp=tv_sec + (tv_usec / 1000000),
+                                direction={
+                                    self.KEY_UP:    'up',
+                                    self.KEY_DOWN:  'down',
+                                    self.KEY_LEFT:  'left',
+                                    self.KEY_RIGHT: 'right',
+                                    self.KEY_ENTER: 'push',
+                                    }[code],
+                                state={
+                                    self.STATE_PRESS:   'pressed',
+                                    self.STATE_RELEASE: 'released',
+                                    self.STATE_HOLD:    'held',
+                                    }[value]
+                                ))
+                            self._buffer_avail.set()
+                            if len(self._buffer) > self.EVENT_BUFFER:
+                                self._buffer = self._buffer[-self.EVENT_BUFFER:]
+                                warnings.warn(SenseStickBufferFull(
+                                    "The internal SenseStick buffer is full; "
+                                    "try reading some events!"))
+        finally:
+            stick_file.close()
+
+    def _try_read(self):
+        with self._buffer_lock:
+            try:
+                event = self._buffer.pop(0)
+            except IndexError:
+                event = None
+            if not self._buffer:
+                self._buffer_avail.clear()
+        return event
+
+    def _run_callbacks(self):
+        while not self._callbacks_close.wait(0) and not self._closing.wait(0):
+            if self.wait(0.1):
+                event = self._try_read()
+                if event:
+                    with self._callbacks_lock:
+                        try:
+                            self._callbacks[event.direction](event)
+                        except KeyError:
+                            pass
+
+    def _start_stop_callbacks(self):
+        with self._callbacks_lock:
+            if self._callbacks and not self._callbacks_thread:
+                self._callbacks_close.clear()
+                self._callbacks_thread = Thread(target=self._run_callbacks)
+                self._callbacks_thread.daemon = True
+                self._callbacks_thread.start()
+            elif not self._callbacks and self._callbacks_thread:
+                self._callbacks_close.set()
+                self._callbacks_thread.join()
+                self._callbacks_thread = None
+
+    def __iter__(self):
+        while True:
+            self._buffer_avail.wait()
+            event = self._try_read()
+            if event:
+                yield event
+
     def read(self):
         return next(iter(self))
 
     def wait(self, timeout=None):
-        # XXX Use poll() instead?
-        r, w, x = select.select([self._stick_file], [], [], timeout)
-        return bool(r)
+        return self._buffer_avail.wait(timeout)
 
+    @property
+    def when_up(self):
+        with self._callbacks_lock:
+            return self._callbacks.get('up')
 
+    @when_up.setter
+    def when_up(self, value):
+        with self._callbacks_lock:
+            if value:
+                self._callbacks['up'] = value
+            else:
+                self._callbacks.pop('up', None)
+            self._start_stop_callbacks()
+
+    @property
+    def when_down(self):
+        with self._callbacks_lock:
+            return self._callbacks.get('down')
+
+    @when_down.setter
+    def when_down(self, value):
+        with self._callbacks_lock:
+            if value:
+                self._callbacks['down'] = value
+            else:
+                self._callbacks.pop('down', None)
+            self._start_stop_callbacks()
+
+    @property
+    def when_left(self):
+        with self._callbacks_lock:
+            return self._callbacks.get('left')
+
+    @when_left.setter
+    def when_left(self, value):
+        with self._callbacks_lock:
+            if value:
+                self._callbacks['left'] = value
+            else:
+                self._callbacks.pop('left', None)
+            self._start_stop_callbacks()
+
+    @property
+    def when_right(self):
+        with self._callbacks_lock:
+            return self._callbacks.get('right')
+
+    @when_right.setter
+    def when_right(self, value):
+        with self._callbacks_lock:
+            if value:
+                self._callbacks['right'] = value
+            else:
+                self._callbacks.pop('right', None)
+            self._start_stop_callbacks()
+
+    @property
+    def when_enter(self):
+        with self._callbacks_lock:
+            return self._callbacks.get('push')
+
+    @when_enter.setter
+    def when_enter(self, value):
+        with self._callbacks_lock:
+            if value:
+                self._callbacks['push'] = value
+            else:
+                self._callbacks.pop('push', None)
+            self._start_stop_callbacks()
