@@ -39,6 +39,7 @@ from .font import SenseFont
 from .screen import SenseScreen, color_dtype
 from .stick import SenseStick, InputEvent
 from .orientation import SenseIMU, Readings, Orientation
+from .environment import SenseEnvironment
 
 
 class SenseHAT(object):

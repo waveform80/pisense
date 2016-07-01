@@ -35,13 +35,79 @@ from __future__ import (
     )
 str = type('')
 
+import time
+from collections import namedtuple
+
+import RTIMU
+
+
+EnvironValue = namedtuple('EnvironValue', ('pressure', 'humidity', 'temperature'))
+
 
 class SenseEnvironment(object):
     def __init__(self, imu_settings='/etc/RTIMULib'):
         self._settings = RTIMU.Settings(imu_settings)
-        self._pressure = RTIMU.RTPressure(self._settings)
-        self._humidity = RTIMU.RTHumidity(self._settings)
-        if not self._pressure.pressureInit():
+        self._p_sensor = RTIMU.RTPressure(self._settings)
+        self._h_sensor = RTIMU.RTHumidity(self._settings)
+        if not self._p_sensor.pressureInit():
             raise RuntimeError('Pressure sensor initialization failed')
-        if not self._humidity.humidityInit():
+        if not self._h_sensor.humidityInit():
             raise RuntimeError('Humidity sensor initialization failed')
+        self._pressure = None
+        self._humidity = None
+        self._temperature = None
+        self._interval = 0.001
+        self._last_read = None
+        self.temperature_sensors = {'pressure', 'humidity'}
+
+    def __iter__(self):
+        while True:
+            self._refresh()
+            yield EnvironValue(
+                self._pressure,
+                self._humidity,
+                self._temperature,
+                )
+            delay = max(0.0, self._last_read + self._interval - time.time())
+            if delay:
+                time.sleep(delay)
+
+    @property
+    def pressure(self):
+        self._refresh()
+        return self._pressure
+
+    @property
+    def humidity(self):
+        self._refresh()
+        return self._humidity
+
+    @property
+    def temperature(self):
+        self._refresh()
+        return self._temperature
+
+    def _get_sensors(self):
+        return self._temp_sensors
+    def _set_sensors(self, value):
+        self._temp_sensors = frozenset(value)
+    temperature_sensors = property(_get_sensors, _set_sensors)
+
+    def _refresh(self):
+        now = time.time()
+        if self._last_read is None or now - self._last_read > self._interval:
+            p_valid, p_value, tp_valid, tp_value = self._p_sensor.pressureRead()
+            h_valid, h_value, th_valid, th_value = self._h_sensor.humidityRead()
+            if p_valid:
+                self._pressure = p_value
+            if h_valid:
+                self._humidity = h_value
+            t_value = ()
+            if tp_valid and 'pressure' in self._temp_sensors:
+                t_value += (tp_value,)
+            if th_valid and 'humidity' in self._temp_sensors:
+                t_value += (th_value,)
+            if t_value:
+                self._temperature = sum(t_value) / len(t_value)
+            self._last_read = now
+

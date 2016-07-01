@@ -42,6 +42,7 @@ from collections import namedtuple
 import RTIMU
 
 
+IMUValue = namedtuple('IMUValue', ('compass', 'gyroscope', 'accelerometer', 'orientation'))
 Readings = namedtuple('Readings', ('x', 'y', 'z'))
 Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
@@ -62,8 +63,14 @@ class SenseIMU(object):
 
     def __iter__(self):
         while True:
-            value = self.orientation
-            if value:
+            self._refresh()
+            value = IMUValue(
+                self._compass,
+                self._gyroscope,
+                self._accelerometer,
+                self._fusion
+                )
+            if self._fusion:
                 yield value
             delay = max(0.0, self._last_read + self._interval - time.time())
             if delay:
