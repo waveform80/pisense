@@ -41,8 +41,9 @@ from .stick import SenseStick, InputEvent
 from .orientation import SenseIMU, Readings, Orientation
 
 
-class SenseHat(object):
+class SenseHAT(object):
     def __init__(self):
+        super(SenseHAT, self).__init__()
         self._screen = SenseScreen()
         self._stick = SenseStick()
         self._imu = SenseIMU()
