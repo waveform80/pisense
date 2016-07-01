@@ -35,31 +35,13 @@ from __future__ import (
     )
 str = type('')
 
-from .font import SenseFont
-from .screen import SenseScreen, color_dtype
-from .stick import SenseStick, InputEvent
-from .orientation import SenseIMU, Readings, Orientation
 
-
-class SenseHat(object):
-    def __init__(self):
-        self._screen = SenseScreen()
-        self._stick = SenseStick()
-        self._imu = SenseIMU()
-        self._environ = SenseEnvironment()
-
-    @property
-    def screen(self):
-        return self._screen
-
-    @property
-    def stick(self):
-        return self._stick
-
-    @property
-    def imu(self):
-        return self._imu
-
-    @property
-    def environ(self):
-        return self._environ
+class SenseEnvironment(object):
+    def __init__(self, imu_settings='/etc/RTIMULib'):
+        self._settings = RTIMU.Settings(imu_settings)
+        self._pressure = RTIMU.RTPressure(self._settings)
+        self._humidity = RTIMU.RTHumidity(self._settings)
+        if not self._pressure.pressureInit():
+            raise RuntimeError('Pressure sensor initialization failed')
+        if not self._humidity.humidityInit():
+            raise RuntimeError('Humidity sensor initialization failed')
