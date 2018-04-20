@@ -44,7 +44,8 @@ import struct
 import select
 import warnings
 from collections import namedtuple, deque
-from threading import Thread, Event, Lock, RLock
+from threading import Thread, RLock
+from queue import Queue, Full, Empty
 
 
 InputEvent = namedtuple('InputEvent', ('timestamp', 'direction', 'action'))
@@ -78,9 +79,7 @@ class SenseStick(object):
         self._callbacks = {}
         self._callbacks_thread = None
         self._closing = Event()
-        self._buffer_lock = Lock()
-        self._buffer_avail = Event()
-        self._buffer = []
+        self._buffer = Queue(maxsize=self.EVENT_BUFFER)
         self._read_thread = Thread(
             target=self._read_stick,
             args=(io.open(self._stick_device(), 'rb', buffering=0),))
@@ -121,53 +120,46 @@ class SenseStick(object):
             while not self._closing.wait(0):
                 if select.select([stick_file], [], [], 0.1)[0]:
                     event = stick_file.read(self.EVENT_SIZE)
-                    (tv_sec, tv_usec, type, code, value) = struct.unpack(self.EVENT_FORMAT, event)
+                    (
+                        tv_sec,
+                        tv_usec,
+                        type,
+                        code,
+                        value,
+                    ) = struct.unpack(self.EVENT_FORMAT, event)
                     if type == self.EV_KEY:
-                        with self._buffer_lock:
-                            self._buffer.append(InputEvent(
-                                timestamp=tv_sec + (tv_usec / 1000000),
-                                direction={
-                                    self.KEY_UP:    'up',
-                                    self.KEY_DOWN:  'down',
-                                    self.KEY_LEFT:  'left',
-                                    self.KEY_RIGHT: 'right',
-                                    self.KEY_ENTER: 'push',
-                                    }[code],
-                                state={
-                                    self.STATE_PRESS:   'pressed',
-                                    self.STATE_RELEASE: 'released',
-                                    self.STATE_HOLD:    'held',
-                                    }[value]
-                                ))
-                            self._buffer_avail.set()
-                            if len(self._buffer) > self.EVENT_BUFFER:
-                                self._buffer = self._buffer[-self.EVENT_BUFFER:]
-                                warnings.warn(SenseStickBufferFull(
-                                    "The internal SenseStick buffer is full; "
-                                    "try reading some events!"))
+                        if self._buffer.full():
+                            warnings.warn(SenseStickBufferFull(
+                                "The internal SenseStick buffer is full; "
+                                "try reading some events!"))
+                            self._buffer.get()
+                        self._buffer.put(InputEvent(
+                            timestamp=tv_sec + (tv_usec / 1000000),
+                            direction={
+                                self.KEY_UP:    'up',
+                                self.KEY_DOWN:  'down',
+                                self.KEY_LEFT:  'left',
+                                self.KEY_RIGHT: 'right',
+                                self.KEY_ENTER: 'push',
+                            }[code],
+                            state={
+                                self.STATE_PRESS:   'pressed',
+                                self.STATE_RELEASE: 'released',
+                                self.STATE_HOLD:    'held',
+                            }[value]
+                        ))
         finally:
             stick_file.close()
 
-    def _try_read(self):
-        with self._buffer_lock:
-            try:
-                event = self._buffer.pop(0)
-            except IndexError:
-                event = None
-            if not self._buffer:
-                self._buffer_avail.clear()
-        return event
-
     def _run_callbacks(self):
         while not self._callbacks_close.wait(0) and not self._closing.wait(0):
-            if self.wait(0.1):
-                event = self._try_read()
-                if event:
-                    with self._callbacks_lock:
-                        try:
-                            self._callbacks[event.direction](event)
-                        except KeyError:
-                            pass
+            event = self.read(0.1)
+            if event is not None:
+                with self._callbacks_lock:
+                    try:
+                        self._callbacks[event.direction](event)
+                    except KeyError:
+                        pass
 
     def _start_stop_callbacks(self):
         with self._callbacks_lock:
@@ -183,16 +175,13 @@ class SenseStick(object):
 
     def __iter__(self):
         while True:
-            self._buffer_avail.wait()
-            event = self._try_read()
-            if event:
-                yield event
+            yield self._buffer.get()
 
-    def read(self):
-        return next(iter(self))
-
-    def wait(self, timeout=None):
-        return self._buffer_avail.wait(timeout)
+    def read(self, timeout=None):
+        try:
+            return self._buffer.get(timeout=timeout)
+        except Empty:
+            return None
 
     @property
     def when_up(self):
