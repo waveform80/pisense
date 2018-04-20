@@ -128,4 +128,3 @@ class SenseFont(object):
             image[y:y + line.shape[0], 0:line.shape[1]] = line
             y += line.shape[0] + line_space
         return image
-
