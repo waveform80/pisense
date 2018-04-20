@@ -127,4 +127,3 @@ class SenseIMU(object):
                 if d.get('fusionPoseValid', False):
                     self._fusion = Orientation(*d['fusionPose'])
                 self._last_read = now
-

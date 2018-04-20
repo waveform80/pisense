@@ -215,4 +215,3 @@ class SenseScreen(object):
         for x in range(image.shape[1] - 8):
             self.pixels = image[:8, x:x + 8]
             time.sleep(1 / fps)
-
