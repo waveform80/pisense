@@ -56,7 +56,7 @@ class SenseEnvironment(object):
         self._pressure = None
         self._humidity = None
         self._temperature = None
-        self._interval = 0.001
+        self._interval = 0.04
         self._last_read = None
         self.temperature_sensors = {'pressure', 'humidity'}
 
