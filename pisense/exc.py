@@ -27,50 +27,20 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import (
-    unicode_literals,
-    absolute_import,
-    print_function,
-    division,
-    )
-str = type('')
+"Defines the exceptions and warnings used by the package"
 
-from .font import SenseFont
-from .screen import SenseScreen, color_dtype
-from .stick import SenseStick, InputEvent
-from .orientation import SenseIMU, Readings, Orientation
-from .environment import SenseEnvironment
+class SenseWarning(Warning):
+    "Base class for warnings raised by the Sense HAT"
 
+class SenseStickWarning(SenseWarning):
+    "Base class for warnings raised by the joystick on the Sense HAT"
 
-class SenseHAT(object):
-    def __init__(self):
-        super(SenseHAT, self).__init__()
-        self._screen = SenseScreen()
-        self._stick = SenseStick()
-        self._imu = SenseIMU()
-        self._environ = SenseEnvironment()
+class SenseStickBufferFull(SenseStickWarning):
+    "Warning raised when the joystick's event buffer fills"
 
-    @property
-    def screen(self):
-        return self._screen
+class SenseStickCallbackRead(SenseStickWarning):
+    """
+    Warning raised when :meth:`SenseStick.read` is called while callbacks are
+    active
+    """
 
-    @property
-    def stick(self):
-        return self._stick
-
-    @property
-    def imu(self):
-        return self._imu
-
-    @property
-    def environ(self):
-        return self._environ
-
-    @property
-    def rotate(self):
-        return self._screen.rotate
-
-    @rotate.setter
-    def rotate(self, value):
-        self._screen.rotate = value
-        self._stick.rotate = value

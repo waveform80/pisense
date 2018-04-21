@@ -1,7 +1,7 @@
 # vim: set et sw=4 sts=4 fileencoding=utf-8:
 #
-# Experimental API for the Sense HAT
-# Copyright (c) 2016 Dave Jones <dave@waveform.org.uk>
+# Alternative API for the Sense HAT
+# Copyright (c) 2016-2018 Dave Jones <dave@waveform.org.uk>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -42,4 +42,4 @@ color_dtype = np.dtype([
     (native_str('red'),   np.uint8),
     (native_str('green'), np.uint8),
     (native_str('blue'),  np.uint8),
-    ])
+])

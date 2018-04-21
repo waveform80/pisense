@@ -1,7 +1,7 @@
 # vim: set et sw=4 sts=4 fileencoding=utf-8:
 #
-# Experimental API for the Sense HAT
-# Copyright (c) 2016 Dave Jones <dave@waveform.org.uk>
+# Alternative API for the Sense HAT
+# Copyright (c) 2016-2018 Dave Jones <dave@waveform.org.uk>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -27,13 +27,17 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+Defines the :class:`SensePixels` and :class:`SenseScreen` classes for
+controlling and manipulating the RGB pixel array on the Sense HAT.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
     )
-str = type('')
 
 import io
 import os
@@ -42,7 +46,6 @@ import mmap
 import errno
 import time
 
-import RTIMU
 import numpy as np
 
 from .common import color_dtype
@@ -50,36 +53,61 @@ from .font import SenseFont
 
 
 class SensePixels(np.ndarray):
+    """
+    The :class:`SensePixels` class represents the state of the Sense HAT
+    screen as a two-dimensional numpy :class:`ndarray` derivative where each
+    element is a :class:`Color` object. This class is not intended to be
+    instantiated by the user directly; an instance can be obtained from the
+    :attr:`SenseScreen.pixels` attribute.
+    """
+    # pylint: disable=too-few-public-methods
+
     def __new__(cls):
+        # pylint: disable=protected-access
         result = np.ndarray.__new__(cls, shape=(8, 8), dtype=color_dtype)
         result._screen = None
         return result
 
     def __array_finalize__(self, obj):
+        # pylint: disable=protected-access,attribute-defined-outside-init
         if obj is None:
             return
         self._screen = getattr(obj, '_screen', None)
 
     def __setitem__(self, index, value):
+        # pylint: disable=protected-access
         super(SensePixels, self).__setitem__(index, value)
         if self._screen:
             # If we're a slice of the original pixels value, find the parent
             # that contains the complete array and send that to _set_pixels
-            a = self
-            while a.shape != (8, 8) and a.base is not None:
-                a = a.base
-            self._screen._set_pixels(a)
+            orig = self
+            while orig.shape != (8, 8) and orig.base is not None:
+                orig = orig.base
+            self._screen._set_pixels(orig)
 
     def __setslice__(self, i, j, sequence):
+        # pylint: disable=protected-access
         super(SensePixels, self).__setslice__(i, j, sequence)
         if self._screen:
-            a = self
-            while a.shape != (8, 8) and a.base is not None:
-                a = a.base
-            self._screen._set_pixels(a)
+            orig = self
+            while orig.shape != (8, 8) and orig.base is not None:
+                orig = orig.base
+            self._screen._set_pixels(orig)
 
 
 class SenseScreen(object):
+    """
+    The :class:`SenseScreen` class represents the RGB pixel display on the
+    Sense HAT. The :attr:pixels` attribute represents the display as a
+    two-dimensional numpy array which can be manipulated as well as read.
+    Several methods like :meth:`marquee`, :meth:`clear`, and :meth:`fade` are
+    provided for common effects. The :attr:`rotate` attribute can be modified
+    to rotate the display's output.
+
+    Users can either instantiate this class themselves, or can access an
+    instance from :attr:`SenseHAT.screen`.
+    """
+    # pylint: disable=too-many-instance-attributes
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
     def __init__(self):
@@ -108,8 +136,8 @@ class SenseScreen(object):
                 with io.open(os.path.join(device, 'name'), 'r') as f:
                     if f.read().strip() == self.SENSE_HAT_FB_NAME:
                         return os.path.join('/dev', os.path.basename(device))
-            except IOError as e:
-                if e.errno != errno.ENOENT:
+            except IOError as exc:
+                if exc.errno != errno.ENOENT:
                     raise
         raise RuntimeError('unable to locate SenseHAT framebuffer device')
 
@@ -174,10 +202,10 @@ class SenseScreen(object):
     def _get_rotate(self):
         return self._rotate
     def _set_rotate(self, value):
-        if value not in (0, 90, 180, 270):
-            raise ValueError('rotate must be 0, 90, 180, or 270')
+        if value % 90:
+            raise ValueError('rotate must be a multiple of 90')
         p = self.pixels
-        self._rotate = value
+        self._rotate = value % 360
         self.pixels = p
     rotate = property(_get_rotate, _set_rotate)
 

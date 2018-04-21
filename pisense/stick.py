@@ -1,7 +1,7 @@
 # vim: set et sw=4 sts=4 fileencoding=utf-8:
 #
-# Experimental API for the Sense HAT
-# Copyright (c) 2016 Dave Jones <dave@waveform.org.uk>
+# Alternative API for the Sense HAT
+# Copyright (c) 2016-2018 Dave Jones <dave@waveform.org.uk>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -27,14 +27,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+Defines the :class:`SenseStick` class representing the Sense HAT's joystick.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
     )
-native_str = str
-str = type('')
 
 import io
 import os
@@ -43,19 +45,37 @@ import errno
 import struct
 import select
 import warnings
-from collections import namedtuple, deque
-from threading import Thread, RLock
-from queue import Queue, Full, Empty
+from collections import namedtuple
+from threading import Thread, Event, RLock
+try:
+    from queue import Queue, Empty
+except ImportError:
+    from Queue import Queue, Empty
 
+from .exc import SenseStickBufferFull, SenseStickCallbackRead
+
+# native_str represents the "native" str type (bytes in Py 2, unicode in Py 3)
+# of the interpreter; str is then redefined to always represent unicode
+native_str = str  # pylint: disable=invalid-name
+str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
 InputEvent = namedtuple('InputEvent', ('timestamp', 'direction', 'action'))
 
 
-class SenseStickBufferFull(Warning):
-    "Warning raised when the joystick's event buffer fills"
-
-
 class SenseStick(object):
+    """
+    The :class:`SenseStick` class represents the joystick on the Sense HAT.
+    Users can either instantiate this class themselves, or can access an
+    instance from :attr:`SenseHAT.stick`.
+
+    The :meth:`read` method can be called to obtain :class:`InputEvent`
+    instances, or the instance can be treated as an iterator in which case
+    events will be yielded as they come in. The :attr:`rotate` attribute can
+    be modified to alter the orientation of events. Finally, several callback
+    attributes (:attr:`when_up`, :attr:`when_down`, etc.) can be assigned event
+    handlers.
+    """
+    # pylint: disable=too-many-instance-attributes
     SENSE_HAT_EVDEV_NAME = 'Raspberry Pi Sense HAT Joystick'
     EVENT_FORMAT = native_str('llHHI')
     EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
@@ -142,7 +162,7 @@ class SenseStick(object):
                                 self.KEY_RIGHT: 'right',
                                 self.KEY_ENTER: 'push',
                             }[code],
-                            state={
+                            action={
                                 self.STATE_PRESS:   'pressed',
                                 self.STATE_RELEASE: 'released',
                                 self.STATE_HOLD:    'held',
@@ -153,7 +173,7 @@ class SenseStick(object):
 
     def _run_callbacks(self):
         while not self._callbacks_close.wait(0) and not self._closing.wait(0):
-            event = self.read(0.1)
+            event = self._buffer.get(timeout=0.1)
             if event is not None:
                 with self._callbacks_lock:
                     try:
@@ -175,9 +195,20 @@ class SenseStick(object):
 
     def __iter__(self):
         while True:
-            yield self._buffer.get()
+            yield self.read()
+
+    def _get_rotate(self):
+        return self._rotate
+    def _set_rotate(self, value):
+        if value % 90:
+            raise ValueError('rotate must be a multiple of 90')
+        self._rotate = value % 360
+    rotate = property(_get_rotate, _set_rotate)
 
     def read(self, timeout=None):
+        if self._callbacks_thread is not None:
+            warnings.warn(SenseStickCallbackRead(
+                'read called while when_* callbacks are assigned'))
         try:
             return self._buffer.get(timeout=timeout)
         except Empty:

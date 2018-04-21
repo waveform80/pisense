@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # vim: set et sw=4 sts=4 fileencoding=utf-8:
 #
-# Experimental API for the Sense HAT
-# Copyright (c) 2016 Dave Jones <dave@waveform.org.uk>
+# Alternative API for the Sense HAT
+# Copyright (c) 2016-2018 Dave Jones <dave@waveform.org.uk>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -28,20 +28,20 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""An experimental API for the Raspberry Pi Sense HAT"""
+"An alternative API for the Raspberry Pi Sense HAT"
 
 import os
 import sys
 from setuptools import setup, find_packages
 
 if sys.version_info[0] == 2:
-    if not sys.version_info >= (2, 7):
+    if sys.version_info < (2, 7):
         raise ValueError('This package requires Python 2.7 or above')
 elif sys.version_info[0] == 3:
-    if not sys.version_info >= (3, 2):
+    if sys.version_info < (3, 2):
         raise ValueError('This package requires Python 3.2 or above')
 else:
-    raise ValueError('What version of Python is this?!')
+    raise ValueError('Unrecognized major version of Python')
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -52,47 +52,55 @@ except ImportError:
     pass
 
 __project__      = 'pisense'
-__version__      = '1.0'
+__version__      = '0.1'
 __author__       = 'Dave Jones'
 __author_email__ = 'dave@waveform.org.uk'
 __url__          = 'http://pisense.readthedocs.io/'
 __platforms__    = 'ALL'
 
 __classifiers__ = [
-    'Development Status :: 4 - Beta',
-    'Environment :: Console',
-    'Intended Audience :: Developers',
-    'License :: OSI Approved :: BSD License',
-    'Operating System :: POSIX :: Linux',
-    'Programming Language :: Python :: 2.7',
-    'Programming Language :: Python :: 3.2',
-    'Programming Language :: Python :: 3.3',
-    ]
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
+    "Topic :: Education",
+    "Operating System :: POSIX :: Linux",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 2",
+    "Programming Language :: Python :: 2.7",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.2",
+    "Programming Language :: Python :: 3.3",
+    "Programming Language :: Python :: 3.4",
+    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
 
 __keywords__ = [
-    'raspberrypi',
-    'sensehat',
-    ]
+    'raspberry', 'pi', 'sensehat',
+]
 
 __requires__ = [
     'numpy',
-    ]
+    'colorzero',
+]
 
 __extra_requires__ = {
     'doc':   ['sphinx'],
-    'test':  ['coverage', 'pytest', 'mock'],
-    }
+    'test':  ['pytest', 'coverage', 'mock'],
+}
 
 if sys.version_info[:2] == (3, 2):
+    # Particular versions are required for Python 3.2 compatibility
     __extra_requires__['doc'].extend([
-        # Particular versions are required for Python 3.2 compatibility. The
-        # ordering is reversed because that's what easy_install needs...
         'Jinja2<2.7',
         'MarkupSafe<0.16',
-        ])
+    ])
+    __extra_requires__['test'][1] = 'coverage<4.0dev'
 
 __entry_points__ = {
-    }
+}
 
 
 def main():
@@ -111,7 +119,7 @@ def main():
                 c.rsplit('::', 1)[1].strip()
                 for c in __classifiers__
                 if c.startswith('License ::')
-                ][0],
+            ][0],
             keywords             = __keywords__,
             packages             = find_packages(),
             include_package_data = True,
@@ -119,8 +127,8 @@ def main():
             install_requires     = __requires__,
             extras_require       = __extra_requires__,
             entry_points         = __entry_points__,
-            )
+        )
+
 
 if __name__ == '__main__':
     main()
-
