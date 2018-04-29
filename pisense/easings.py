@@ -27,19 +27,37 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+Defines various easing functions for the screen animation methods.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
-    )
-native_str = str
-str = type('')
+)
 
-import numpy as np
 
-color_dtype = np.dtype([
-    (native_str('red'),   np.uint8),
-    (native_str('green'), np.uint8),
-    (native_str('blue'),  np.uint8),
-])
+def linear(steps):
+    "Linear easing function; yields *steps* values between 0.0 and 1.0"
+    for t in range(steps):
+        yield t / (steps - 1)
+
+
+def ease_in(steps):
+    "Quadratic ease-in function; yields *steps* values between 0.0 and 1.0"
+    for t in linear(steps):
+        yield t ** 2
+
+
+def ease_out(steps):
+    "Quadratic ease-out function; yields *steps* values between 0.0 and 1.0"
+    for t in linear(steps):
+        yield t * (2 - t)
+
+
+def ease_in_out(steps):
+    "Quadratic ease-in-out function; yields *steps* values between 0.0 and 1.0"
+    for t in linear(steps):
+        yield 2 * t ** 2 if t < 0.5 else (4 - 2 * t) * t - 1
