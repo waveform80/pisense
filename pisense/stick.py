@@ -46,7 +46,7 @@ import struct
 import select
 import warnings
 from collections import namedtuple
-from threading import Thread, Event, RLock
+from threading import Thread, Event, Lock
 try:
     from queue import Queue, Empty
 except ImportError:
@@ -79,7 +79,6 @@ class SenseStick(object):
     SENSE_HAT_EVDEV_NAME = 'Raspberry Pi Sense HAT Joystick'
     EVENT_FORMAT = native_str('llHHI')
     EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
-    EVENT_BUFFER = 100
 
     EV_KEY = 0x01
 
@@ -93,13 +92,13 @@ class SenseStick(object):
     KEY_DOWN = 108
     KEY_ENTER = 28
 
-    def __init__(self):
-        self._callbacks_lock = RLock()
+    def __init__(self, max_events=100):
+        self._callbacks_lock = Lock()
         self._callbacks_close = Event()
         self._callbacks = {}
         self._callbacks_thread = None
         self._closing = Event()
-        self._buffer = Queue(maxsize=self.EVENT_BUFFER)
+        self._buffer = Queue(maxsize=max_events)
         self._read_thread = Thread(
             target=self._read_stick,
             args=(io.open(self._stick_device(), 'rb', buffering=0),))
@@ -160,7 +159,7 @@ class SenseStick(object):
                                 self.KEY_DOWN:  'down',
                                 self.KEY_LEFT:  'left',
                                 self.KEY_RIGHT: 'right',
-                                self.KEY_ENTER: 'push',
+                                self.KEY_ENTER: 'enter',
                             }[code],
                             action={
                                 self.STATE_PRESS:   'pressed',
@@ -177,9 +176,10 @@ class SenseStick(object):
             if event is not None:
                 with self._callbacks_lock:
                     try:
-                        self._callbacks[event.direction](event)
+                        cb = self._callbacks[event.direction]
                     except KeyError:
                         pass
+                cb(event)
 
     def _start_stop_callbacks(self):
         with self._callbacks_lock:
@@ -226,7 +226,7 @@ class SenseStick(object):
                 self._callbacks['up'] = value
             else:
                 self._callbacks.pop('up', None)
-            self._start_stop_callbacks()
+        self._start_stop_callbacks()
 
     @property
     def when_down(self):
@@ -240,7 +240,7 @@ class SenseStick(object):
                 self._callbacks['down'] = value
             else:
                 self._callbacks.pop('down', None)
-            self._start_stop_callbacks()
+        self._start_stop_callbacks()
 
     @property
     def when_left(self):
@@ -254,7 +254,7 @@ class SenseStick(object):
                 self._callbacks['left'] = value
             else:
                 self._callbacks.pop('left', None)
-            self._start_stop_callbacks()
+        self._start_stop_callbacks()
 
     @property
     def when_right(self):
@@ -268,18 +268,18 @@ class SenseStick(object):
                 self._callbacks['right'] = value
             else:
                 self._callbacks.pop('right', None)
-            self._start_stop_callbacks()
+        self._start_stop_callbacks()
 
     @property
     def when_enter(self):
         with self._callbacks_lock:
-            return self._callbacks.get('push')
+            return self._callbacks.get('enter')
 
     @when_enter.setter
     def when_enter(self, value):
         with self._callbacks_lock:
             if value:
-                self._callbacks['push'] = value
+                self._callbacks['enter'] = value
             else:
-                self._callbacks.pop('push', None)
-            self._start_stop_callbacks()
+                self._callbacks.pop('enter', None)
+        self._start_stop_callbacks()
