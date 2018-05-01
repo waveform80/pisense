@@ -39,6 +39,7 @@ from .screen import SenseScreen, color_dtype
 from .stick import SenseStick, InputEvent
 from .orientation import SenseIMU, Readings, Orientation
 from .environment import SenseEnvironment
+from .easings import linear, ease_in, ease_out, ease_in_out
 
 
 class SenseHAT(object):

@@ -87,7 +87,7 @@ class SenseArray(np.ndarray):
             orig = self
             while orig.shape != (8, 8) and orig.base is not None:
                 orig = orig.base
-            self._screen._set_pixels(orig)
+            self._screen._set_array(orig)
 
     def __setslice__(self, i, j, sequence):
         # pylint: disable=protected-access
@@ -96,7 +96,7 @@ class SenseArray(np.ndarray):
             orig = self
             while orig.shape != (8, 8) and orig.base is not None:
                 orig = orig.base
-            self._screen._set_pixels(orig)
+            self._screen._set_array(orig)
 
     def copy(self, order='C'):
         result = super(SenseArray, self).copy(order)
@@ -151,40 +151,34 @@ class SenseScreen(object):
         arr = self._array
         arr._screen = None
         try:
-            arr = rgb565_to_rgb(self.raw)
+            rgb565_to_rgb(self.raw, arr)
             arr = self._undo_transforms(arr)
         finally:
             arr._screen = self
-        return result
+        return arr
     def _set_array(self, value):
         if isinstance(value, np.ndarray):
             value = value.view(color_dtype).reshape((8, 8))
         else:
             value = np.array(value, dtype=color_dtype).reshape((8, 8))
         value = self._apply_transforms(value)
-        self.raw = (
-                ((value['red']   & 0xF8).astype(np.uint16) << 8) |
-                ((value['green'] & 0xFC).astype(np.uint16) << 3) |
-                ((value['blue']  & 0xF8).astype(np.uint16) >> 3)
-                )
+        rgb_to_rgb565(value, self.raw)
     array = property(_get_array, _set_array)
 
     def _get_vflip(self):
         return self._vflip
     def _set_vflip(self, value):
-        # TODO fix this
-        p = self.pixels
+        p = self._undo_transforms(self.raw)
         self._vflip = bool(value)
-        self.pixels = p
+        self.raw = self._apply_transforms(p)
     vflip = property(_get_vflip, _set_vflip)
 
     def _get_hflip(self):
         return self._hflip
     def _set_hflip(self, value):
-        # TODO fix this
-        p = self.pixels
+        p = self._undo_transforms(self.raw)
         self._hflip = bool(value)
-        self.pixels = p
+        self.raw = self._apply_transforms(p)
     hflip = property(_get_hflip, _set_hflip)
 
     def _get_rotation(self):
@@ -192,10 +186,9 @@ class SenseScreen(object):
     def _set_rotation(self, value):
         if value % 90:
             raise ValueError('rotation must be a multiple of 90')
-        # TODO fix this
-        p = self.pixels
+        p = self._undo_transforms(self.raw)
         self._rotation = value % 360
-        self.pixels = p
+        self.raw = self._apply_transforms(p)
     rotation = property(_get_rotation, _set_rotation)
 
     def _apply_transforms(self, arr):
@@ -222,8 +215,9 @@ class SenseScreen(object):
         arr = rgb565_to_image(arr)
         return arr
 
-    def draw(self, img):
-        if not isinstance(img, Image.Image) or img.size != (8, 8) or img.mode != 'RGB':
+    def draw(self, buf):
+        img = buf_to_image(buf)
+        if img.size != (8, 8):
             raise ValueError('image must be an 8x8 RGB PIL Image')
         arr = image_to_rgb565(img)
         arr = self._apply_transforms(arr)
@@ -235,10 +229,7 @@ class SenseScreen(object):
             self.raw = self._apply_transforms(frame)
             time.sleep(delay)
 
-    def marquee(
-            # XXX Is there a better default on Raspbian?
-            self, text, font='Piboto-Regular', size=7, foreground=(1, 1, 1),
-            background=(0, 0, 0), letter_space=1, steps=None, fps=10):
+    def _load_font(self, font, size):
         try:
             f = self._font_cache[font]
         except KeyError:
@@ -246,44 +237,142 @@ class SenseScreen(object):
                 f = ImageFont.load_default()
             else:
                 f = ImageFont.truetype(font, size)
-            self._font_cache
-        size = f.getsize(text)
-        im = Image.new('RGB', (size[0] + 16, size[1]))
-        draw = ImageDraw.Draw(im)
-        draw.rectangle(((0, 0), im.size), Color(*background).rgb_bytes)
-        draw.text((0, 0), text, Color(*foreground).rgb_bytes, f)
-        if steps is None:
-            steps = im.size[0]
-        arr = image_to_rgb565(img)
-        x_inc = im.size[0] / steps
-        frames = [
-            arr[im.size[1] - 8:im.size[1], x:x + 8]
-            for x_step in range(steps)
-            for x in (x_step * x_inc,)
-        ]
-        self._play(frames, fps)
+            self._font_cache[font] = f
+        return f
 
-    def fade_to(self, image, steps=10, fps=10, easing=linear):
-        base = self.image()
-        target = buf_to_image(image)
+    def scroll_text(
+            # XXX Is there a better default on Raspbian?
+            self, text, font='DejaVuSans', size=9, foreground=(1, 1, 1),
+            background=(0, 0, 0), letter_space=1, direction='left',
+            frames=None, fps=15):
+        f = self._load_font(font, size)
+        size = f.getsize(text)
+        # +16 for blank screens either side (to let the text scroll onto and
+        # off of the display) and +2 to compensate for spillage due to anti-
+        # aliasing
+        img = Image.new('RGB', (size[0] + 16 + 2, 8))
+        if frames is None:
+            frames = img.size[0] - 8
+        check_frames(frames)
+        check_fps(fps)
+        x_inc = (img.size[0] - 8) / frames
+        try:
+            x_steps = {
+                'left': range(frames),
+                'right': range(frames, -1, -1),
+            }[direction]
+        except KeyError:
+            raise ValueError('invalid direction')
+        draw = ImageDraw.Draw(img)
+        draw.rectangle(((0, 0), img.size), Color(*background).rgb_bytes)
+        draw.text((9, 8 - size[1]), text, Color(*foreground).rgb_bytes, f)
+        arr = image_to_rgb565(img)
+        arrays = [
+            arr[:, x:x + 8]
+            for x_step in x_steps
+            for x in (int(x_step * x_inc),)
+        ]
+        # Guarantee the final frame is solid background color
+        arrays[-1] = np.array(
+            (Color(*background).rgb565,) * 64, np.uint16).reshape(8, 8)
+        self._play(arrays, fps)
+
+    def fade_to(self, image, frames=15, fps=15, easing=linear):
+        check_frames(frames)
+        check_fps(fps)
+        start = self.image()
+        finish = buf_to_image(image)
         mask = np.empty((8, 8), np.uint8)
         mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
-        frames = []
-        for f in easing(steps):
+        arrays = []
+        for f in easing(frames):
+            mask[...] = int(255 * f)
+            frame = start.copy()
+            frame.paste(finish, (0, 0), mask_img)
+            arrays.append(image_to_rgb565(frame))
+        self._play(arrays, fps)
+
+    def slide_to(self, image, direction='left', cover=False, frames=15, fps=15,
+                 easing=linear):
+        check_frames(frames)
+        check_fps(fps)
+        try:
+            delta_x, delta_y = {
+                'left':  (-1, 0),
+                'right': (1, 0),
+                'up':    (0, -1),
+                'down':  (0, 1),
+            }[direction]
+        except KeyError:
+            raise ValueError('invalid direction: ' % direction)
+        start = self.image().resize((64, 64))
+        image = buf_to_image(image)
+        finish = image.resize((64, 64))
+        if not cover:
+            canvas = Image.new('RGB', (64, 64))
+        arrays = []
+        for f in easing(frames):
+            x = int(delta_x * f * 64)
+            y = int(delta_y * f * 64)
+            if cover:
+                canvas = start.copy()
+            else:
+                canvas.paste(start, (x, y))
+            canvas.paste(finish, (64 * -delta_x + x, 64 * -delta_y + y))
+            arrays.append(image_to_rgb565(canvas.resize((8, 8), Image.BOX)))
+        # Ensure the final frame is the finish image (without bicubic blur)
+        arrays[-1] = image_to_rgb565(image)
+        self._play(arrays, fps)
+
+    def zoom_to(self, image, center=(4, 4), direction='in', frames=15, fps=15,
+                easing=linear):
+        check_frames(frames)
+        check_fps(fps)
+        if direction == 'in':
+            base = self.image().resize((64, 64))
+            top = buf_to_image(image)
+            final = top
+        elif direction == 'out':
+            final = buf_to_image(image)
+            base = final.resize((64, 64))
+            top = self.image().copy()
+        else:
+            raise ValueError('invalid direction: %s' % direction)
+        arrays = []
+        mask = np.empty((8, 8), np.uint8)
+        mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
+        for f in easing(frames):
+            if direction == 'out':
+                f = 1 - f
             mask[...] = int(255 * f)
             frame = base.copy()
-            frame.paste(target, (0, 0), mask_img)
-            frames.append(image_to_rgb565(frame))
-        self._play(frames, fps)
+            frame.paste(top, (center[0] * 8, center[1] * 8), mask_img)
+            frame = frame.crop((
+                int(center[0] * f * 8),
+                int(center[1] * f * 8),
+                int(64 - f * 8 * (8 - (center[0] + 1))),
+                int(64 - f * 8 * (8 - (center[1] + 1))),
+            ))
+            arrays.append(image_to_rgb565(frame.resize((8, 8), Image.BOX)))
+        # Ensure the final frame is the finish image (without bicubic blur)
+        arrays[-1] = image_to_rgb565(final)
+        self._play(arrays, fps)
 
-    def slide_to(self, image, direction='left', steps=10, fps=10, easing=linear):
-        raise NotImplementedError()
 
-    def cover_with(self, image, direction='left', steps=10, fps=10, easing=linear):
-        raise NotImplementedError()
+def check_frames(frames):
+    """
+    Ensures *frames* is greater than or equal to 1.
+    """
+    if frames < 1:
+        raise ValueError('frames must be at least 1')
 
-    def expand_to(self, image, center=(4, 4), steps=10, fps=10, easing=linear):
-        raise NotImplementedError()
+
+def check_fps(fps):
+    """
+    Ensures *fps* is greater than 0.
+    """
+    if fps <= 0:
+        raise ValueError('fps must be a positive value')
 
 
 def image_to_rgb888(img):
@@ -312,15 +401,48 @@ def image_to_rgb565(img):
 
 
 def rgb888_to_image(arr):
-    raise NotImplementedError()
+    """
+    Convert a numpy :class:`ndarray` in RGB888 format (unsigned 8-bit values in
+    3 planes) to a PIL :class:`Image`.
+    """
+    # XXX Change to exception
+    assert arr.dtype == np.uint8 and len(arr.shape) == 3 and arr.shape[2] == 3
+    return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
+                            arr, 'raw', 'RGB', 0, 1)
 
 
 def rgb888_to_rgb565(arr, out=None):
-    raise NotImplementedError()
+    if out is None:
+        out = np.empty(arr.shape[:2], np.uint16)
+    else:
+        # XXX Change to exception
+        assert out.shape == arr.shape[:2] and out.dtype == np.uint16
+    out[...] = (
+        ((arr[..., 0] & 0xF8).astype(np.uint16) << 8) |
+        ((arr[..., 1] & 0xFC).astype(np.uint16) << 3) |
+        ((arr[..., 2] & 0xF8).astype(np.uint16) >> 3)
+    )
+    return out
 
 
 def rgb565_to_rgb888(arr, out=None):
-    raise NotImplementedError()
+    if out is None:
+        out = np.empty(arr.shape + (3,), np.uint8)
+    else:
+        # XXX Change to exception
+        assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
+    out[..., 0] = ((arr & 0xF800) >> 8).astype(np.uint8)
+    out[..., 1] = ((arr & 0x07E0) >> 3).astype(np.uint8)
+    out[..., 2] = ((arr & 0x001F) << 3).astype(np.uint8)
+    # Fill the bottom bits
+    out[..., 0] |= out[..., 0] >> 5
+    out[..., 1] |= out[..., 1] >> 6
+    out[..., 2] |= out[..., 2] >> 5
+    return out
+
+
+def rgb565_to_image(arr):
+    return rgb888_to_image(rgb565_to_rgb888(arr))
 
 
 def rgb_to_rgb888(arr, out=None):
@@ -334,10 +456,9 @@ def rgb_to_rgb888(arr, out=None):
     else:
         # XXX Change to exception
         assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
-    arr = (arr * 255).astype(np.uint8)
-    out[..., 0] = arr['r']
-    out[..., 1] = arr['g']
-    out[..., 2] = arr['b']
+    out[..., 0] = arr['r'] * 255
+    out[..., 1] = arr['g'] * 255
+    out[..., 2] = arr['b'] * 255
     return out
 
 
@@ -411,7 +532,7 @@ def buf_to_image(buf):
 def buf_to_rgb888(buf):
     if isinstance(buf, Image.Image):
         arr = image_to_rgb888(buf)
-    elif isinstance(buf, np.ndarray) and 2 <= buf.shape <= 3:
+    elif isinstance(buf, np.ndarray) and 2 <= len(buf.shape) <= 3:
         if len(buf.shape) == 2:
             if buf.dtype == color_dtype:
                 arr = rgb_to_rgb888(buf)
