@@ -54,13 +54,14 @@ from PIL import Image, ImageFont, ImageDraw
 from colorzero import Color
 
 from .easings import linear
-
-
-color_dtype = np.dtype([
-    (native_str('r'), np.float16),
-    (native_str('g'), np.float16),
-    (native_str('b'), np.float16),
-])
+from .images import (
+    color,
+    buf_to_image,
+    image_to_rgb565,
+    rgb565_to_image,
+    rgb_to_rgb565,
+    rgb565_to_rgb,
+)
 
 
 class SenseArray(np.ndarray):
@@ -68,7 +69,7 @@ class SenseArray(np.ndarray):
 
     def __new__(cls):
         # pylint: disable=protected-access
-        result = np.ndarray.__new__(cls, shape=(8, 8), dtype=color_dtype)
+        result = np.ndarray.__new__(cls, shape=(8, 8), dtype=color)
         result._screen = None
         return result
 
@@ -108,7 +109,7 @@ class SenseScreen(object):
     # pylint: disable=too-many-instance-attributes
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
-    def __init__(self):
+    def __init__(self, easing=linear):
         self._fb_file = io.open(self._fb_device(), 'wb+')
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
@@ -118,6 +119,8 @@ class SenseScreen(object):
         self._vflip = False
         self._rotation = 0
         self._font_cache = {}
+        self.fps = 15
+        self.easing = easing
 
     def close(self):
         self._fb_array = None
@@ -158,9 +161,9 @@ class SenseScreen(object):
         return arr
     def _set_array(self, value):
         if isinstance(value, np.ndarray):
-            value = value.view(color_dtype).reshape((8, 8))
+            value = value.view(color).reshape((8, 8))
         else:
-            value = np.array(value, dtype=color_dtype).reshape((8, 8))
+            value = np.array(value, dtype=color).reshape((8, 8))
         value = self._apply_transforms(value)
         rgb_to_rgb565(value, self.raw)
     array = property(_get_array, _set_array)
@@ -223,8 +226,8 @@ class SenseScreen(object):
         arr = self._apply_transforms(arr)
         self.raw = arr
 
-    def _play(self, frames, fps=10):
-        delay = 1 / fps
+    def _play(self, frames):
+        delay = 1 / self.fps
         for frame in frames:
             self.raw = self._apply_transforms(frame)
             time.sleep(delay)
@@ -244,22 +247,22 @@ class SenseScreen(object):
             # XXX Is there a better default on Raspbian?
             self, text, font='DejaVuSans', size=9, foreground=(1, 1, 1),
             background=(0, 0, 0), letter_space=1, direction='left',
-            frames=None, fps=15):
+            duration=None):
         f = self._load_font(font, size)
         size = f.getsize(text)
         # +16 for blank screens either side (to let the text scroll onto and
         # off of the display) and +2 to compensate for spillage due to anti-
         # aliasing
         img = Image.new('RGB', (size[0] + 16 + 2, 8))
-        if frames is None:
-            frames = img.size[0] - 8
-        check_frames(frames)
-        check_fps(fps)
-        x_inc = (img.size[0] - 8) / frames
+        if duration is None:
+            steps = img.size[0] - 8
+        else:
+            steps = int(duration * self.fps)
+        x_inc = (img.size[0] - 8) / steps
         try:
             x_steps = {
-                'left': range(frames),
-                'right': range(frames, -1, -1),
+                'left': range(steps),
+                'right': range(steps, -1, -1),
             }[direction]
         except KeyError:
             raise ValueError('invalid direction')
@@ -267,35 +270,35 @@ class SenseScreen(object):
         draw.rectangle(((0, 0), img.size), Color(*background).rgb_bytes)
         draw.text((9, 8 - size[1]), text, Color(*foreground).rgb_bytes, f)
         arr = image_to_rgb565(img)
-        arrays = [
+        frames = [
             arr[:, x:x + 8]
             for x_step in x_steps
             for x in (int(x_step * x_inc),)
         ]
         # Guarantee the final frame is solid background color
-        arrays[-1] = np.array(
+        frames[-1] = np.array(
             (Color(*background).rgb565,) * 64, np.uint16).reshape(8, 8)
-        self._play(arrays, fps)
+        self._play(frames)
 
-    def fade_to(self, image, frames=15, fps=15, easing=linear):
-        check_frames(frames)
-        check_fps(fps)
+    def fade_to(self, image, duration=1, easing=None):
+        if easing is None:
+            easing = self.easing
         start = self.image()
         finish = buf_to_image(image)
         mask = np.empty((8, 8), np.uint8)
         mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
-        arrays = []
-        for f in easing(frames):
+        frames = []
+        for f in easing(int(duration * self.fps)):
             mask[...] = int(255 * f)
             frame = start.copy()
             frame.paste(finish, (0, 0), mask_img)
-            arrays.append(image_to_rgb565(frame))
-        self._play(arrays, fps)
+            frames.append(image_to_rgb565(frame))
+        self._play(frames)
 
-    def slide_to(self, image, direction='left', cover=False, frames=15, fps=15,
-                 easing=linear):
-        check_frames(frames)
-        check_fps(fps)
+    def slide_to(self, image, direction='left', cover=False, duration=1,
+                 easing=None):
+        if easing is None:
+            easing = self.easing
         try:
             delta_x, delta_y = {
                 'left':  (-1, 0),
@@ -310,8 +313,8 @@ class SenseScreen(object):
         finish = image.resize((64, 64))
         if not cover:
             canvas = Image.new('RGB', (64, 64))
-        arrays = []
-        for f in easing(frames):
+        frames = []
+        for f in easing(int(duration * self.fps)):
             x = int(delta_x * f * 64)
             y = int(delta_y * f * 64)
             if cover:
@@ -319,15 +322,15 @@ class SenseScreen(object):
             else:
                 canvas.paste(start, (x, y))
             canvas.paste(finish, (64 * -delta_x + x, 64 * -delta_y + y))
-            arrays.append(image_to_rgb565(canvas.resize((8, 8), Image.BOX)))
+            frames.append(image_to_rgb565(canvas.resize((8, 8), Image.BOX)))
         # Ensure the final frame is the finish image (without bicubic blur)
-        arrays[-1] = image_to_rgb565(image)
-        self._play(arrays, fps)
+        frames[-1] = image_to_rgb565(image)
+        self._play(frames)
 
-    def zoom_to(self, image, center=(4, 4), direction='in', frames=15, fps=15,
-                easing=linear):
-        check_frames(frames)
-        check_fps(fps)
+    def zoom_to(self, image, center=(4, 4), direction='in', duration=1,
+                easing=None):
+        if easing is None:
+            easing = self.easing
         if direction == 'in':
             base = self.image().resize((64, 64))
             top = buf_to_image(image)
@@ -338,10 +341,10 @@ class SenseScreen(object):
             top = self.image().copy()
         else:
             raise ValueError('invalid direction: %s' % direction)
-        arrays = []
+        frames = []
         mask = np.empty((8, 8), np.uint8)
         mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
-        for f in easing(frames):
+        for f in easing(int(duration * self.fps)):
             if direction == 'out':
                 f = 1 - f
             mask[...] = int(255 * f)
@@ -353,212 +356,7 @@ class SenseScreen(object):
                 int(64 - f * 8 * (8 - (center[0] + 1))),
                 int(64 - f * 8 * (8 - (center[1] + 1))),
             ))
-            arrays.append(image_to_rgb565(frame.resize((8, 8), Image.BOX)))
+            frames.append(image_to_rgb565(frame.resize((8, 8), Image.BOX)))
         # Ensure the final frame is the finish image (without bicubic blur)
-        arrays[-1] = image_to_rgb565(final)
-        self._play(arrays, fps)
-
-
-def check_frames(frames):
-    """
-    Ensures *frames* is greater than or equal to 1.
-    """
-    if frames < 1:
-        raise ValueError('frames must be at least 1')
-
-
-def check_fps(fps):
-    """
-    Ensures *fps* is greater than 0.
-    """
-    if fps <= 0:
-        raise ValueError('fps must be a positive value')
-
-
-def image_to_rgb888(img):
-    """
-    Convert *img* (a PIL :class:`Image`) to RGB888 format in a numpy
-    :class:`ndarray` with shape (8, 8, 3).
-    """
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
-    try:
-        buf = img.tobytes()
-    except AttributeError:
-        # Ooooooold PIL
-        buf = img.tostring()
-    return np.frombuffer(buf, dtype=np.uint8).reshape(
-        (img.size[1], img.size[0], 3)
-    )
-
-
-def image_to_rgb565(img):
-    """
-    Convert *img* (a PIL :class:`Image`) to RGB565 format in a numpy
-    :class:`ndarray` with shape (8, 8).
-    """
-    return rgb888_to_rgb565(image_to_rgb888(img))
-
-
-def rgb888_to_image(arr):
-    """
-    Convert a numpy :class:`ndarray` in RGB888 format (unsigned 8-bit values in
-    3 planes) to a PIL :class:`Image`.
-    """
-    # XXX Change to exception
-    assert arr.dtype == np.uint8 and len(arr.shape) == 3 and arr.shape[2] == 3
-    return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
-                            arr, 'raw', 'RGB', 0, 1)
-
-
-def rgb888_to_rgb565(arr, out=None):
-    if out is None:
-        out = np.empty(arr.shape[:2], np.uint16)
-    else:
-        # XXX Change to exception
-        assert out.shape == arr.shape[:2] and out.dtype == np.uint16
-    out[...] = (
-        ((arr[..., 0] & 0xF8).astype(np.uint16) << 8) |
-        ((arr[..., 1] & 0xFC).astype(np.uint16) << 3) |
-        ((arr[..., 2] & 0xF8).astype(np.uint16) >> 3)
-    )
-    return out
-
-
-def rgb565_to_rgb888(arr, out=None):
-    if out is None:
-        out = np.empty(arr.shape + (3,), np.uint8)
-    else:
-        # XXX Change to exception
-        assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
-    out[..., 0] = ((arr & 0xF800) >> 8).astype(np.uint8)
-    out[..., 1] = ((arr & 0x07E0) >> 3).astype(np.uint8)
-    out[..., 2] = ((arr & 0x001F) << 3).astype(np.uint8)
-    # Fill the bottom bits
-    out[..., 0] |= out[..., 0] >> 5
-    out[..., 1] |= out[..., 1] >> 6
-    out[..., 2] |= out[..., 2] >> 5
-    return out
-
-
-def rgb565_to_image(arr):
-    return rgb888_to_image(rgb565_to_rgb888(arr))
-
-
-def rgb_to_rgb888(arr, out=None):
-    """
-    Convert a numpy :class:`ndarray` in RGB format (structured floating-point
-    type with 3 values each between 0 and 1) to RGB888 format (unsigned 8-bit
-    values in 3 planes).
-    """
-    if out is None:
-        out = np.empty(arr.shape + (3,), np.uint8)
-    else:
-        # XXX Change to exception
-        assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
-    out[..., 0] = arr['r'] * 255
-    out[..., 1] = arr['g'] * 255
-    out[..., 2] = arr['b'] * 255
-    return out
-
-
-def rgb888_to_rgb(arr, out=None):
-    """
-    Convert a numpy :class:`ndarray` in RGB888 format (unsigned 8-bit values
-    in 3 planes) to RGB format (structured floating-point type with 3 values,
-    each between 0 and 1).
-    1.
-    """
-    if out is None:
-        out = np.empty(arr.shape[:2], color_dtype)
-    else:
-        # XXX Change to exception
-        assert out.shape == arr.shape[:2] and out.dtype == color_dtype
-    arr = arr.astype(np.float16) / 255
-    out['r'] = arr[..., 0]
-    out['g'] = arr[..., 1]
-    out['b'] = arr[..., 2]
-    return out
-
-
-def rgb_to_rgb565(arr, out=None):
-    """
-    Convert a numpy :class:`ndarray` in RGB format (structured floating-point
-    type with 3 values each between 0 and 1) to RGB565 format (unsigned 16-bit
-    values with 5 bits for red and blue, and 6 bits for green laid out
-    RRRRRGGGGGGBBBBB).
-    """
-    if out is None:
-        out = np.zeros(arr.shape, np.uint16)
-    else:
-        # XXX Change to exception
-        assert out.shape == arr.shape and out.dtype == np.uint16
-        out[...] = 0
-    out |= (arr['r'] * 0x1F).astype(np.uint16) << 11
-    out |= (arr['g'] * 0x3F).astype(np.uint16) << 5
-    out |= (arr['b'] * 0x1F).astype(np.uint16)
-    return out
-
-
-def rgb565_to_rgb(arr, out=None):
-    """
-    Convert a numpy :class:`ndarray` in RGB565 format (unsigned 16-bit values
-    with 5 bits for red and blue, and 6 bits for green laid out
-    RRRRRGGGGGGBBBBB) to RGB format (structured  floating-point type with 3
-    values each between 0 and 1).
-    """
-    if out is None:
-        out = np.empty(arr.shape, color_dtype)
-    else:
-        assert out.shape == arr.shape and out.dtype == color_dtype
-    out['r'] = ((arr & 0xF800) / 0xF800).astype(np.float16)
-    out['g'] = ((arr & 0x07E0) / 0x07E0).astype(np.float16)
-    out['b'] = ((arr & 0x001F) / 0x001F).astype(np.float16)
-    return out
-
-
-def buf_to_image(buf):
-    if isinstance(buf, Image.Image):
-        if buf.mode != 'RGB':
-            return buf.convert('RGB')
-        else:
-            return buf
-    else:
-        arr = buf_to_rgb888(buf)
-        return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
-                                arr, 'raw', 'RGB', 0, 1)
-
-
-def buf_to_rgb888(buf):
-    if isinstance(buf, Image.Image):
-        arr = image_to_rgb888(buf)
-    elif isinstance(buf, np.ndarray) and 2 <= len(buf.shape) <= 3:
-        if len(buf.shape) == 2:
-            if buf.dtype == color_dtype:
-                arr = rgb_to_rgb888(buf)
-            elif buf.dtype == np.uint8:
-                arr = np.dstack((buf, buf, buf))
-            else:
-                raise ValueError("can't coerce dtype %s to uint8" % buf.dtype)
-        else:
-            if buf.dtype != np.uint8:
-                raise ValueError("can't coerce dtype %s to uint8" % buf.dtype)
-            arr = buf
-    else:
-        arr = np.frombuffer(buf, np.uint8)
-        if len(arr) == 192:
-            arr = arr.reshape((8, 8, 3))
-        elif len(arr) == 64:
-            arr = arr.reshape((8, 8))
-            arr = np.dstack((arr, arr, arr)) # me hearties!
-        else:
-            raise ValueError("buffer must be 8x8 pixels in size")
-    return arr
-
-
-def buf_to_rgb(buf):
-    if isinstance(buf, np.ndarray) and buf.dtype == color_dtype:
-        return buf
-    else:
-        arr = buf_to_rgb888(buf)
-        return arr.astype(np.float16) / 255
+        frames[-1] = image_to_rgb565(final)
+        self._play(frames)
