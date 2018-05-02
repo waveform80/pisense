@@ -68,10 +68,10 @@ class SenseHAT(object):
         return self._environ
 
     @property
-    def rotate(self):
-        return self._screen.rotate
+    def rotation(self):
+        return self._screen.rotation
 
-    @rotate.setter
-    def rotate(self, value):
-        self._screen.rotate = value
-        self._stick.rotate = value
+    @rotation.setter
+    def rotation(self, value):
+        self._screen.rotation = value
+        self._stick.rotation = value

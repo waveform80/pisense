@@ -59,7 +59,7 @@ from .exc import SenseStickBufferFull, SenseStickCallbackRead
 native_str = str  # pylint: disable=invalid-name
 str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
-InputEvent = namedtuple('InputEvent', ('timestamp', 'direction', 'action'))
+StickEvent = namedtuple('StickEvent', ('timestamp', 'direction', 'pressed', 'held'))
 
 
 class SenseStick(object):
@@ -68,12 +68,21 @@ class SenseStick(object):
     Users can either instantiate this class themselves, or can access an
     instance from :attr:`SenseHAT.stick`.
 
-    The :meth:`read` method can be called to obtain :class:`InputEvent`
+    The :meth:`read` method can be called to obtain :class:`StickEvent`
     instances, or the instance can be treated as an iterator in which case
-    events will be yielded as they come in. The :attr:`rotate` attribute can
-    be modified to alter the orientation of events. Finally, several callback
-    attributes (:attr:`when_up`, :attr:`when_down`, etc.) can be assigned event
-    handlers.
+    events will be yielded as they come in.
+
+    Alternatively, handler functions can be assigned to the attributes
+    :attr:`when_up`, :attr:`when_down`, :attr:`when_left`, :attr:`when_right`,
+    :attr:`when_enter`, and/or :attr:`when_any`. The assigned functions will
+    be called when any matching event occurs.
+
+    Finally, the attributes :attr:`up`, :attr:`down`, :attr:`left`,
+    :attr:`right`, and attr:`enter` can be polled to determine the current
+    state of the joystick.
+
+    The :attr:`rotation` attribute can be modified to alter the orientation of
+    events, and the aforementioned attributes.
     """
     # pylint: disable=too-many-instance-attributes
     SENSE_HAT_EVDEV_NAME = 'Raspberry Pi Sense HAT Joystick'
@@ -104,6 +113,18 @@ class SenseStick(object):
             args=(io.open(self._stick_device(), 'rb', buffering=0),))
         self._read_thread.daemon = True
         self._read_thread.start()
+        # This is just a guess; we can't know the actual joystick state at
+        # initialization. However, if it's incorrect, future events should
+        # correct this
+        self._pressed = set()
+        self._held = set()
+        self._rot_map = {
+            SenseStick.KEY_UP: SenseStick.KEY_RIGHT,
+            SenseStick.KEY_LEFT: SenseStick.KEY_UP,
+            SenseStick.KEY_DOWN: SenseStick.KEY_LEFT,
+            SenseStick.KEY_RIGHT: SenseStick.KEY_DOWN,
+            SenseStick.KEY_ENTER: SenseStick.KEY_ENTER,
+        }
 
     def close(self):
         if self._read_thread:
@@ -127,7 +148,7 @@ class SenseStick(object):
         for evdev in glob.glob('/sys/class/input/event*'):
             try:
                 with io.open(os.path.join(evdev, 'device', 'name'), 'r') as f:
-                    if f.read().strip() == self.SENSE_HAT_EVDEV_NAME:
+                    if f.read().strip() == SenseStick.SENSE_HAT_EVDEV_NAME:
                         return os.path.join('/dev', 'input', os.path.basename(evdev))
             except IOError as e:
                 if e.errno != errno.ENOENT:
@@ -138,35 +159,53 @@ class SenseStick(object):
         try:
             while not self._closing.wait(0):
                 if select.select([stick_file], [], [], 0.1)[0]:
-                    event = stick_file.read(self.EVENT_SIZE)
+                    event = stick_file.read(SenseStick.EVENT_SIZE)
                     (
                         tv_sec,
                         tv_usec,
                         type,
                         code,
                         value,
-                    ) = struct.unpack(self.EVENT_FORMAT, event)
-                    if type == self.EV_KEY:
+                    ) = struct.unpack(SenseStick.EVENT_FORMAT, event)
+                    r = self._rotation
+                    while r:
+                        code = self._rot_map[code]
+                        r -= 90
+                    if type == SenseStick.EV_KEY:
                         if self._buffer.full():
                             warnings.warn(SenseStickBufferFull(
                                 "The internal SenseStick buffer is full; "
                                 "try reading some events!"))
                             self._buffer.get()
-                        self._buffer.put(InputEvent(
+                        e = StickEvent(
                             timestamp=tv_sec + (tv_usec / 1000000),
                             direction={
-                                self.KEY_UP:    'up',
-                                self.KEY_DOWN:  'down',
-                                self.KEY_LEFT:  'left',
-                                self.KEY_RIGHT: 'right',
-                                self.KEY_ENTER: 'enter',
+                                SenseStick.KEY_UP:    'up',
+                                SenseStick.KEY_DOWN:  'down',
+                                SenseStick.KEY_LEFT:  'left',
+                                SenseStick.KEY_RIGHT: 'right',
+                                SenseStick.KEY_ENTER: 'enter',
                             }[code],
-                            action={
-                                self.STATE_PRESS:   'pressed',
-                                self.STATE_RELEASE: 'released',
-                                self.STATE_HOLD:    'held',
-                            }[value]
-                        ))
+                            pressed=(value != SenseStick.STATE_RELEASE),
+                            held=(value == SenseStick.STATE_HOLD or (
+                                value == SenseStick.STATE_RELEASE and
+                                code in self._held))
+                        )
+                        if not e.pressed:
+                            self._pressed -= {code}
+                            self._held -= {code}
+                        elif e.held:
+                            self._pressed |= {code}  # to correct state
+                            self._held |= {code}
+                        else: # pressed
+                            self._pressed |= {code}
+                            self._held -= {code}  # to correct state
+                        # Only push event onto the queue once the internal
+                        # state is updated; this ensures the various read-only
+                        # properties will be accurate for event handlers that
+                        # subsequently fire (although if they take too long the
+                        # state may change again before the next handler fires)
+                        self._buffer.put(e)
         finally:
             stick_file.close()
 
@@ -197,15 +236,38 @@ class SenseStick(object):
         while True:
             yield self.read()
 
-    def _get_rotate(self):
-        return self._rotate
-    def _set_rotate(self, value):
+    def _get_rotation(self):
+        return self._rotation
+    def _set_rotation(self, value):
+        # TODO If rotation is modified while _pressed and _held aren't empty
+        # then we potentially have bad state (unless it's just ENTER);
+        # technically we should anti-rotate their current values here...
         if value % 90:
-            raise ValueError('rotate must be a multiple of 90')
-        self._rotate = value % 360
-    rotate = property(_get_rotate, _set_rotate)
+            raise ValueError('rotation must be a multiple of 90')
+        self._rotation = value % 360
+    rotation = property(_get_rotation, _set_rotation)
 
     def read(self, timeout=None):
+        """
+        Wait up to *timeout* seconds for another joystick event. If one occurs,
+        return it, otherwise return ``None``.
+
+        .. note::
+
+            Attempting to call this method when callbacks are assigned to
+            attributes like :attr:`when_left` will trigger a
+            :exc:`SenseStickCallbackRead` warning. This is because using the
+            callback mechanism causes a background thread to continually read
+            joystick events (removing them from the queue that :meth:`read`
+            accesses). Mixing these programming styles can result in missing
+            events.
+
+        :param float timeout:
+            The number of seconds to wait for an event to occur.
+
+        :returns StickEvent:
+            The event that occurred, or ``None``.
+        """
         if self._callbacks_thread is not None:
             warnings.warn(SenseStickCallbackRead(
                 'read called while when_* callbacks are assigned'))
@@ -215,7 +277,24 @@ class SenseStick(object):
             return None
 
     @property
+    def up(self):
+        """
+        Returns ``True`` if the joystick is currently pressed upward.
+        """
+        return SenseStick.KEY_UP in self._pressed
+
+    @property
+    def up_held(self):
+        """
+        Returns ``True`` if the joystick is currently held upward.
+        """
+        return SenseStick.KEY_UP in self._held
+
+    @property
     def when_up(self):
+        """
+        The function to call when the joystick is moved upward.
+        """
         with self._callbacks_lock:
             return self._callbacks.get('up')
 
@@ -229,7 +308,24 @@ class SenseStick(object):
         self._start_stop_callbacks()
 
     @property
+    def down(self):
+        """
+        Returns ``True`` if the joystick is currently pressed downward.
+        """
+        return SenseStick.KEY_DOWN in self._pressed
+
+    @property
+    def down_held(self):
+        """
+        Returns ``True`` if the joystick is currently held downward.
+        """
+        return SenseStick.KEY_DOWN in self._held
+
+    @property
     def when_down(self):
+        """
+        The function to call when the joystick is moved downward.
+        """
         with self._callbacks_lock:
             return self._callbacks.get('down')
 
@@ -243,7 +339,24 @@ class SenseStick(object):
         self._start_stop_callbacks()
 
     @property
+    def left(self):
+        """
+        Returns ``True`` if the joystick is currently pressed leftward.
+        """
+        return SenseStick.KEY_LEFT in self._pressed
+
+    @property
+    def left_held(self):
+        """
+        Returns ``True`` if the joystick is currently held leftward.
+        """
+        return SenseStick.KEY_LEFT in self._held
+
+    @property
     def when_left(self):
+        """
+        The function to call when the joystick is moved leftward.
+        """
         with self._callbacks_lock:
             return self._callbacks.get('left')
 
@@ -257,7 +370,24 @@ class SenseStick(object):
         self._start_stop_callbacks()
 
     @property
+    def right(self):
+        """
+        Returns ``True`` if the joystick is currently pressed rightward.
+        """
+        return SenseStick.KEY_RIGHT in self._pressed
+
+    @property
+    def right_held(self):
+        """
+        Returns ``True`` if the joystick is currently held rightward.
+        """
+        return SenseStick.KEY_RIGHT in self._held
+
+    @property
     def when_right(self):
+        """
+        The function to call when the joystick is moved rightward.
+        """
         with self._callbacks_lock:
             return self._callbacks.get('right')
 
@@ -271,7 +401,24 @@ class SenseStick(object):
         self._start_stop_callbacks()
 
     @property
+    def enter(self):
+        """
+        Returns ``True`` if the joystick is currently pressed inward.
+        """
+        return SenseStick.KEY_ENTER in self._pressed
+
+    @property
+    def enter_held(self):
+        """
+        Returns ``True`` if the joystick is currently held inward.
+        """
+        return SenseStick.KEY_ENTER in self._held
+
+    @property
     def when_enter(self):
+        """
+        The function to call when the joystick is pressed in or released.
+        """
         with self._callbacks_lock:
             return self._callbacks.get('enter')
 
