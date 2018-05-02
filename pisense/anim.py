@@ -46,7 +46,7 @@ import atexit
 
 import numpy as np
 from pkg_resources import resource_filename, cleanup_resources
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from colorzero import Color
 
 from .easings import linear

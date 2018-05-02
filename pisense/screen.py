@@ -52,6 +52,7 @@ import time
 import numpy as np
 from colorzero import Color
 
+from .easings import linear
 from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .images import (
     color,
@@ -134,7 +135,7 @@ class SenseScreen(object):
     # pylint: disable=too-many-instance-attributes
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
-    def __init__(self, easing=linear):
+    def __init__(self, fps=15, easing=linear):
         self._fb_file = io.open(self._fb_device(), 'wb+')
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
@@ -144,7 +145,7 @@ class SenseScreen(object):
         self._vflip = False
         self._rotation = 0
         self._font_cache = {}
-        self.fps = 15
+        self.fps = fps
         self.easing = easing
 
     def close(self):
