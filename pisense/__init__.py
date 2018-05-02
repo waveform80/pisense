@@ -37,10 +37,11 @@ str = type('')
 
 from .images import color
 from .screen import SenseScreen, ScreenArray
-from .stick import SenseStick, InputEvent
-from .orientation import SenseIMU, Readings, Orientation
-from .environment import SenseEnvironment
 from .easings import linear, ease_in, ease_out, ease_in_out
+from .anim import scroll_text, fade_to, slide_to, zoom_to
+from .stick import SenseStick, StickEvent
+from .orientation import SenseIMU, Readings, Orientation
+from .environment import SenseEnviron, EnvironReadings
 
 
 class SenseHAT(object):
@@ -49,7 +50,7 @@ class SenseHAT(object):
         self._screen = SenseScreen()
         self._stick = SenseStick()
         self._imu = SenseIMU()
-        self._environ = SenseEnvironment()
+        self._environ = SenseEnviron()
 
     @property
     def screen(self):

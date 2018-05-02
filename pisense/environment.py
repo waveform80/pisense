@@ -41,11 +41,71 @@ from collections import namedtuple
 import RTIMU
 
 
-EnvironValue = namedtuple('EnvironValue', ('pressure', 'humidity', 'temperature'))
+EnvironReadings = namedtuple('EnvironReadings', ('pressure', 'humidity', 'temperature'))
 
 
-class SenseEnvironment(object):
-    def __init__(self, imu_settings='/etc/RTIMULib'):
+def pressure(p_temp, h_temp):
+    """
+    Use this function as :attr:`~SenseEnviron.temperature_source` if you want
+    to read temperature from the pressure sensor only. This is the default.
+    """
+    return p_temp
+
+
+def humidity(p_temp, h_temp):
+    """
+    Use this function as :attr:`~SenseEnviron.temperature_source` if you want
+    to read temperature from the humidity sensor only.
+    """
+    return h_temp
+
+
+def average(p_temp, h_temp):
+    """
+    Use this function as :attr:`~SenseEnviron.temperature_source` if you wish
+    to read the average of both the pressure and humidity sensor's
+    temperatures.
+    """
+    if p_temp is None:
+        return h_temp
+    elif h_temp is None:
+        return p_temp
+    else:
+        return (p_temp + h_temp) / 2
+
+
+def both(p_temp, h_temp):
+    """
+    Use this function as :attr:`~SenseEnviron.temperature_source` if you wish
+    to return both the pressure and humidity sensor's temperature readings as a
+    tuple from the :attr:`~SenseEnviron.temperature` attribute.
+    """
+    return p_temp, h_temp
+
+
+class SenseEnviron(object):
+    """
+    The :class:`SenseEnviron` class represents the suite of environmental
+    sensors on the Sense HAT. Users can either instantiate this class
+    themselves, or can access an instance from :attr:`SenseHAT.environ`.
+
+    The :attr:`temperature`, :attr:`pressure`, and :attr:`humidity` attributes
+    can be queried to read the current values from the sensors. Alternatively,
+    the instance can be treated as an iterator in which case readings will be
+    yielded as they are detected::
+
+        hat = SenseHAT()
+        for reading in hat.environ:
+            print(reading.temperature)
+
+    Because both the pressure and humidity sensors contain a temperature
+    sensor, a source must be selected for the temperature reading. By default
+    this is from the pressure sensor only, but you can specify a function for
+    :attr:`temperature_source` which, given the two temperature readings
+    returns the reading you are interested in, or some combination there-of.
+    """
+    def __init__(self, imu_settings='/etc/RTIMULib',
+                 temperature_source=pressure):
         self._settings = RTIMU.Settings(imu_settings)
         self._p_sensor = RTIMU.RTPressure(self._settings)
         self._h_sensor = RTIMU.RTHumidity(self._settings)
@@ -55,15 +115,15 @@ class SenseEnvironment(object):
             raise RuntimeError('Humidity sensor initialization failed')
         self._pressure = None
         self._humidity = None
+        self._temp_source = temperature_source
         self._temperature = None
         self._interval = 0.04
         self._last_read = None
-        self.temperature_sensors = {'pressure', 'humidity'}
 
     def __iter__(self):
         while True:
-            self._refresh()
-            yield EnvironValue(
+            self._read()
+            yield EnvironReadings(
                 self._pressure,
                 self._humidity,
                 self._temperature,
@@ -74,26 +134,31 @@ class SenseEnvironment(object):
 
     @property
     def pressure(self):
-        self._refresh()
+        self._read()
         return self._pressure
 
     @property
     def humidity(self):
-        self._refresh()
+        self._read()
         return self._humidity
 
     @property
     def temperature(self):
-        self._refresh()
+        self._read()
         return self._temperature
 
-    def _get_sensors(self):
-        return self._temp_sensors
-    def _set_sensors(self, value):
-        self._temp_sensors = frozenset(value)
-    temperature_sensors = property(_get_sensors, _set_sensors)
+    def _get_temp_source(self):
+        return self._temp_source
+    def _set_temp_source(self, value):
+        try:
+            value(20, 22)
+        except TypeError:
+            raise ValueError('temp_source must be a callable that accepts '
+                             '2 parameters')
+        self._temp_source = value
+    temperature_source = property(_get_temp_source, _set_temp_source)
 
-    def _refresh(self):
+    def _read(self):
         now = time.time()
         if self._last_read is None or now - self._last_read > self._interval:
             p_valid, p_value, tp_valid, tp_value = self._p_sensor.pressureRead()
@@ -102,12 +167,8 @@ class SenseEnvironment(object):
                 self._pressure = p_value
             if h_valid:
                 self._humidity = h_value
-            t_value = ()
-            if tp_valid and 'pressure' in self._temp_sensors:
-                t_value += (tp_value,)
-            if th_valid and 'humidity' in self._temp_sensors:
-                t_value += (th_value,)
-            if t_value:
-                self._temperature = sum(t_value) / len(t_value)
+            if tp_valid or th_valid:
+                self._temperature = self._temp_source(
+                    tp_value if tp_valid else None,
+                    th_value if th_valid else None)
             self._last_read = now
-

@@ -70,7 +70,12 @@ class SenseStick(object):
 
     The :meth:`read` method can be called to obtain :class:`StickEvent`
     instances, or the instance can be treated as an iterator in which case
-    events will be yielded as they come in.
+    events will be yielded as they come in::
+
+        hat = SenseHAT()
+        for event in hat.stick:
+            if event.pressed and not event.held:
+                print('%s pressed!' % event.direction)
 
     Alternatively, handler functions can be assigned to the attributes
     :attr:`when_up`, :attr:`when_down`, :attr:`when_left`, :attr:`when_right`,
