@@ -28,7 +28,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 """
-Defines the :class:`SenseArray` and :class:`SenseScreen` classes for
+Defines the :class:`ScreenArray` and :class:`SenseScreen` classes for
 controlling and manipulating the RGB pixel array on the Sense HAT.
 """
 
@@ -64,13 +64,37 @@ from .images import (
 )
 
 
-class SenseArray(np.ndarray):
+class ScreenArray(np.ndarray):
     # pylint: disable=too-few-public-methods
 
-    def __new__(cls):
+    def __new__(cls, shape=(8, 8)):
         # pylint: disable=protected-access
-        result = np.ndarray.__new__(cls, shape=(8, 8), dtype=color)
+        result = np.ndarray.__new__(cls, shape=shape, dtype=color)
         result._screen = None
+        return result
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        inputs = [
+            v.view(np.float16, np.ndarray).reshape(v.shape + (3,))
+            if isinstance(v, np.ndarray) and v.dtype == color else v
+            for v in inputs
+        ]
+        try:
+            v, = kwargs['out']
+        except (KeyError, ValueError):
+            pass
+        else:
+            kwargs['out'] = (
+                v.view(np.float16, np.ndarray).reshape(v.shape + (3,)),
+            )
+        result = super(ScreenArray, self).__array_ufunc__(
+            ufunc, method, *inputs, **kwargs)
+        if (
+                isinstance(result, np.ndarray) and
+                result.dtype == np.float16 and
+                len(result.shape) == 3 and
+                result.shape[-1] == 3):
+            result = result.view(color, self.__class__).squeeze()
         return result
 
     def __array_finalize__(self, obj):
@@ -81,7 +105,7 @@ class SenseArray(np.ndarray):
 
     def __setitem__(self, index, value):
         # pylint: disable=protected-access
-        super(SenseArray, self).__setitem__(index, value)
+        super(ScreenArray, self).__setitem__(index, value)
         if self._screen:
             # If we're a slice of the original pixels value, find the parent
             # that contains the complete array and send that to _set_pixels
@@ -92,7 +116,7 @@ class SenseArray(np.ndarray):
 
     def __setslice__(self, i, j, sequence):
         # pylint: disable=protected-access
-        super(SenseArray, self).__setslice__(i, j, sequence)
+        super(ScreenArray, self).__setslice__(i, j, sequence)
         if self._screen:
             orig = self
             while orig.shape != (8, 8) and orig.base is not None:
@@ -100,7 +124,7 @@ class SenseArray(np.ndarray):
             self._screen._set_array(orig)
 
     def copy(self, order='C'):
-        result = super(SenseArray, self).copy(order)
+        result = super(ScreenArray, self).copy(order)
         result._screen = None
         return result
 
@@ -113,7 +137,7 @@ class SenseScreen(object):
         self._fb_file = io.open(self._fb_device(), 'wb+')
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
-        self._array = SenseArray()
+        self._array = ScreenArray()
         self._array._screen = self
         self._hflip = False
         self._vflip = False
@@ -164,6 +188,7 @@ class SenseScreen(object):
             value = value.view(color).reshape((8, 8))
         else:
             value = np.array(value, dtype=color).reshape((8, 8))
+        value = value.clip(0, 1)
         value = self._apply_transforms(value)
         rgb_to_rgb565(value, self.raw)
     array = property(_get_array, _set_array)

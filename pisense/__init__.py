@@ -36,7 +36,7 @@ from __future__ import (
 str = type('')
 
 from .images import color
-from .screen import SenseScreen
+from .screen import SenseScreen, ScreenArray
 from .stick import SenseStick, InputEvent
 from .orientation import SenseIMU, Readings, Orientation
 from .environment import SenseEnvironment
