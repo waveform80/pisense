@@ -123,6 +123,7 @@ class SenseStick(object):
         # correct this
         self._pressed = set()
         self._held = set()
+        self._rotation = 0
         self._rot_map = {
             SenseStick.KEY_UP: SenseStick.KEY_RIGHT,
             SenseStick.KEY_LEFT: SenseStick.KEY_UP,

@@ -49,6 +49,7 @@ Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
 class SenseIMU(object):
     def __init__(self, imu_settings='/etc/RTIMULib'):
+        # TODO rotation
         self._settings = RTIMU.Settings(imu_settings)
         self._imu = RTIMU.RTIMU(self._settings)
         if not self._imu.IMUInit():

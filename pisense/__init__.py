@@ -36,7 +36,7 @@ from __future__ import (
 str = type('')
 
 from .images import color
-from .screen import SenseScreen, ScreenArray
+from .screen import SenseScreen, ScreenArray, array
 from .easings import linear, ease_in, ease_out, ease_in_out
 from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .stick import SenseStick, StickEvent

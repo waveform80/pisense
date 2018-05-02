@@ -64,6 +64,24 @@ from .images import (
 )
 
 
+def array(data=None, shape=(8, 8)):
+    """
+    Use this function to construct a new :class:`ScreenArray` and fill it
+    with an initial source of *data*, which can be a single :class:`Color`,
+    a list of :class:`Color` values, or another (compatible) array.
+    """
+    # TODO what about an Image?
+    result = ScreenArray(shape)
+    if data is None:
+        result[...] = 0
+    else:
+        try:
+            result[...] = data
+        except ValueError:
+            result.ravel()[...] = data
+    return result
+
+
 class ScreenArray(np.ndarray):
     # pylint: disable=too-few-public-methods
 
