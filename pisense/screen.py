@@ -50,10 +50,9 @@ import errno
 import time
 
 import numpy as np
-from PIL import Image, ImageFont, ImageDraw
 from colorzero import Color
 
-from .easings import linear
+from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .images import (
     color,
     buf_to_image,
@@ -76,7 +75,9 @@ class ScreenArray(np.ndarray):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         inputs = [
             v.view(np.float16, np.ndarray).reshape(v.shape + (3,))
-            if isinstance(v, np.ndarray) and v.dtype == color else v
+            if isinstance(v, np.ndarray) and v.dtype == color else
+            v.view(v.dtype, np.ndarray).reshape(v.shape)
+            if isinstance(v, np.ndarray) else v
             for v in inputs
         ]
         try:
@@ -188,7 +189,6 @@ class SenseScreen(object):
             value = value.view(color).reshape((8, 8))
         else:
             value = np.array(value, dtype=color).reshape((8, 8))
-        value = value.clip(0, 1)
         value = self._apply_transforms(value)
         rgb_to_rgb565(value, self.raw)
     array = property(_get_array, _set_array)
@@ -235,8 +235,10 @@ class SenseScreen(object):
             arr = np.flipud(arr)
         return arr
 
-    def clear(self):
-        self.raw = 0
+    def clear(self, color=Color('black')):
+        if not isinstance(color, Color):
+            color = Color(*color)
+        self.raw = color.rgb565
 
     def image(self):
         arr = self._undo_transforms(self.raw)
@@ -251,137 +253,32 @@ class SenseScreen(object):
         arr = self._apply_transforms(arr)
         self.raw = arr
 
-    def _play(self, frames):
+    def play(self, frames):
         delay = 1 / self.fps
         for frame in frames:
             self.raw = self._apply_transforms(frame)
             time.sleep(delay)
 
-    def _load_font(self, font, size):
-        try:
-            f = self._font_cache[font]
-        except KeyError:
-            if font is None:
-                f = ImageFont.load_default()
-            else:
-                f = ImageFont.truetype(font, size)
-            self._font_cache[font] = f
-        return f
+    def scroll_text(self, text, font=None, size=8, foreground=Color('white'),
+                    background=Color('black'), direction='left',
+                    duration=None, fps=None):
+        self.play(scroll_text(text, font, size, foreground, background,
+                              direction, duration,
+                              self.fps if fps is None else fps))
 
-    def scroll_text(
-            # XXX Is there a better default on Raspbian?
-            self, text, font='DejaVuSans', size=9, foreground=(1, 1, 1),
-            background=(0, 0, 0), letter_space=1, direction='left',
-            duration=None):
-        f = self._load_font(font, size)
-        size = f.getsize(text)
-        # +16 for blank screens either side (to let the text scroll onto and
-        # off of the display) and +2 to compensate for spillage due to anti-
-        # aliasing
-        img = Image.new('RGB', (size[0] + 16 + 2, 8))
-        if duration is None:
-            steps = img.size[0] - 8
-        else:
-            steps = int(duration * self.fps)
-        x_inc = (img.size[0] - 8) / steps
-        try:
-            x_steps = {
-                'left': range(steps),
-                'right': range(steps, -1, -1),
-            }[direction]
-        except KeyError:
-            raise ValueError('invalid direction')
-        draw = ImageDraw.Draw(img)
-        draw.rectangle(((0, 0), img.size), Color(*background).rgb_bytes)
-        draw.text((9, 8 - size[1]), text, Color(*foreground).rgb_bytes, f)
-        arr = image_to_rgb565(img)
-        frames = [
-            arr[:, x:x + 8]
-            for x_step in x_steps
-            for x in (int(x_step * x_inc),)
-        ]
-        # Guarantee the final frame is solid background color
-        frames[-1] = np.array(
-            (Color(*background).rgb565,) * 64, np.uint16).reshape(8, 8)
-        self._play(frames)
-
-    def fade_to(self, image, duration=1, easing=None):
-        if easing is None:
-            easing = self.easing
-        start = self.image()
-        finish = buf_to_image(image)
-        mask = np.empty((8, 8), np.uint8)
-        mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
-        frames = []
-        for f in easing(int(duration * self.fps)):
-            mask[...] = int(255 * f)
-            frame = start.copy()
-            frame.paste(finish, (0, 0), mask_img)
-            frames.append(image_to_rgb565(frame))
-        self._play(frames)
+    def fade_to(self, image, duration=1, fps=None, easing=None):
+        self.play(fade_to(self.image(), image, duration,
+                          self.fps if fps is None else fps,
+                          self.easing if easing is None else easing))
 
     def slide_to(self, image, direction='left', cover=False, duration=1,
-                 easing=None):
-        if easing is None:
-            easing = self.easing
-        try:
-            delta_x, delta_y = {
-                'left':  (-1, 0),
-                'right': (1, 0),
-                'up':    (0, -1),
-                'down':  (0, 1),
-            }[direction]
-        except KeyError:
-            raise ValueError('invalid direction: ' % direction)
-        start = self.image().resize((64, 64))
-        image = buf_to_image(image)
-        finish = image.resize((64, 64))
-        if not cover:
-            canvas = Image.new('RGB', (64, 64))
-        frames = []
-        for f in easing(int(duration * self.fps)):
-            x = int(delta_x * f * 64)
-            y = int(delta_y * f * 64)
-            if cover:
-                canvas = start.copy()
-            else:
-                canvas.paste(start, (x, y))
-            canvas.paste(finish, (64 * -delta_x + x, 64 * -delta_y + y))
-            frames.append(image_to_rgb565(canvas.resize((8, 8), Image.BOX)))
-        # Ensure the final frame is the finish image (without bicubic blur)
-        frames[-1] = image_to_rgb565(image)
-        self._play(frames)
+                 fps=None, easing=None):
+        self.play(slide_to(self.image(), image, direction, cover, duration,
+                           self.fps if fps is None else fps,
+                           self.easing if easing is None else easing))
 
     def zoom_to(self, image, center=(4, 4), direction='in', duration=1,
-                easing=None):
-        if easing is None:
-            easing = self.easing
-        if direction == 'in':
-            base = self.image().resize((64, 64))
-            top = buf_to_image(image)
-            final = top
-        elif direction == 'out':
-            final = buf_to_image(image)
-            base = final.resize((64, 64))
-            top = self.image().copy()
-        else:
-            raise ValueError('invalid direction: %s' % direction)
-        frames = []
-        mask = np.empty((8, 8), np.uint8)
-        mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
-        for f in easing(int(duration * self.fps)):
-            if direction == 'out':
-                f = 1 - f
-            mask[...] = int(255 * f)
-            frame = base.copy()
-            frame.paste(top, (center[0] * 8, center[1] * 8), mask_img)
-            frame = frame.crop((
-                int(center[0] * f * 8),
-                int(center[1] * f * 8),
-                int(64 - f * 8 * (8 - (center[0] + 1))),
-                int(64 - f * 8 * (8 - (center[1] + 1))),
-            ))
-            frames.append(image_to_rgb565(frame.resize((8, 8), Image.BOX)))
-        # Ensure the final frame is the finish image (without bicubic blur)
-        frames[-1] = image_to_rgb565(final)
-        self._play(frames)
+                fps=None, easing=None):
+        self.play(zoom_to(self.image(), image, center, direction, duration,
+                          self.fps if fps is None else fps,
+                          self.easing if easing is None else easing))
