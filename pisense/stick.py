@@ -45,6 +45,7 @@ import errno
 import struct
 import select
 import warnings
+import termios
 from collections import namedtuple
 from threading import Thread, Event, Lock
 try:
@@ -106,7 +107,8 @@ class SenseStick(object):
     KEY_DOWN = 108
     KEY_ENTER = 28
 
-    def __init__(self, max_events=100):
+    def __init__(self, max_events=100, flush_input=True):
+        self._flush = flush_input
         self._callbacks_lock = Lock()
         self._callbacks_close = Event()
         self._callbacks = {}
@@ -133,13 +135,16 @@ class SenseStick(object):
         }
 
     def close(self):
-        if self._read_thread:
+        if self._read_thread is not None:
             self._closing.set()
             self._read_thread.join()
             if self._callbacks_thread:
                 self._callbacks_thread.join()
             self._read_thread = None
             self._callbacks_thread = None
+        if self._flush:
+            termios.tcflush(0, termios.TCIFLUSH)
+            self._flush = False
 
     def __del__(self):
         self.close()

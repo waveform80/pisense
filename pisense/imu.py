@@ -41,17 +41,21 @@ from collections import namedtuple
 
 import RTIMU
 
+from .settings import SenseSettings
 
-IMUValue = namedtuple('IMUValue', ('compass', 'gyroscope', 'accelerometer', 'orientation'))
+
+IMUValue = namedtuple('IMUValue', ('compass', 'gyro', 'accel', 'orient'))
 Readings = namedtuple('Readings', ('x', 'y', 'z'))
 Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
 
 
 class SenseIMU(object):
-    def __init__(self, imu_settings='/etc/RTIMULib'):
+    def __init__(self, settings=None):
         # TODO rotation
-        self._settings = RTIMU.Settings(imu_settings)
-        self._imu = RTIMU.RTIMU(self._settings)
+        if not isinstance(settings, SenseSettings):
+            settings = SenseSettings(settings)
+        self._settings = settings
+        self._imu = RTIMU.RTIMU(self._settings.settings)
         if not self._imu.IMUInit():
             raise RuntimeError('IMU initialization failed')
         self._interval = self._imu.IMUGetPollInterval() / 1000.0 # seconds
@@ -61,6 +65,16 @@ class SenseIMU(object):
         self._fusion = None
         self._last_read = None
         self.orientation_sensors = {'compass', 'gyroscope', 'accelerometer'}
+
+    def close(self):
+        self._imu = None
+        self._settings = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.close()
 
     def __iter__(self):
         while True:

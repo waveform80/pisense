@@ -40,17 +40,47 @@ from .screen import SenseScreen, ScreenArray, array
 from .easings import linear, ease_in, ease_out, ease_in_out
 from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .stick import SenseStick, StickEvent
-from .orientation import SenseIMU, Readings, Orientation
+from .imu import SenseIMU, Readings, Orientation
 from .environment import SenseEnviron, EnvironReadings
+from .settings import SenseSettings
 
 
 class SenseHAT(object):
-    def __init__(self):
+    def __init__(self, settings='/etc/RTIMULib.ini', **kwargs):
         super(SenseHAT, self).__init__()
-        self._screen = SenseScreen()
-        self._stick = SenseStick()
-        self._imu = SenseIMU()
-        self._environ = SenseEnviron()
+        # Old-style kw-only args...
+        fps = kwargs.pop('fps', 15)
+        easing = kwargs.pop('easing', linear)
+        max_events = kwargs.pop('max_events', 100)
+        flush_input = kwargs.pop('flush_input', True)
+        if kwargs:
+            raise TypeError("unexpected keyword argument %r" %
+                            kwargs.popitem()[0])
+        self._settings = SenseSettings(settings)
+        self._screen = SenseScreen(fps, easing)
+        self._stick = SenseStick(max_events, flush_input)
+        self._imu = SenseIMU(self._settings)
+        self._environ = SenseEnviron(self._settings)
+
+    def close(self):
+        if self._environ is not None:
+            self._environ.close()
+            self._environ = None
+        if self._imu is not None:
+            self._imu.close()
+            self._imu = None
+        if self._stick is not None:
+            self._stick.close()
+            self._stick = None
+        if self._screen is not None:
+            self._screen.close()
+            self._screen = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.close()
 
     @property
     def screen(self):

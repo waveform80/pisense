@@ -40,6 +40,8 @@ from collections import namedtuple
 
 import RTIMU
 
+from .settings import SenseSettings
+
 
 EnvironReadings = namedtuple('EnvironReadings', ('pressure', 'humidity', 'temperature'))
 
@@ -104,11 +106,12 @@ class SenseEnviron(object):
     :attr:`temperature_source` which, given the two temperature readings
     returns the reading you are interested in, or some combination there-of.
     """
-    def __init__(self, imu_settings='/etc/RTIMULib',
-                 temperature_source=pressure):
-        self._settings = RTIMU.Settings(imu_settings)
-        self._p_sensor = RTIMU.RTPressure(self._settings)
-        self._h_sensor = RTIMU.RTHumidity(self._settings)
+    def __init__(self, settings=None, temperature_source=pressure):
+        if not isinstance(settings, SenseSettings):
+            settings = SenseSettings(settings)
+        self._settings = settings
+        self._p_sensor = RTIMU.RTPressure(self._settings.settings)
+        self._h_sensor = RTIMU.RTHumidity(self._settings.settings)
         if not self._p_sensor.pressureInit():
             raise RuntimeError('Pressure sensor initialization failed')
         if not self._h_sensor.humidityInit():
@@ -119,6 +122,17 @@ class SenseEnviron(object):
         self._temperature = None
         self._interval = 0.04
         self._last_read = None
+
+    def close(self):
+        self._p_sensor = None
+        self._h_sensor = None
+        self._settings = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.close()
 
     def __iter__(self):
         while True:
