@@ -43,7 +43,10 @@ import RTIMU
 from .settings import SenseSettings
 
 
-EnvironReadings = namedtuple('EnvironReadings', ('pressure', 'humidity', 'temperature'))
+class EnvironReadings(namedtuple('EnvironReadings', ('pressure', 'humidity', 'temperature'))):
+    __slots__ = ()
+    def __repr__(self):
+        return 'EnvironReadings(pressure=%g, humidity=%g, temperature=%g)' % self
 
 
 def temp_pressure(p_temp, h_temp):
@@ -116,10 +119,8 @@ class SenseEnviron(object):
             raise RuntimeError('Pressure sensor initialization failed')
         if not self._h_sensor.humidityInit():
             raise RuntimeError('Humidity sensor initialization failed')
-        self._pressure = None
-        self._humidity = None
+        self._readings = EnvironReadings(None, None, None)
         self._temp_source = temperature_source
-        self._temperature = None
         self._interval = 0.04
         self._last_read = None
 
@@ -136,30 +137,44 @@ class SenseEnviron(object):
 
     def __iter__(self):
         while True:
-            self._read()
-            yield EnvironReadings(
-                self._pressure,
-                self._humidity,
-                self._temperature,
-                )
-            delay = max(0.0, self._last_read + self._interval - time.time())
-            if delay:
-                time.sleep(delay)
+            yield self.read()
+
+    def read(self):
+        self._read(True)
+        return self._readings
+
+    def _read(self, wait):
+        now = time.time()
+        if self._last_read is not None:
+            if wait:
+                time.sleep(max(0.0, self._interval - (now - self._last_read)))
+            elif now - self._last_read < self._interval:
+                return
+        p_valid, p_value, tp_valid, tp_value = self._p_sensor.pressureRead()
+        h_valid, h_value, th_valid, th_value = self._h_sensor.humidityRead()
+        self._readings = EnvironReadings(
+            pressure=p_value if p_valid else None,
+            humidity=h_value if h_valid else None,
+            temperature=self._temp_source(
+                tp_value if tp_valid else None,
+                th_value if th_valid else None)
+            if tp_valid or th_valid else None)
+        self._last_read = now
 
     @property
     def pressure(self):
-        self._read()
-        return self._pressure
+        self._read(False)
+        return self._readings.pressure
 
     @property
     def humidity(self):
-        self._read()
-        return self._humidity
+        self._read(False)
+        return self._readings.humidity
 
     @property
     def temperature(self):
-        self._read()
-        return self._temperature
+        self._read(False)
+        return self._readings.temperature
 
     def _get_temp_source(self):
         return self._temp_source
@@ -171,18 +186,3 @@ class SenseEnviron(object):
                              '2 parameters')
         self._temp_source = value
     temperature_source = property(_get_temp_source, _set_temp_source)
-
-    def _read(self):
-        now = time.time()
-        if self._last_read is None or now - self._last_read > self._interval:
-            p_valid, p_value, tp_valid, tp_value = self._p_sensor.pressureRead()
-            h_valid, h_value, th_valid, th_value = self._h_sensor.humidityRead()
-            if p_valid:
-                self._pressure = p_value
-            if h_valid:
-                self._humidity = h_value
-            if tp_valid or th_valid:
-                self._temperature = self._temp_source(
-                    tp_value if tp_valid else None,
-                    th_value if th_valid else None)
-            self._last_read = now

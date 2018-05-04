@@ -44,9 +44,17 @@ import RTIMU
 from .settings import SenseSettings
 
 
-IMUValue = namedtuple('IMUValue', ('compass', 'gyro', 'accel', 'orient'))
-Readings = namedtuple('Readings', ('x', 'y', 'z'))
-Orientation = namedtuple('Orientation', ('roll', 'pitch', 'yaw'))
+IMUState = namedtuple('IMUState', ('compass', 'gyro', 'accel', 'orient'))
+
+class IMUReadings(namedtuple('IMUReadings', ('x', 'y', 'z'))):
+    __slots__ = ()
+    def __repr__(self):
+        return 'IMUReadings(x=%g, y=%g, z=%g)' % self
+
+class IMUOrient(namedtuple('IMUOrient', ('roll', 'pitch', 'yaw'))):
+    __slots__ = ()
+    def __repr__(self):
+        return 'IMUOrient(roll=%g, pitch=%g, yaw=%g)' % self
 
 
 class SenseIMU(object):
@@ -59,12 +67,17 @@ class SenseIMU(object):
         if not self._imu.IMUInit():
             raise RuntimeError('IMU initialization failed')
         self._interval = self._imu.IMUGetPollInterval() / 1000.0 # seconds
-        self._compass = None
-        self._gyroscope = None
-        self._accel = None
-        self._fusion = None
+        self._imu.setCompassEnable(True)
+        self._imu.setGyroEnable(True)
+        self._imu.setAccelEnable(True)
+        self._sensors = frozenset(('compass', 'gyro', 'accel'))
+        self._readings = IMUState(
+            IMUReadings(None, None, None),
+            IMUReadings(None, None, None),
+            IMUReadings(None, None, None),
+            IMUOrient(None, None, None)
+        )
         self._last_read = None
-        self.orientation_sensors = {'compass', 'gyroscope', 'accelerometer'}
 
     def close(self):
         self._imu = None
@@ -78,18 +91,30 @@ class SenseIMU(object):
 
     def __iter__(self):
         while True:
-            self._refresh()
-            value = IMUValue(
-                self._compass,
-                self._gyroscope,
-                self._accelerometer,
-                self._fusion
-                )
-            if self._fusion:
+            value = self.read()
+            if value.orient is not None:
                 yield value
-            delay = max(0.0, self._last_read + self._interval - time.time())
-            if delay:
-                time.sleep(delay)
+
+    def read(self):
+        self._read(True)
+        return self._readings
+
+    def _read(self, wait):
+        now = time.time()
+        if self._last_read is not None:
+            if wait:
+                time.sleep(max(0.0, self._interval - (now - self._last_read)))
+            elif now - self._last_read < self._interval:
+                return
+        if self._imu.IMURead():
+            d = self._imu.getIMUData()
+            self._readings = IMUState(
+                IMUReadings(*d['compass']) if d.get('compassValid', False) else None,
+                IMUReadings(*d['gyro']) if d.get('gyroValid', False) else None,
+                IMUReadings(*d['accel']) if d.get('accelValid', False) else None,
+                IMUOrient(*d['fusionPose']) if d.get('fusionPoseValid', False) else None,
+            )
+            self._last_read = now
 
     @property
     def name(self):
@@ -97,48 +122,36 @@ class SenseIMU(object):
 
     @property
     def compass(self):
-        self._refresh()
-        return self._compass
+        self._read(False)
+        return self._readings.compass
 
     @property
-    def gyroscope(self):
-        self._refresh()
-        return self._gyroscope
+    def gyro(self):
+        self._read(False)
+        return self._readings.gyro
 
     @property
-    def accelerometer(self):
-        self._refresh()
-        return self._accelerometer
+    def accel(self):
+        self._read(False)
+        return self._readings.accel
 
     @property
-    def orientation(self):
-        self._refresh()
-        return self._fusion
-
-    @property
-    def orientation_degrees(self):
-        return Orientation(*(math.degrees(e) % 360 for e in self.orientation))
+    def orient(self):
+        self._read(False)
+        return self._readings.orient
 
     def _get_sensors(self):
         return self._sensors
     def _set_sensors(self, value):
-        self._sensors = frozenset(value)
+        if isinstance(value, bytes):
+            value = value.decode('ascii')
+        if isinstance(value, str):
+            value = {value}
+        clean = {'compass', 'gyro', 'accel'} & set(value)
+        if clean != value:
+            raise ValueError('invalid sensor "%s"' % (value - clean).pop())
+        self._sensors = frozenset(clean)
         self._imu.setCompassEnable('compass' in self._sensors)
-        self._imu.setGyroEnable('gyroscope' in self._sensors)
-        self._imu.setAccelEnable('accelerometer' in self._sensors)
-    orientation_sensors = property(_get_sensors, _set_sensors)
-
-    def _refresh(self):
-        now = time.time()
-        if self._last_read is None or now - self._last_read > self._interval:
-            if self._imu.IMURead():
-                d = self._imu.getIMUData()
-                if d.get('compassValid', False):
-                    self._compass = Readings(*d['compass'])
-                if d.get('gyroValid', False):
-                    self._gyroscope = Readings(*d['gyro'])
-                if d.get('accelValid', False):
-                    self._accelerometer = Readings(*d['accel'])
-                if d.get('fusionPoseValid', False):
-                    self._fusion = Orientation(*d['fusionPose'])
-                self._last_read = now
+        self._imu.setGyroEnable('gyro' in self._sensors)
+        self._imu.setAccelEnable('accel' in self._sensors)
+    orient_sensors = property(_get_sensors, _set_sensors)

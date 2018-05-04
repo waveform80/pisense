@@ -154,6 +154,7 @@ class SenseScreen(object):
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
     def __init__(self, fps=15, easing=linear):
+        # TODO gamma
         self._fb_file = io.open(self._fb_device(), 'wb+')
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
