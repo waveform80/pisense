@@ -101,8 +101,10 @@ autodoc_default_flags = ['members']
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3.5', None),
     'numpy':  ('https://docs.scipy.org/doc/numpy/', None),
-    'colorzero': ('https://colorzero.readthedocs/io/en/latest/', None),
+    'pillow': ('https://pillow.readthedocs.io/en/latest/', None),
+    'colorzero': ('https://colorzero.readthedocs.io/en/latest/', None),
 }
+intersphinx_cache_limit = 7
 
 # -- Options for HTML output ----------------------------------------------
 

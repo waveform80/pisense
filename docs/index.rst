@@ -11,6 +11,7 @@ Table of Contents
     quickstart
     game
     monitor
+    faq
     development
     api
     changelog

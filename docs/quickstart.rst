@@ -41,7 +41,7 @@ To install the Sense HAT:
 
 3. If using the stand-offs, secure them to the Sense HAT from the top with the
    remaining screws. If you find you cannot align the holes on the Sense HAT
-   with the stand-offs this is a sure-fire sign that the pins are mis-aligned
+   with the stand-offs this is a sure-fire sign that the pins are misaligned
    (you've missed a row / column of GPIO pins when installing the HAT). In
    this case, remove the Sense HAT from the GPIO pins and try again.
 
@@ -70,7 +70,7 @@ pisense library, then construct an object to interface to the HAT::
 The ``hat`` object represents the Sense HAT, and provides several attributes
 which represent the different components on the HAT. Specifically:
 
-* ``hat.screen`` represents the 8x8 grid of LEDs on the HAT.
+* ``hat.screen`` represents the 8 x 8 grid of LEDs on the HAT.
 
 * ``hat.stick`` represents the miniature joystick at the bottom right of the
   HAT.
@@ -86,8 +86,9 @@ The Screen
 ==========
 
 Let's try controlling the screen first of all. The screen's state is
-represented as a `numpy`_ array of ``(red, green, blue)`` values. The structure
-of the values is compatible with the `colorzero`_ library which makes them
+represented as a `numpy`_ :class:`~numpy.ndarray` of ``(red, green, blue)``
+values.  The structure of the values is compatible with
+:class:`~colorzero.Color` class from the `colorzero`_ library which makes them
 quite easy to work with::
 
     >>> from colorzero import Color
@@ -131,7 +132,7 @@ change the entire upper left quadrant red with a single command::
 
 We can omit both the start and end of a slice (by specifying ":") to indicate
 we want the entire length of whatever we're slicing. For example, to draw a
-copule of white lines next to our quadrant::
+couple of white lines next to our quadrant::
 
     >>> hat.screen.array[:, 4] = Color('white')
     >>> hat.screen.array[4, :] = Color('white')
@@ -169,8 +170,8 @@ construct a blue screen (thankfully not of death!) and fade to it::
     >>> hat.screen.fade_to(blue_screen)
 
 The :func:`array` function can also be given a list of values to initialize
-itself. This is particularly useful with :class:`Color` aliases a single letter
-long. For example, to draw a French flag on our display::
+itself. This is particularly useful with :class:`~colorzero.Color` aliases a
+single letter long. For example, to draw a French flag on our display::
 
     >>> B = Color('black')
     >>> r = Color('red')
@@ -184,9 +185,9 @@ long. For example, to draw a French flag on our display::
 Finally, if you're familiar with the `Pillow`_ library (formerly PIL, the
 Python Imaging Library) you can obtain a representation of the screen with the
 :meth:`~SenseScreen.image` method. You can draw on this with the facilities of
-Pillow's :mod:`ImageDraw` module then copy the result back to the Sense HAT's
-screen with the :meth:`~SenseScreen.draw` method (the image returned doesn't
-automatically update the screen when modified, unlike the array
+Pillow's :mod:`~PIL.ImageDraw` module then copy the result back to the Sense
+HAT's screen with the :meth:`~SenseScreen.draw` method (the image returned
+doesn't automatically update the screen when modified, unlike the array
 representation).
 
 
@@ -194,7 +195,7 @@ The Joystick
 ============
 
 The miniature joystick at the bottom right of the Sense HAT is exceedingly
-useful as a basic interface for Rapsberry Pis without a keyboard. The joystick
+useful as a basic interface for Raspberry Pis without a keyboard. The joystick
 actually emulates a keyboard (which in some circumstances is very annoying) but
 it's simpler, and more useful, to use the library's facilities to read the
 joystick rather than trying to read the keyboard. The :meth:`~SenseStick.read`
@@ -221,7 +222,8 @@ return ``None``::
     >>> hat.stick.read(1.0)
     >>>
 
-The event is returned as a :func:`namedtuple` with the following fields:
+The event is returned as a :func:`~collections.namedtuple` with the following
+fields:
 
 * ``timestamp`` -- the timestamp at which the event occurred.
 
@@ -247,19 +249,25 @@ The event is returned as a :func:`namedtuple` with the following fields:
 Hence a typical sequence of events when briefly pressing the joystick right
 would be:
 
-|direction|pressed|held|
-|right|True|False|
-|right|False|False|
+========= ======= =====
+direction pressed held
+========= ======= =====
+right     True    False
+right     False   False
+========= ======= =====
 
 However, when holding the joystick right, the sequence would be:
 
-|direction|pressed|held|
-|right|True|False|
-|right|True|True|
-|right|True|True|
-|right|True|True|
-|right|True|True|
-|right|False|True|
+========= ======= =====
+direction pressed held
+========= ======= =====
+right     True    False
+right     True    True
+right     True    True
+right     True    True
+right     True    True
+right     False   True
+========= ======= =====
 
 Finally, the joystick can be treated as an iterator which yields events
 whenever they occur. This is particularly useful for driving interfaces as
@@ -268,11 +276,13 @@ we'll see in later sections. For now, you can try this on the command line::
     >>> for event in hat.stick:
     ...     print(repr(event))
     ...
-    StickEvent(..., direction='right', pressed=True, held=False)
-    StickEvent(..., direction='right', pressed=True, held=True)
-    StickEvent(..., direction='right', pressed=True, held=True)
-    StickEvent(..., direction='right', pressed=True, held=True)
-    StickEvent(..., direction='right', pressed=False, held=True)
+    StickEvent(timestamp=datetime.datetime(2018, 5, 4, 20, 6, 10, 845258), direction='right', pressed=True, held=False)
+    StickEvent(timestamp=datetime.datetime(2018, 5, 4, 20, 6, 11, 100073), direction='right', pressed=True, held=True)
+    StickEvent(timestamp=datetime.datetime(2018, 5, 4, 20, 6, 11, 150078), direction='right', pressed=True, held=True)
+    StickEvent(timestamp=datetime.datetime(2018, 5, 4, 20, 6, 11, 200125), direction='right', pressed=True, held=True)
+    StickEvent(timestamp=datetime.datetime(2018, 5, 4, 20, 6, 11, 250146), direction='right', pressed=True, held=True)
+    StickEvent(timestamp=datetime.datetime(2018, 5, 4, 20, 6, 11, 300088), direction='right', pressed=True, held=True)
+    StickEvent(timestamp=datetime.datetime(2018, 5, 4, 20, 6, 11, 316964), direction='right', pressed=False, held=True)
     ^C
 
 .. note::
@@ -298,6 +308,10 @@ humidity, or temperature::
     51.75486755371094
     >>> hat.environ.temperature
     29.045833587646484
+
+The pressure is returned in `millibars`_ (which are equivalent to
+`hectopascals`_). The humidity is given as a `relative humidity`_ percentage.
+Finally, the temperature is returned in `celsius`_.
 
 Despite there being effectively two temperature sensors there's only a single
 ``temperature`` property. By default it returns the reading from the pressure
@@ -328,19 +342,101 @@ iterator::
     >>> for reading in hat.environ:
     ...     print(repr(reading))
     ...
-    EnvironReadings(pressure=1025.415283203125, humidity=51.15349578857422, temperature=27.177431106567383)
-    EnvironReadings(pressure=1025.418701171875, humidity=50.985107421875, temperature=27.226137161254883)
-    EnvironReadings(pressure=1025.41943359375, humidity=50.985107421875, temperature=27.2271785736084)
-    EnvironReadings(pressure=1025.421142578125, humidity=50.985107421875, temperature=27.22405433654785)
-    EnvironReadings(pressure=1025.4248046875, humidity=50.920963287353516, temperature=27.22405433654785)
-    EnvironReadings(pressure=1025.4228515625, humidity=50.920963287353516, temperature=27.223012924194336)
-    EnvironReadings(pressure=1025.425537109375, humidity=50.920963287353516, temperature=27.226137161254883)
-    EnvironReadings(pressure=1025.4287109375, humidity=50.920963287353516, temperature=27.2271785736084)
-    EnvironReadings(pressure=1025.426025390625, humidity=51.06930160522461, temperature=27.23317050933838)
+    EnvironReadings(pressure=1025.41, humidity=51.1534, temperature=27.1774)
+    EnvironReadings(pressure=1025.41, humidity=50.9851, temperature=27.2261)
+    EnvironReadings(pressure=1025.41, humidity=50.9851, temperature=27.2271)
+    EnvironReadings(pressure=1025.42, humidity=50.9851, temperature=27.2240)
+    EnvironReadings(pressure=1025.42, humidity=50.9209, temperature=27.2240)
+    EnvironReadings(pressure=1025.42, humidity=50.9209, temperature=27.2230)
+    EnvironReadings(pressure=1025.42, humidity=50.9209, temperature=27.2261)
+    EnvironReadings(pressure=1025.42, humidity=50.9209, temperature=27.2271)
+    EnvironReadings(pressure=1025.42, humidity=51.0693, temperature=27.2331)
     ^C
 
+A simple experiment you can run is to breathe near the humidity sensor and then
+query its value. You should see the value rise quite rapidly before it slowly
+falls back down as the vapour you exhaled evaporates from the surface of the
+sensor.
 
-.. _numpy:
-.. _colorzero:
-.. _slicing:
+
+Inertial Measurement Unit (IMU)
+===============================
+
+The `Inertial Measurement Unit`_ (IMU) on the Sense HAT actually consists of
+three different sensors (an `accelerometer`_, a `gyroscope`_, and a
+`magnetometer`_) each of which provide three readings (X, Y, and Z). This is
+why you may also hear the sensor referred to as a 9-DoF (9 Degrees of Freedom)
+sensor; it returns 9 independent values.
+
+You can read values from the sensors independently::
+
+    >>> hat.imu.accel
+    IMUReadings(x=0.0351547, y=0.052686, z=1.015)
+    >>> hat.imu.gyro
+    IMUReadings(x=0.0180783, 0.000277532, z=-0.0179323)
+    >>> hat.imu.compass
+    IMUReadings(x=-47.4917, y=-22.4575, z=38.9144)
+
+The accelerometer returns values in g (`standard gravities`_, equivalent to
+9.80665m/s²). Hence, with the Sense HAT lying flat on a table, the X and Y
+values of the accelerometer should be close to zero, while the Z values should
+be close to 1 (because gravity is pulling it straight down).
+
+The gyroscope returns values in `radians per second`_. With the Sense HAT lying
+stationary all values should be close to zero. If you wish to test the
+gyroscope, set the console to continually print values and slowly rotate the
+HAT::
+
+    >>> while True:
+    ...     print(hat.imu.gyro)
+    ...     sleep(0.1)
+    ...
+    TODO
+
+Finally, the magnetometer returns values in µT (`micro-Teslas`_, where 1µT is
+equal to 10mG or `milli-Gauss`_). The Earth's magnetic field is incredibly
+weak, so if you wish to test the magnetometer it is easier to do so with a
+permanent magnet, especially something strong like a small `neodymium magnet`_.
+Bringing such a magnet within 10cm of the HAT should provoke an obvious
+reaction in the readings.
+
+The readings from these three components are combined by the underlying library
+to form a composite "orientation" reading which provides the `roll, pitch, and
+yaw`_ of the HAT in `radians`_::
+
+    >>> hat.imu.orient
+    IMUOrient(roll=-0.461751, pitch=1.10459, yaw=-0.508346)
+
+Like all the other sensors on the HAT, the IMU can be treated as an iterator::
+
+    >>> for state in hat.imu:
+    ...     print(repr(state))
+    ...
+    TODO
+
+The concludes the tour of the Raspberry Pi Sense HAT, and of the bare
+functionality of the pisense library. The next sections will introduce some
+simple projects to give you an idea of how the library can be used to combine
+these facilities to useful or fun effect!
+
+
+.. _numpy: https://numpy.org/
+.. _Pillow: https://pillow.readthedocs.io/
+.. _colorzero: https://colorzero.readthedocs.io/
+.. _slicing: https://docs.scipy.org/doc/numpy/user/quickstart.html#indexing-slicing-and-iterating
+.. _millibars: https://en.wikipedia.org/wiki/Bar_(unit)
+.. _hectopascals: https://en.wikipedia.org/wiki/Pascal_(unit)
+.. _relative humidity: https://en.wikipedia.org/wiki/Relative_humidity
+.. _celsius: https://en.wikipedia.org/wiki/Celsius
+.. _Inertial Measurement Unit: https://en.wikipedia.org/wiki/Inertial_measurement_unit
+.. _accelerometer: https://en.wikipedia.org/wiki/Accelerometer
+.. _gyroscope: https://en.wikipedia.org/wiki/Gyroscope
+.. _magnetometer: https://en.wikipedia.org/wiki/Magnetometer
+.. _standard gravities: https://en.wikipedia.org/wiki/Standard_gravity
+.. _radians per second: https://en.wikipedia.org/wiki/Radian_per_second
+.. _micro-Teslas: https://en.wikipedia.org/wiki/Tesla_(unit)
+.. _milli-Gauss: https://en.wikipedia.org/wiki/Gauss_(unit)
+.. _neodymium magnet: https://en.wikipedia.org/wiki/Neodymium_magnet
+.. _roll, pitch, and yaw: https://en.wikipedia.org/wiki/Aircraft_principal_axes
+.. _radians: https://en.wikipedia.org/wiki/Radian
 .. _Dilbert: http://dilbert.com/strip/2008-05-07
