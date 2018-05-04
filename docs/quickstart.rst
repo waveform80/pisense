@@ -14,6 +14,8 @@ Hardware
 
 Remove the sense HAT from its packaging. You should have the following parts:
 
+.. TODO package pictures
+
 1. The Sense HAT itself
 
 2. A 40-pin stand-off header. This usually comes attached to the Sense HAT and
@@ -23,6 +25,8 @@ Remove the sense HAT from its packaging. You should have the following parts:
 3. Eight screws and four stand-off posts.
 
 To install the Sense HAT:
+
+.. TODO installation pictures
 
 1. Screw the stand-off posts onto the Pi from the bottom.
 
@@ -58,7 +62,9 @@ First Steps
 
 Start a Python environment (this documentation assumes you use Python 3, though
 the pisense library is compatible with both Python 2 and 3), and import the
-pisense library, then construct an object to interface to the HAT::
+pisense library, then construct an object to interface to the HAT:
+
+.. code-block:: console
 
     $ python3
     Python 3.5.3 (default, Jan 19 2017, 14:11:04)
@@ -314,18 +320,18 @@ The pressure is returned in `millibars`_ (which are equivalent to
 Finally, the temperature is returned in `celsius`_.
 
 Despite there being effectively two temperature sensors there's only a single
-``temperature`` property. By default it returns the reading from the pressure
+``temperature`` property. By default it returns the reading from the humidity
 sensor, but you configure this with the
 :attr:`~SenseEnvironment.temperature_source` attribute::
 
     >>> hat.environ.temperature_source
-    <function temp_pressure at 0x7515b588>
-    >>> hat.environ.temperature_source = pisense.temp_humidity
-    >>> hat.environ.temperature
-    25.24289321899414
+    <function temp_humidity at 0x7515b588>
     >>> hat.environ.temperature_source = pisense.temp_pressure
     >>> hat.environ.temperature
     29.149999618530273
+    >>> hat.environ.temperature_source = pisense.temp_humidity
+    >>> hat.environ.temperature
+    25.24289321899414
 
 Note that both temperature readings can be quite different!  You can also
 configure it to take the average of the two readings::
@@ -377,6 +383,8 @@ You can read values from the sensors independently::
     >>> hat.imu.compass
     IMUReadings(x=-47.4917, y=-22.4575, z=38.9144)
 
+.. TODO update these
+
 The accelerometer returns values in g (`standard gravities`_, equivalent to
 9.80665m/s²). Hence, with the Sense HAT lying flat on a table, the X and Y
 values of the accelerometer should be close to zero, while the Z values should
@@ -391,7 +399,8 @@ HAT::
     ...     print(hat.imu.gyro)
     ...     sleep(0.1)
     ...
-    TODO
+
+.. TODO output
 
 Finally, the magnetometer returns values in µT (`micro-Teslas`_, where 1µT is
 equal to 10mG or `milli-Gauss`_). The Earth's magnetic field is incredibly
@@ -407,12 +416,15 @@ yaw`_ of the HAT in `radians`_::
     >>> hat.imu.orient
     IMUOrient(roll=-0.461751, pitch=1.10459, yaw=-0.508346)
 
+.. TODO correct this
+
 Like all the other sensors on the HAT, the IMU can be treated as an iterator::
 
     >>> for state in hat.imu:
     ...     print(repr(state))
     ...
-    TODO
+
+.. TODO output
 
 The concludes the tour of the Raspberry Pi Sense HAT, and of the bare
 functionality of the pisense library. The next sections will introduce some

@@ -9,11 +9,15 @@ Table of Contents
 
     install
     quickstart
-    game
     monitor
+    game
     faq
     development
     api
+    api_screen
+    api_stick
+    api_environ
+    api_imu
     changelog
     license
 

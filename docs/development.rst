@@ -40,6 +40,8 @@ within a virtual Python environment:
     (pisense) $ cd pisense
     (pisense) $ make develop
 
+.. TODO What about RTIMULib?
+
 To pull the latest changes from git into your clone and update your
 installation:
 

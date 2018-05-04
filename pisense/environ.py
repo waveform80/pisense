@@ -109,7 +109,7 @@ class SenseEnviron(object):
     :attr:`temperature_source` which, given the two temperature readings
     returns the reading you are interested in, or some combination there-of.
     """
-    def __init__(self, settings=None, temperature_source=temp_pressure):
+    def __init__(self, settings=None, temperature_source=temp_humidity):
         if not isinstance(settings, SenseSettings):
             settings = SenseSettings(settings)
         self._settings = settings
