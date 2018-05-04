@@ -273,6 +273,7 @@ we'll see in later sections. For now, you can try this on the command line::
     StickEvent(..., direction='right', pressed=True, held=True)
     StickEvent(..., direction='right', pressed=True, held=True)
     StickEvent(..., direction='right', pressed=False, held=True)
+    ^C
 
 .. note::
 
@@ -327,6 +328,16 @@ iterator::
     >>> for reading in hat.environ:
     ...     print(repr(reading))
     ...
+    EnvironReadings(pressure=1025.415283203125, humidity=51.15349578857422, temperature=27.177431106567383)
+    EnvironReadings(pressure=1025.418701171875, humidity=50.985107421875, temperature=27.226137161254883)
+    EnvironReadings(pressure=1025.41943359375, humidity=50.985107421875, temperature=27.2271785736084)
+    EnvironReadings(pressure=1025.421142578125, humidity=50.985107421875, temperature=27.22405433654785)
+    EnvironReadings(pressure=1025.4248046875, humidity=50.920963287353516, temperature=27.22405433654785)
+    EnvironReadings(pressure=1025.4228515625, humidity=50.920963287353516, temperature=27.223012924194336)
+    EnvironReadings(pressure=1025.425537109375, humidity=50.920963287353516, temperature=27.226137161254883)
+    EnvironReadings(pressure=1025.4287109375, humidity=50.920963287353516, temperature=27.2271785736084)
+    EnvironReadings(pressure=1025.426025390625, humidity=51.06930160522461, temperature=27.23317050933838)
+    ^C
 
 
 .. _numpy:
