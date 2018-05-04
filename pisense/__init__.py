@@ -41,7 +41,10 @@ from .easings import linear, ease_in, ease_out, ease_in_out
 from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .stick import SenseStick, StickEvent
 from .imu import SenseIMU, Readings, Orientation
-from .environment import SenseEnviron, EnvironReadings
+from .environment import (
+    SenseEnviron, EnvironReadings,
+    temp_pressure, temp_humidity, temp_average, temp_both
+)
 from .settings import SenseSettings
 
 

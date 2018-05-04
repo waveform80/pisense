@@ -46,7 +46,7 @@ from .settings import SenseSettings
 EnvironReadings = namedtuple('EnvironReadings', ('pressure', 'humidity', 'temperature'))
 
 
-def pressure(p_temp, h_temp):
+def temp_pressure(p_temp, h_temp):
     """
     Use this function as :attr:`~SenseEnviron.temperature_source` if you want
     to read temperature from the pressure sensor only. This is the default.
@@ -54,7 +54,7 @@ def pressure(p_temp, h_temp):
     return p_temp
 
 
-def humidity(p_temp, h_temp):
+def temp_humidity(p_temp, h_temp):
     """
     Use this function as :attr:`~SenseEnviron.temperature_source` if you want
     to read temperature from the humidity sensor only.
@@ -62,7 +62,7 @@ def humidity(p_temp, h_temp):
     return h_temp
 
 
-def average(p_temp, h_temp):
+def temp_average(p_temp, h_temp):
     """
     Use this function as :attr:`~SenseEnviron.temperature_source` if you wish
     to read the average of both the pressure and humidity sensor's
@@ -76,7 +76,7 @@ def average(p_temp, h_temp):
         return (p_temp + h_temp) / 2
 
 
-def both(p_temp, h_temp):
+def temp_both(p_temp, h_temp):
     """
     Use this function as :attr:`~SenseEnviron.temperature_source` if you wish
     to return both the pressure and humidity sensor's temperature readings as a
@@ -106,7 +106,7 @@ class SenseEnviron(object):
     :attr:`temperature_source` which, given the two temperature readings
     returns the reading you are interested in, or some combination there-of.
     """
-    def __init__(self, settings=None, temperature_source=pressure):
+    def __init__(self, settings=None, temperature_source=temp_pressure):
         if not isinstance(settings, SenseSettings):
             settings = SenseSettings(settings)
         self._settings = settings

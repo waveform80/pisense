@@ -46,6 +46,7 @@ import struct
 import select
 import warnings
 import termios
+from datetime import datetime
 from collections import namedtuple
 from threading import Thread, Event, Lock
 try:
@@ -149,6 +150,10 @@ class SenseStick(object):
     def __del__(self):
         self.close()
 
+    def __iter__(self):
+        while True:
+            yield self.read()
+
     def __enter__(self):
         return self
 
@@ -189,7 +194,9 @@ class SenseStick(object):
                                 "try reading some events!"))
                             self._buffer.get()
                         e = StickEvent(
-                            timestamp=tv_sec + (tv_usec / 1000000),
+                            timestamp=datetime.fromtimestamp(
+                                tv_sec + (tv_usec / 1000000)
+                            ),
                             direction={
                                 SenseStick.KEY_UP:    'up',
                                 SenseStick.KEY_DOWN:  'down',
@@ -242,10 +249,6 @@ class SenseStick(object):
                 self._callbacks_close.set()
                 self._callbacks_thread.join()
                 self._callbacks_thread = None
-
-    def __iter__(self):
-        while True:
-            yield self.read()
 
     def _get_rotation(self):
         return self._rotation
