@@ -35,8 +35,8 @@ from __future__ import (
     )
 str = type('')
 
-import math
 import time
+from math import degrees
 from collections import namedtuple
 
 import RTIMU
@@ -54,7 +54,9 @@ class IMUReadings(namedtuple('IMUReadings', ('x', 'y', 'z'))):
 class IMUOrient(namedtuple('IMUOrient', ('roll', 'pitch', 'yaw'))):
     __slots__ = ()
     def __repr__(self):
-        return 'IMUOrient(roll=%g, pitch=%g, yaw=%g)' % self
+        return 'IMUOrient(roll=%g (%.1f°), pitch=%g (%.1f°), yaw=%g (%.1f°))' % (
+            self.roll, degrees(self.roll), self.pitch, degrees(self.pitch),
+            self.yaw, degrees(self.yaw))
 
 
 class SenseIMU(object):
