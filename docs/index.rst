@@ -9,6 +9,8 @@ Table of Contents
 
     install
     quickstart
+    game
+    monitor
     development
     api
     changelog
