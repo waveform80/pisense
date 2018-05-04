@@ -5,37 +5,16 @@ from colorzero import Color
 from time import sleep
 
 
-def main():
-    with zs.SenseHAT() as hat:
-        for anim, data in game(hat, 8, 8):
-            if anim == 'fade':
-                hat.screen.fade_to(data)
-            elif anim == 'zoom':
-                hat.screen.zoom_to(data, center=(6, 6))
-            elif anim == 'show':
-                hat.screen.array = data
-            elif anim == 'scroll':
-                hat.screen.scroll_text(data, background=Color('red'))
-            elif anim == 'quit':
-                break
-            else:
-                assert False
-
-
-def game(hat, width, height):
+def main(width=8, height=8):
     walls = generate_maze(width, height)
-    wall = Color('white')
-    unvisited = Color('black')
-    maze = draw_maze(width, height, walls, wall, unvisited)
-    height, width = maze.shape
-    visited = Color('green')
-    ball = Color('red')
-    y, x = (1, 1)
-    maze[y, x] = ball
-    left, right = clamp(x, width)
-    top, bottom = clamp(y, height)
-    yield 'fade', maze[top:bottom, left:right]
-    for event in hat.stick:
+    with zs.SenseHAT() as hat:
+        inputs = moves(hat.stick)
+        outputs = game(walls, width, height, inputs)
+        display(hat.screen, outputs)
+
+
+def moves(stick):
+    for event in stick:
         if event.pressed:
             try:
                 delta_y, delta_x = {
@@ -44,21 +23,51 @@ def game(hat, width, height):
                     'up': (-1, 0),
                     'down': (1, 0),
                 }[event.direction]
-                if Color(*maze[y + delta_y, x + delta_x]) != wall:
-                    maze[y, x] = visited
-                    y += delta_y
-                    x += delta_x
-                    maze[y, x] = ball
-                    left, right = clamp(x, width)
-                    top, bottom = clamp(y, height)
-                    if y == height - 2 and x == width - 2:
-                        for state in winners_cup():
-                            yield state
-                        break
-                    else:
-                        yield 'show', maze[top:bottom, left:right]
+                yield delta_y, delta_x
             except KeyError:
                 break
+
+
+def display(screen, states):
+    for anim, data in states:
+        if anim == 'fade':
+            screen.fade_to(data)
+        elif anim == 'zoom':
+            screen.zoom_to(data, center=(6, 6))
+        elif anim == 'show':
+            screen.array = data
+        elif anim == 'scroll':
+            screen.scroll_text(data, background=Color('red'))
+        else:
+            assert False
+
+
+def game(walls, width, height, moves):
+    wall = Color('white')
+    unvisited = Color('black')
+    visited = Color('green')
+    ball = Color('red')
+    maze = draw_maze(width, height, walls, wall, unvisited)
+    height, width = maze.shape
+    y, x = (1, 1)
+    maze[y, x] = ball
+    left, right = clamp(x, width)
+    top, bottom = clamp(y, height)
+    yield 'fade', maze[top:bottom, left:right]
+    for delta_y, delta_x in moves:
+        if Color(*maze[y + delta_y, x + delta_x]) != wall:
+            maze[y, x] = visited
+            y += delta_y
+            x += delta_x
+            maze[y, x] = ball
+            left, right = clamp(x, width)
+            top, bottom = clamp(y, height)
+            if y == height - 2 and x == width - 2:
+                for state in winners_cup():
+                    yield state
+                break
+            else:
+                yield 'show', maze[top:bottom, left:right]
     yield 'fade', zs.array(Color('black'))
 
 
