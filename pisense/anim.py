@@ -87,9 +87,8 @@ def _load_font(font, size):
     return f
 
 
-def scroll_text(text, font=None, size=8, foreground=Color('white'),
-                background=Color('black'), direction='left',
-                duration=None, fps=15):
+def draw_text(text, font, size=8, foreground=Color('white'),
+              background=Color('black')):
     if not isinstance(foreground, Color):
         foreground = Color(*foreground)
     if not isinstance(background, Color):
@@ -100,11 +99,22 @@ def scroll_text(text, font=None, size=8, foreground=Color('white'),
     # off of the display) and +2 to compensate for spillage due to anti-
     # aliasing
     img = Image.new('RGB', (size[0] + 16 + 2, 8))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle(((0, 0), img.size), background.rgb_bytes)
+    draw.text((9, 8 - size[1]), text, foreground.rgb_bytes, f)
+    arr = image_to_rgb565(img)
+    return arr
+
+
+def scroll_text(text, font=None, size=8, foreground=Color('white'),
+                background=Color('black'), direction='left',
+                duration=None, fps=15):
+    arr = draw_text(text, font, size, foreground, background)
     if duration is None:
-        steps = img.size[0] - 8
+        steps = arr.shape[1] - 8
     else:
         steps = int(duration * fps)
-    x_inc = (img.size[0] - 8) / steps
+    x_inc = (arr.shape[1] - 8) / steps
     try:
         x_steps = {
             'left': range(steps),
@@ -112,10 +122,6 @@ def scroll_text(text, font=None, size=8, foreground=Color('white'),
         }[direction]
     except KeyError:
         raise ValueError('invalid direction')
-    draw = ImageDraw.Draw(img)
-    draw.rectangle(((0, 0), img.size), background.rgb_bytes)
-    draw.text((9, 8 - size[1]), text, foreground.rgb_bytes, f)
-    arr = image_to_rgb565(img)
     frames = [
         arr[:, x:x + 8]
         for x_step in x_steps

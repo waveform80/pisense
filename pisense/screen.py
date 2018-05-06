@@ -48,6 +48,8 @@ import glob
 import mmap
 import errno
 import time
+import struct
+import fcntl
 
 import numpy as np
 from colorzero import Color
@@ -62,6 +64,17 @@ from .images import (
     rgb_to_rgb565,
     rgb565_to_rgb,
 )
+
+
+default_gamma = [0,  0,  0,  0,  0,  0,  1,  1,
+                 2,  2,  3,  3,  4,  5,  6,  7,
+                 8,  9,  10, 11, 12, 14, 15, 17,
+                 18, 20, 21, 23, 25, 27, 29, 31]
+
+low_gamma = [0, 1, 1, 1, 1, 1, 1,  1,
+             1, 1, 1, 1, 1, 2, 2,  2,
+             3, 3, 3, 4, 4, 5, 5,  6,
+             6, 7, 7, 8, 8, 9, 10, 10]
 
 
 def array(data=None, shape=(8, 8)):
@@ -153,6 +166,13 @@ class SenseScreen(object):
     # pylint: disable=too-many-instance-attributes
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
+    GET_GAMMA = 61696
+    SET_GAMMA = 61697
+    RESET_GAMMA = 61698
+    GAMMA_DEFAULT = 0
+    GAMMA_LOW = 1
+    GAMMA_USER = 2
+
     def __init__(self, fps=15, easing=linear):
         # TODO gamma
         self._fb_file = io.open(self._fb_device(), 'wb+')
@@ -194,6 +214,22 @@ class SenseScreen(object):
     def _set_raw(self, value):
         self._fb_array[:] = value
     raw = property(_get_raw, _set_raw)
+
+    def _get_gamma(self):
+        buf = bytearray(32)
+        fcntl.ioctl(self._fb_file, SenseScreen.GET_GAMMA, buf)
+        return list(buf)
+    def _set_gamma(self, value):
+        if value is None:
+            fcntl.ioctl(self._fb_file, SenseScreen.RESET_GAMMA, 0)
+        else:
+            if len(value) != 32:
+                raise ValueError('gamma array must contain 32 entries')
+            if not all (0 <= v < 32 for v in value):
+                raise ValueError('gamma values must be in the range 0..31')
+            buf = struct.pack(native_str('32B'), *value)
+            fcntl.ioctl(self._fb_file, SenseScreen.SET_GAMMA, buf)
+    gamma = property(_get_gamma, _set_gamma)
 
     def _get_array(self):
         arr = self._array

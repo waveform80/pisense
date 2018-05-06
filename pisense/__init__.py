@@ -36,9 +36,9 @@ from __future__ import (
 str = type('')
 
 from .images import color
-from .screen import SenseScreen, ScreenArray, array
+from .screen import SenseScreen, ScreenArray, array, default_gamma, low_gamma
 from .easings import linear, ease_in, ease_out, ease_in_out
-from .anim import scroll_text, fade_to, slide_to, zoom_to
+from .anim import draw_text, scroll_text, fade_to, slide_to, zoom_to
 from .stick import SenseStick, StickEvent
 from .imu import SenseIMU, IMUReadings, IMUOrient
 from .environ import (
