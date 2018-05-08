@@ -42,6 +42,7 @@ native_str = str
 str = type('')
 
 
+import os
 import atexit
 
 import numpy as np
@@ -68,15 +69,15 @@ def _load_font(font, size):
     try:
         f = _font_cache[font]
     except KeyError:
-        if font is None:
+        if font.endswith('.pil') and not os.path.exists(font):
             # PIL's internal font format is rather annoying in that it
             # requires *two* files (of which only one is specified in the
             # load() method). As a result, we can't use resource_stream
             # and have to (potentially) extract the resources to the
             # file-system (and register a manual clean-up routine).
             atexit.register(cleanup_resources)
-            pil_file = resource_filename(__name__, 'default.pil')
-            pbm_file = resource_filename(__name__, 'default.pbm')
+            pil_file = resource_filename(__name__, font)
+            pbm_file = resource_filename(__name__, font[:-4] + '.pbm')
             f = ImageFont.load(pil_file)
         else:
             try:
@@ -87,34 +88,36 @@ def _load_font(font, size):
     return f
 
 
-def draw_text(text, font, size=8, foreground=Color('white'),
-              background=Color('black')):
+def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
+              background=Color('black'), padding=(0, 0, 0, 0), min_height=8):
     if not isinstance(foreground, Color):
         foreground = Color(*foreground)
     if not isinstance(background, Color):
         background = Color(*background)
     f = _load_font(font, size)
-    size = f.getsize(text)
-    # +16 for blank screens either side (to let the text scroll onto and
-    # off of the display) and +2 to compensate for spillage due to anti-
-    # aliasing
-    img = Image.new('RGB', (size[0] + 16 + 2, 8))
+    w, h = f.getsize(text)
+    h = max(h, min_height)
+    pl, pt, pr, pb = padding
+    img = Image.new('RGB', (pl + w + pr, pt + h + pb))
     draw = ImageDraw.Draw(img)
     draw.rectangle(((0, 0), img.size), background.rgb_bytes)
-    draw.text((9, 8 - size[1]), text, foreground.rgb_bytes, f)
-    arr = image_to_rgb565(img)
-    return arr
+    draw.text((pl, pt), text, foreground.rgb_bytes, f)
+    return img
 
 
-def scroll_text(text, font=None, size=8, foreground=Color('white'),
+def scroll_text(text, font='default.pil', size=8, foreground=Color('white'),
                 background=Color('black'), direction='left',
                 duration=None, fps=15):
-    arr = draw_text(text, font, size, foreground, background)
+    # +8 for blank screens either side (to let the text scroll onto and
+    # off of the display) and +1 to compensate for spillage due to anti-
+    # aliasing
+    img = draw_text(text, font, size, foreground, background,
+                    padding=(9, 0, 9, 0))
     if duration is None:
-        steps = arr.shape[1] - 8
+        steps = img.size[0] - 8
     else:
         steps = int(duration * fps)
-    x_inc = (arr.shape[1] - 8) / steps
+    x_inc = (img.size[0] - 8) / steps
     try:
         x_steps = {
             'left': range(steps),
@@ -122,15 +125,14 @@ def scroll_text(text, font=None, size=8, foreground=Color('white'),
         }[direction]
     except KeyError:
         raise ValueError('invalid direction')
-    frames = [
-        arr[:, x:x + 8]
-        for x_step in x_steps
-        for x in (int(x_step * x_inc),)
-    ]
+    for frame in (
+            img.crop((x, 0, x + 8, img.size[1]))
+            for x_step in x_steps
+            for x in (int(x_step * x_inc),)
+        ):
+        yield frame
     # Guarantee the final frame is solid background color
-    frames[-1] = np.array(
-        (background.rgb565,) * 64, np.uint16).reshape(8, 8)
-    return frames
+    yield Image.new('RGB', (8, 8), background.rgb_bytes)
 
 
 def fade_to(start, finish, duration=1, fps=15, easing=linear):
@@ -143,8 +145,7 @@ def fade_to(start, finish, duration=1, fps=15, easing=linear):
         mask[...] = int(255 * f)
         frame = start.copy()
         frame.paste(finish, (0, 0), mask_img)
-        frames.append(image_to_rgb565(frame))
-    return frames
+        yield frame
 
 
 def slide_to(start, finish, direction='left', cover=False, duration=1, fps=15,
@@ -172,10 +173,9 @@ def slide_to(start, finish, direction='left', cover=False, duration=1, fps=15,
         else:
             canvas.paste(start, (x, y))
         canvas.paste(finish, (64 * -delta_x + x, 64 * -delta_y + y))
-        frames.append(image_to_rgb565(canvas.resize((8, 8), Image.BOX)))
+        yield canvas.resize((8, 8), Image.BOX)
     # Ensure the final frame is the finish image (without resizing blur)
-    frames[-1] = image_to_rgb565(finish_small)
-    return frames
+    yield finish_small
 
 
 def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
@@ -205,7 +205,6 @@ def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
             int(64 - f * 8 * (8 - (center[0] + 1))),
             int(64 - f * 8 * (8 - (center[1] + 1))),
         ))
-        frames.append(image_to_rgb565(frame.resize((8, 8), Image.BOX)))
+        yield frame.resize((8, 8), Image.BOX)
     # Ensure the final frame is the finish image (without resizing blur)
-    frames[-1] = image_to_rgb565(final)
-    return frames
+    yield final

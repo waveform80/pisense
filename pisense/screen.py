@@ -106,10 +106,11 @@ class ScreenArray(np.ndarray):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         inputs = [
-            v.view(np.float16, np.ndarray).reshape(v.shape + (3,))
+            np.ascontiguousarray(v).view(np.float16, np.ndarray).reshape(v.shape + (3,))
             if isinstance(v, np.ndarray) and v.dtype == color else
-            v.view(v.dtype, np.ndarray).reshape(v.shape)
-            if isinstance(v, np.ndarray) else v
+            np.ascontiguousarray(v).view(v.dtype, np.ndarray).reshape(v.shape)
+            if isinstance(v, np.ndarray) else
+            v
             for v in inputs
         ]
         try:
@@ -118,7 +119,7 @@ class ScreenArray(np.ndarray):
             pass
         else:
             kwargs['out'] = (
-                v.view(np.float16, np.ndarray).reshape(v.shape + (3,)),
+                np.ascontiguousarray(v).view(np.float16, np.ndarray).reshape(v.shape + (3,)),
             )
         result = super(ScreenArray, self).__array_ufunc__(
             ufunc, method, *inputs, **kwargs)
@@ -312,29 +313,44 @@ class SenseScreen(object):
     def play(self, frames):
         delay = 1 / self.fps
         for frame in frames:
-            self.raw = self._apply_transforms(frame)
+            if (isinstance(frame, np.ndarray) and
+                    frame.shape == (8, 8) and
+                    frame.dtype == np.float16):
+                # Fast-path
+                self.raw = self._apply_transforms(frame)
+            else:
+                self.draw(frame)
             time.sleep(delay)
 
-    def scroll_text(self, text, font=None, size=8, foreground=Color('white'),
-                    background=Color('black'), direction='left',
-                    duration=None, fps=None):
-        self.play(scroll_text(text, font, size, foreground, background,
-                              direction, duration,
-                              self.fps if fps is None else fps))
+    def scroll_text(self, text, font='default.pil', size=8,
+                    foreground=Color('white'), background=Color('black'),
+                    direction='left', duration=None, fps=None):
+        frames = scroll_text(text, font, size, foreground, background,
+                             direction, duration,
+                             self.fps if fps is None else fps)
+        frames = [image_to_rgb565(frame) for frame in frames]
+        self.play(frames)
 
     def fade_to(self, image, duration=1, fps=None, easing=None):
-        self.play(fade_to(self.image(), image, duration,
-                          self.fps if fps is None else fps,
-                          self.easing if easing is None else easing))
+        frames = fade_to(self.image(), image, duration,
+                         self.fps if fps is None else fps,
+                         self.easing if easing is None else easing)
+        frames = [image_to_rgb565(frame) for frame in frames]
+        self.play(frames)
 
     def slide_to(self, image, direction='left', cover=False, duration=1,
                  fps=None, easing=None):
-        self.play(slide_to(self.image(), image, direction, cover, duration,
-                           self.fps if fps is None else fps,
-                           self.easing if easing is None else easing))
+        frames = slide_to(self.image(), image, direction, cover, duration,
+                          self.fps if fps is None else fps,
+                          self.easing if easing is None else easing)
+        frames = [image_to_rgb565(frame) for frame in frames]
+        self.play(frames)
 
     def zoom_to(self, image, center=(4, 4), direction='in', duration=1,
                 fps=None, easing=None):
-        self.play(zoom_to(self.image(), image, center, direction, duration,
-                          self.fps if fps is None else fps,
-                          self.easing if easing is None else easing))
+        frames = zoom_to(self.image(), image, center,
+                         direction, duration,
+                         self.fps if fps is None else fps,
+                         self.easing if easing is None else easing)
+        frames = [image_to_rgb565(frame) for frame in frames]
+        self.play(frames)

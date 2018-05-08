@@ -78,6 +78,14 @@ def image_to_rgb565(img):
     return rgb888_to_rgb565(image_to_rgb888(img))
 
 
+def image_to_rgb(img):
+    """
+    Convert *img* (a PIL:class:`Image`) to a numpy :class:`ndarray` in RGB
+    format (structured floating-point type with 3 values each between 0 and 1).
+    """
+    return rgb888_to_rgb(image_to_rgb888(img))
+
+
 def rgb888_to_image(arr):
     """
     Convert a numpy :class:`ndarray` in RGB888 format (unsigned 8-bit values in
@@ -240,4 +248,3 @@ def buf_to_rgb(buf):
     else:
         arr = buf_to_rgb888(buf)
         return arr.astype(np.float16) / 255
-
