@@ -11,5 +11,5 @@ while True:
         for y in range(8)
     ])
     hat.screen.array = rainbow
-    offset += 0.01
-    sleep(0.1)
+    offset += 0.05
+    sleep(0.05)
