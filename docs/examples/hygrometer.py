@@ -7,8 +7,8 @@ def hygrometer(readings):
     for reading in readings:
         h = reading.humidity / 100 * 64
         screen = array([
-            Color('blue') if i < int(h) else
-            Color('blue') * Blue(h - int(h)) if i < h else
+            Color('#008') if i < int(h) else
+            Color('#008') * Blue(h - int(h)) if i < h else
             Color('black')
             for i in range(64)
         ])
