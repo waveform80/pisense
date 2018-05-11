@@ -106,7 +106,7 @@ class ScreenArray(np.ndarray):
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         inputs = [
-            np.ascontiguousarray(v).view(np.float16, np.ndarray).reshape(v.shape + (3,))
+            np.ascontiguousarray(v).view(np.float32, np.ndarray).reshape(v.shape + (3,))
             if isinstance(v, np.ndarray) and v.dtype == color else
             np.ascontiguousarray(v).view(v.dtype, np.ndarray).reshape(v.shape)
             if isinstance(v, np.ndarray) else
@@ -119,13 +119,13 @@ class ScreenArray(np.ndarray):
             pass
         else:
             kwargs['out'] = (
-                np.ascontiguousarray(v).view(np.float16, np.ndarray).reshape(v.shape + (3,)),
+                np.ascontiguousarray(v).view(np.float32, np.ndarray).reshape(v.shape + (3,)),
             )
         result = super(ScreenArray, self).__array_ufunc__(
             ufunc, method, *inputs, **kwargs)
         if (
                 isinstance(result, np.ndarray) and
-                result.dtype == np.float16 and
+                result.dtype == np.float32 and
                 len(result.shape) == 3 and
                 result.shape[-1] == 3):
             result = result.view(color, self.__class__).squeeze()
@@ -315,7 +315,7 @@ class SenseScreen(object):
         for frame in frames:
             if (isinstance(frame, np.ndarray) and
                     frame.shape == (8, 8) and
-                    frame.dtype == np.float16):
+                    frame.dtype == np.uint16):
                 # Fast-path
                 self.raw = self._apply_transforms(frame)
             else:
@@ -328,6 +328,9 @@ class SenseScreen(object):
         frames = scroll_text(text, font, size, foreground, background,
                              direction, duration,
                              self.fps if fps is None else fps)
+        # Pre-calc all the frames in the raw RGR565 format; doesn't take a huge
+        # amount of memory and ensures a smooth playback even on tiny
+        # platforms like the A+
         frames = [image_to_rgb565(frame) for frame in frames]
         self.play(frames)
 

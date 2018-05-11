@@ -85,13 +85,13 @@ API`_, but here's what I *don't* like about it:
   implies. There's no way to get this set of data from a single IMU read.
 
 
-Why are you using *half* precision floats in the display?!
-==========================================================
+Why are you using *single* precision floats in the display?!
+============================================================
 
 Under the covers, the Sense HAT's display framebuffer stores pixel information
 in RGB565 format. That's 5-bits for red and blue, and 6-bits for green. The
-16-bit `half-precision floating point`_ format used in pisense still uses
-11-bits for the mantissa; more than enough to represent the 5 or 6-bits of data
+32-bit `single-precision floating point`_ format used in pisense still uses
+23-bits for the mantissa; more than enough to represent the 5 or 6-bits of data
 for each pixel.
 
 Why not use RGB565 directly? We do: the :attr:`SenseScreen.raw` attribute
@@ -102,11 +102,14 @@ However, for ease of use I wanted the array format to be compatible with my
 `colorzero`_ library, which meant using a floating point format. The smaller
 the format, the more efficient the library as there's less data to chuck around
 and crunch (ideally I wanted it to perform reasonably on the smallest Pi
-platforms like the old A+). Half-precision was the smallest floating point
-format `numpy`_ offered, and it was sufficiently precise for the task.
+platforms like the old A+). During development, this library used the rather
+obscure half-precision floating point format which is only 16-bits in size
+(and provides 11-bits for the mantissa). However, hardware support for this
+floating point format is only present on some Pi models and as best as I can
+tell isn't supported at all in Raspbian's 32-bit userland. In tests, the single
+precision format turned out to be the fastest so that's what the library uses.
 
-
-.. _half-precision floating point: https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+.. _single-precision floating point: https://en.wikipedia.org/wiki/Single-precision_floating-point_format
 .. _colorzero: https://colorzero.readthedocs.io/
 .. _numpy: https://numpy.org/
 

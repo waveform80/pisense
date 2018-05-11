@@ -47,9 +47,9 @@ from PIL import Image
 
 
 color = np.dtype([
-    (native_str('r'), np.float16),
-    (native_str('g'), np.float16),
-    (native_str('b'), np.float16),
+    (native_str('r'), np.float32),
+    (native_str('g'), np.float32),
+    (native_str('b'), np.float32),
 ])
 
 
@@ -160,7 +160,7 @@ def rgb888_to_rgb(arr, out=None):
     else:
         # XXX Change to exception
         assert out.shape == arr.shape[:2] and out.dtype == color
-    arr = arr.astype(np.float16) / 255
+    arr = arr.astype(np.float32) / 255
     out['r'] = arr[..., 0]
     out['g'] = arr[..., 1]
     out['b'] = arr[..., 2]
@@ -197,9 +197,9 @@ def rgb565_to_rgb(arr, out=None):
         out = np.empty(arr.shape, color)
     else:
         assert out.shape == arr.shape and out.dtype == color
-    out['r'] = ((arr & 0xF800) / 0xF800).astype(np.float16)
-    out['g'] = ((arr & 0x07E0) / 0x07E0).astype(np.float16)
-    out['b'] = ((arr & 0x001F) / 0x001F).astype(np.float16)
+    out['r'] = ((arr & 0xF800) / 0xF800).astype(np.float32)
+    out['g'] = ((arr & 0x07E0) / 0x07E0).astype(np.float32)
+    out['b'] = ((arr & 0x001F) / 0x001F).astype(np.float32)
     return out
 
 
@@ -247,4 +247,4 @@ def buf_to_rgb(buf):
         return buf
     else:
         arr = buf_to_rgb888(buf)
-        return arr.astype(np.float16) / 255
+        return arr.astype(np.float32) / 255
