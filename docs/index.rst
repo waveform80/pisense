@@ -9,6 +9,7 @@ Table of Contents
 
     install
     quickstart
+    demos
     monitor
     game
     faq

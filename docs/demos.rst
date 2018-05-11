@@ -3,8 +3,8 @@ Simple Demos
 ============
 
 
-To get us warmed up before we attempt any real projects, here's some simple
-demos that use the functionality of the Sense HAT.
+To get us warmed up before we attempt some complete applications, here's some
+simple demos that use the functionality of the Sense HAT.
 
 
 Rainbow Scroller
@@ -29,7 +29,7 @@ this easily from the command line::
     >>> hat.screen.array = rainbow
 
 At this point you should have a nice rainbow on your display. How do we make
-this scroll? Simple: construct a loop that increments the hue a tiny amount
+this scroll? We simply construct a loop that increments the hue a tiny amount
 each time round. For example:
 
 .. literalinclude:: examples/rainbow.py
@@ -46,9 +46,32 @@ interested in the joystick events themselves, but rather on what they *mean* to
 your application.
 
 Hence our first step is to define a generator function that transforms joystick
-events into relative X, Y movements. Then we'll define another simple generator
-that transforms these into arrays for the display. Finally, we'll use that
-output to drive the display:
+events into relative X, Y movements:
+
+.. literalinclude:: examples/joystick_basic.py
+    :pyobject: movements
+
+You can try this out from the command line like so::
+
+    >>> from pisense import SenseHAT
+    >>> hat = SenseHAT()
+    >>> for x, y in movements(hat.stick):
+    ...     print('x:', x, 'y:', y)
+    ...
+    x: 1 y: 0
+    x: 1 y: 0
+    x: 0 y: 1
+    x: 0 y: 1
+    x: -1 y: 0
+
+.. note::
+
+    You may see several control characters like ``^[[C`` and ``^[[D`` appearing
+    as you play with this. These are the raw characters that represent the
+    cursor keys; this output can be ignored.
+
+Now, we'll define another simple generator that transforms these into arrays
+for the display. Finally, we'll use that output to drive the display:
 
 .. literalinclude:: examples/joystick_basic.py
 

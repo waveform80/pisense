@@ -1,8 +1,8 @@
 from pisense import SenseHAT, array
 from colorzero import Color
 
-def movements(hat):
-    for event in hat.stick:
+def movements(events):
+    for event in events:
         if event.pressed:
             try:
                 yield {
@@ -29,5 +29,5 @@ def arrays(moves):
     yield a  # exit with blank display
 
 with SenseHAT() as hat:
-    for a in arrays(movements(hat)):
+    for a in arrays(movements(hat.stick)):
         hat.screen.array = a
