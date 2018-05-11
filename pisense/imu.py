@@ -44,14 +44,52 @@ import RTIMU
 from .settings import SenseSettings
 
 
-IMUState = namedtuple('IMUState', ('compass', 'gyro', 'accel', 'orient'))
+class IMUState(namedtuple('IMUState', ('compass', 'gyro', 'accel', 'orient'))):
+    """
+    Represents a single reading from the Inertial Measurement Unit (IMU). The
+    fields are as follows:
 
-class IMUReadings(namedtuple('IMUReadings', ('x', 'y', 'z'))):
+    .. attribute:: compass
+
+        An :attr:`IMUVector` tuple containing the raw values from the
+        magnetometer in µT (`micro-teslas`_).
+
+    .. attribute:: gyro
+
+        An :attr:`IMUVector` tuple containing the raw values from the
+        gyroscope in `radians / second <radians-per-second>`_.
+
+    .. attribute:: accel
+
+        An :attr:`IMUVector` tuple containing the raw values from the
+        accelerometer in `standard gravities`_ (g).
+
+    .. attribute:: orient
+
+        The orientation of the HAT, as calculated from the three sensors,
+        presented as an :class:`IMUOrient` instance.
+
+    .. _micro-teslas: https://en.wikipedia.org/wiki/Tesla_(unit)
+    .. _radians-per-second: https://en.wikipedia.org/wiki/Radian_per_second
+    .. _standard gravities: https://en.wikipedia.org/wiki/Standard_gravity
+    """
+    __slots__ = ()
+
+class IMUVector(namedtuple('IMUVector', ('x', 'y', 'z'))):
+    """
+    Represents a three-dimensional vector with X, Y, and Z components. This is
+    mostly used to represent the output of the major IMU sensors (magnetometer,
+    gryoscope, and accelerometer).
+    """
     __slots__ = ()
     def __repr__(self):
-        return 'IMUReadings(x=%g, y=%g, z=%g)' % self
+        return 'IMUVector(x=%g, y=%g, z=%g)' % self
 
 class IMUOrient(namedtuple('IMUOrient', ('roll', 'pitch', 'yaw'))):
+    """
+    Represents the orientation of the Sense HAT in radians (though the display
+    is provided in degrees for human comfort.
+    """
     __slots__ = ()
     def __repr__(self):
         return 'IMUOrient(roll=%g (%.1f°), pitch=%g (%.1f°), yaw=%g (%.1f°))' % (
@@ -60,6 +98,11 @@ class IMUOrient(namedtuple('IMUOrient', ('roll', 'pitch', 'yaw'))):
 
 
 class SenseIMU(object):
+    """
+    The :class:`SenseIMU` class represents the Inertial Measurement Unit (IMU)
+    on the Sense HAT. Users can either instantiate the class themselves, or can
+    access an instance from :attr:`???`
+    """
     def __init__(self, settings=None):
         # TODO rotation
         if not isinstance(settings, SenseSettings):
@@ -74,9 +117,9 @@ class SenseIMU(object):
         self._imu.setAccelEnable(True)
         self._sensors = frozenset(('compass', 'gyro', 'accel'))
         self._readings = IMUState(
-            IMUReadings(None, None, None),
-            IMUReadings(None, None, None),
-            IMUReadings(None, None, None),
+            IMUVector(None, None, None),
+            IMUVector(None, None, None),
+            IMUVector(None, None, None),
             IMUOrient(None, None, None)
         )
         self._last_read = None
@@ -111,9 +154,9 @@ class SenseIMU(object):
         if self._imu.IMURead():
             d = self._imu.getIMUData()
             self._readings = IMUState(
-                IMUReadings(*d['compass']) if d.get('compassValid', False) else None,
-                IMUReadings(*d['gyro']) if d.get('gyroValid', False) else None,
-                IMUReadings(*d['accel']) if d.get('accelValid', False) else None,
+                IMUVector(*d['compass']) if d.get('compassValid', False) else None,
+                IMUVector(*d['gyro']) if d.get('gyroValid', False) else None,
+                IMUVector(*d['accel']) if d.get('accelValid', False) else None,
                 IMUOrient(*d['fusionPose']) if d.get('fusionPoseValid', False) else None,
             )
             self._last_read = now

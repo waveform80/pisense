@@ -64,9 +64,12 @@ class Mock(object):
         else:
             return Mock()
 
+sys.modules['colorzero'] = Mock()
 sys.modules['numpy'] = Mock()
 sys.modules['numpy.lib'] = sys.modules['numpy'].lib
 sys.modules['numpy.lib.stride_tricks'] = sys.modules['numpy'].lib.stride_tricks
+sys.modules['PIL'] = Mock()
+sys.modules['RTIMU'] = Mock()
 
 # -- General configuration ------------------------------------------------
 

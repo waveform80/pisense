@@ -5,6 +5,7 @@ from itertools import cycle, chain
 import numpy as np
 
 def bounce(it):
+    # bounce('ABC') --> A B C C B A A B C ...
     return cycle(chain(it, reversed(it)))
 
 def barometer(readings):

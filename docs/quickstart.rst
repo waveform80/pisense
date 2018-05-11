@@ -225,8 +225,8 @@ The :meth:`~SenseStick.read` method can also take a timeout value (measured in
 seconds). If an event has not occurred before the timeout elapses, it will
 return ``None``::
 
-    >>> hat.stick.read(1.0)
-    >>>
+    >>> print(repr(hat.stick.read(1.0)))
+    None
 
 The event is returned as a :func:`~collections.namedtuple` with the following
 fields:

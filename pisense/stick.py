@@ -61,7 +61,38 @@ from .exc import SenseStickBufferFull, SenseStickCallbackRead
 native_str = str  # pylint: disable=invalid-name
 str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
-StickEvent = namedtuple('StickEvent', ('timestamp', 'direction', 'pressed', 'held'))
+class StickEvent(namedtuple('StickEvent',
+                            ('timestamp', 'direction', 'pressed', 'held'))):
+    """
+    Represents a joystick event. The fields of the event are defined below:
+
+    .. attribute;: timestamp
+
+        A :class:`~datetime.datetime` object specifying when the event took
+        place. This timestamp is derived from the kernel event so it should be
+        accurate even when callbacks have taken time reacting to events.
+
+    .. attribute:: direction
+
+        A string indicating which direction the event pertains to. Can be one
+        of "up", "down", "leftʺ, "right", or "enter" (the last event refers to
+        the joystick being pressed inward).
+
+    .. attribute:: pressed
+
+        A bool which is ``True`` when the event indicates that the joystick is
+        being pressed *or held* in the specified direction. When this is
+        ``False``, the event indicates that the joystick has been released from
+        the specified direction.
+
+    .. attribute:: held
+
+        A bool which is ``True`` when the event indicates that the joystick
+        direction is currently held down (when :attr:`pressed` is also
+        ``True``) or that the direction was *previously* held down (when
+        :attr:`pressed` is ``False`` buut :attr:`held` is still ``True``).
+    """
+    __slots__ = ()
 
 
 class SenseStick(object):
@@ -136,6 +167,12 @@ class SenseStick(object):
         }
 
     def close(self):
+        """
+        Call the :meth:`close` method to close the joystick interface and free
+        up any background resources. The method is idempotent (you can call it
+        multiple times without error) and after it is called, any operations on
+        the joystick may return an error (but are not guaranteed to do so).
+        """
         if self._read_thread is not None:
             self._closing.set()
             self._read_thread.join()
@@ -143,6 +180,7 @@ class SenseStick(object):
                 self._callbacks_thread.join()
             self._read_thread = None
             self._callbacks_thread = None
+            self._buffer = None
         if self._flush:
             termios.tcflush(0, termios.TCIFLUSH)
             self._flush = False
@@ -259,7 +297,9 @@ class SenseStick(object):
         if value % 90:
             raise ValueError('rotation must be a multiple of 90')
         self._rotation = value % 360
-    rotation = property(_get_rotation, _set_rotation)
+    rotation = property(_get_rotation, _set_rotation, doc="""
+    TODO documentation
+    """)
 
     def read(self, timeout=None):
         """
@@ -444,3 +484,5 @@ class SenseStick(object):
             else:
                 self._callbacks.pop('enter', None)
         self._start_stop_callbacks()
+
+        # TODO any callback

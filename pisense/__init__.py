@@ -35,12 +35,18 @@ from __future__ import (
     )
 str = type('')
 
+from .exc import (
+    SenseWarning,
+    SenseStickWarning,
+    SenseStickBufferFull,
+    SenseStickCallbackRead,
+)
 from .images import color, image_to_rgb565, image_to_rgb888, image_to_rgb
 from .screen import SenseScreen, ScreenArray, array, default_gamma, low_gamma
 from .easings import linear, ease_in, ease_out, ease_in_out
 from .anim import draw_text, scroll_text, fade_to, slide_to, zoom_to
 from .stick import SenseStick, StickEvent
-from .imu import SenseIMU, IMUReadings, IMUOrient
+from .imu import SenseIMU, IMUState, IMUVector, IMUOrient
 from .environ import (
     SenseEnviron, EnvironReadings,
     temp_pressure, temp_humidity, temp_average, temp_both

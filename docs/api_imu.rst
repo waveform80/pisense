@@ -8,7 +8,7 @@ API - Inertial Measurement Unit (IMU)
 
 .. autoclass:: IMUState
 
-.. autoclass:: IMUReadings
+.. autoclass:: IMUVector
 
 .. autoclass:: IMUOrient
 
