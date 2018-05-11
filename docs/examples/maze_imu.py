@@ -5,55 +5,88 @@ from colorzero import Color
 from time import sleep
 
 
-def main():
+def main(width=8, height=8):
+    colors = {
+        'unvisited': Color('black'),
+        'visited':   Color('green'),
+        'wall':      Color('white'),
+        'ball':      Color('red'),
+        'goal':      Color('yellow'),
+    }
     with zs.SenseHAT() as hat:
-        for anim, data in game(hat, 8, 8):
-            if anim == 'fade':
-                hat.screen.fade_to(data)
-            elif anim == 'zoom':
-                hat.screen.zoom_to(data, center=(6, 6))
-            elif anim == 'show':
-                hat.screen.array = data
-            elif anim == 'scroll':
-                hat.screen.scroll_text(data, background=Color('red'))
-            else:
-                assert False
-            sleep(1/10)
+        maze = generate_maze(width, height, colors)
+        inputs = moves(hat.imu)
+        outputs = game(maze, colors, inputs)
+        display(hat.screen, outputs)
 
 
-def game(hat, width, height):
-    walls = generate_maze(width, height)
-    wall = Color('white')
-    unvisited = Color('black')
-    maze = draw_maze(width, height, walls, wall, unvisited)
+def moves(imu):
+    for reading in imu:
+        delta_x = round(max(-1, min(1, reading.accel.x)))
+        delta_y = round(max(-1, min(1, reading.accel.y)))
+        if delta_x != 0 or delta_y != 0:
+            yield delta_y, delta_x
+        sleep(1/10)
+
+
+def display(screen, states):
+    for anim, data in states:
+        if anim == 'fade':
+            screen.fade_to(data)
+        elif anim == 'zoom':
+            screen.zoom_to(data)
+        elif anim == 'show':
+            screen.array = data
+        elif anim == 'scroll':
+            screen.scroll_text(data, background=Color('red'))
+        else:
+            assert False
+
+
+def game(maze, colors, moves):
     height, width = maze.shape
-    visited = Color('green')
-    ball = Color('red')
     y, x = (1, 1)
-    maze[y, x] = ball
+    maze[y, x] = colors['ball']
     left, right = clamp(x, width)
     top, bottom = clamp(y, height)
     yield 'fade', maze[top:bottom, left:right]
-    for reading in hat.imu:
-        delta_x = min(1, max(-1, round(reading.accel.x)))
-        delta_y = min(1, max(-1, round(reading.accel.y)))
-        if Color(*maze[y + delta_y, x + delta_x]) != wall:
-            maze[y, x] = visited
+    for delta_y, delta_x in moves:
+        if Color(*maze[y + delta_y, x + delta_x]) != colors['wall']:
+            maze[y, x] = colors['visited']
             y += delta_y
             x += delta_x
-            maze[y, x] = ball
-            left, right = clamp(x, width)
-            top, bottom = clamp(y, height)
-            if y == height - 2 and x == width - 2:
-                for state in winners_cup():
-                    yield state
+            if Color(*maze[y, x]) == colors['goal']:
+                yield from winners_cup()
                 break
             else:
+                maze[y, x] = colors['ball']
+                left, right = clamp(x, width)
+                top, bottom = clamp(y, height)
                 yield 'show', maze[top:bottom, left:right]
     yield 'fade', zs.array(Color('black'))
 
 
-def generate_maze(width, height):
+def generate_maze(width, height, colors):
+    walls = generate_walls(width, height)
+    maze = zs.array(shape=(2 * height + 1, 2 * width + 1))
+    maze[...] = colors['unvisited']
+    maze[::2, ::2] = colors['wall']
+    for a, b in walls:
+        ay, ax = a
+        by, bx = b
+        y = 2 * by + 1
+        x = 2 * bx + 1
+        if ay == by:
+            maze[y, x - 1] = colors['wall']
+        else:
+            maze[y - 1, x] = colors['wall']
+    maze[0, :] = maze[:, 0] = colors['wall']
+    maze[-1, :] = maze[:, -1] = colors['wall']
+    maze[-2, -2] = colors['goal']
+    return maze
+
+
+def generate_walls(width, height):
     # Generate the maze with Kruskal's algorithm (there's better choices,
     # but this is a simple demo!)
     sets = {frozenset({(y, x)}) for y in range(height) for x in range(width)}
@@ -91,24 +124,6 @@ def generate_maze(width, height):
     assert len(sets) == 1
     assert sets.pop() == {(y, x) for y in range(height) for x in range(width)}
     return walls
-
-
-def draw_maze(width, height, walls, wall_color, gap_color):
-    result = zs.array(shape=(2 * height + 1, 2 * width + 1))
-    result[...] = gap_color
-    result[::2, ::2] = wall_color
-    for a, b in walls:
-        ay, ax = a
-        by, bx = b
-        y = 2 * by + 1
-        x = 2 * bx + 1
-        if ay == by:
-            result[y, x - 1] = wall_color
-        else:
-            result[y - 1, x] = wall_color
-    result[0, :] = result[:, 0] = wall_color
-    result[-1, :] = result[:, -1] = wall_color
-    return result
 
 
 def clamp(pos, limit, window=8):
