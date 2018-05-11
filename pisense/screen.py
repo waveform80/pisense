@@ -157,6 +157,26 @@ class ScreenArray(np.ndarray):
                 orig = orig.base
             self._screen._set_array(orig)
 
+    def __format__(self, format_spec):
+        if format_spec.endswith('p'):
+            char = format_spec[:-1]
+            return '\n'.join(
+                ''.join('{0:16m}{1}{0:0}'.format(Color(*elem), char)
+                        for elem in row)
+                for row in self
+            )
+        elif format_spec.endswith('b'):
+            char = format_spec[:-1]
+            space = ' ' * len(char)
+            return '\n'.join(
+                ''.join(char if Color(*elem).lightness >= 0.33333 else space
+                        for elem in row)
+                for row in self
+            )
+
+    def preview(self, char='\u2588\u2588', style='p'):
+        print(('{0:%s%s}' %( char, style)).format(self))
+
     def copy(self, order='C'):
         result = super(ScreenArray, self).copy(order)
         result._screen = None
