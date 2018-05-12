@@ -2,9 +2,12 @@
 Simple Demos
 ============
 
+.. currentmodule:: pisense
 
 To get us warmed up before we attempt some complete applications, here's some
-simple demos that use the functionality of the Sense HAT.
+simple demos that use the functionality of the Sense HAT. Along with some demos
+there's a small exercise, which you might like to try if you want to hone your
+skills with the library.
 
 
 Rainbow Scroller
@@ -83,6 +86,12 @@ This pattern of programming, treating inputs as iterators and writing a series
 of transforms to produce screen arrays, will become a common theme in much of
 the rest of this manual.
 
+.. note::
+
+    Exercise: can you convert the rainbow demo above to use an iterable for its
+    display? Hint: the iterable doesn't need to take any input because it's not
+    really transforming anything, just yielding outputs.
+
 
 Orientation Sensing
 ===================
@@ -138,6 +147,12 @@ the joystick demo above is the ``movements`` function:
 .. literalinclude:: examples/imu_basic.py
     :caption:
 
+.. note::
+
+    Exercise: can you combine the orientation demo with the rainbow scroller
+    and make the rainbow scroll in different directions based on the
+    orientation of the board?
+
 
 .. _thermometer:
 
@@ -149,12 +164,12 @@ write a transform that produces a screen containing the temperature as both a
 number (in a small font), and a very basic chart which lights more elements as
 the temperature increases.
 
-We'll start with a function that takes a *readings* iterator, limits the range
-of temperatures we're interested in (0° to 50°), and distributes that over the
+We'll start with a function that takes a *reading*, limits the range of
+temperatures we're interested in (0° to 50°), and distributes that over the
 range 0 <= n < 64 (representing all 64 elements of the HAT's display):
 
 .. literalinclude:: examples/thermometer.py
-    :lines: 1-8
+    :lines: 1-7
 
 Next, we need to construct the crude chart representing the temperature. For
 this we call :func:`array` and pass it a list of 64 :class:`~colorzero.Color`
@@ -164,7 +179,7 @@ temperature, a scaled red for the element at the current temperature, and black
 as we want the chart to start at the bottom and work its way up:
 
 .. literalinclude:: examples/thermometer.py
-    :lines: 9-15
+    :lines: 8-14
 
 Next, we call :func:`draw_text` which will return us a small
 :class:`~PIL.Image.Image` object containing the rendered text. We'll "add" that
@@ -173,14 +188,27 @@ result to the range 0 to 1 (because where the text overlays the chart we'll
 probably exceed the bounds of the red channel):
 
 .. literalinclude:: examples/thermometer.py
-    :lines: 16-20
+    :lines: 15-18
 
 Finally, here's the whole thing put together:
 
 .. literalinclude:: examples/thermometer.py
     :caption:
 
-You can try this script out by running it, then placing your finger on the
+You can test this script by running it, then placing your finger on the
 humidity sensor (which is the sensor we're using to read temperature). If the
 ambient temperature is below about 24°C you should see the reading rise quite
 quickly. Take your finger off the sensor and it should fall back down again.
+
+Why, in this example, did we construct a transform that took a single reading?
+Why did we not pass the iterator to the transform? Quite simply it is because
+we could: the transformation works from a single reading. It doesn't have any
+need to know prior readings, or to keep any state between frames, so it's
+simplest to make it a straight-forward function. That said…
+
+.. note::
+
+    Exercise: can you change the script to show whether the temperature is
+    rising or falling? Hint: passing the iterator to the transform is one way
+    to do this, but for another way (without passing the iterator), look up
+    ``pairwise`` in :mod:`itertools`.
