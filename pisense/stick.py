@@ -146,6 +146,7 @@ class SenseStick(object):
         self._callbacks = {}
         self._callbacks_thread = None
         self._closing = Event()
+        self._stream = False
         self._buffer = Queue(maxsize=max_events)
         self._read_thread = Thread(
             target=self._read_stick,
@@ -190,7 +191,7 @@ class SenseStick(object):
 
     def __iter__(self):
         while True:
-            yield self.read()
+            yield self.read(0 if self._stream else None)
 
     def __enter__(self):
         return self
@@ -288,18 +289,24 @@ class SenseStick(object):
                 self._callbacks_thread.join()
                 self._callbacks_thread = None
 
-    def _get_rotation(self):
+    @property
+    def rotation(self):
+        """
+        Specifies the rotation (really, the orientation) of the joystick as a
+        multiple of 90 degrees. When rotation is 0 (the default), "up" is
+        toward the GPIO pins, when rotation is 90, "up" is towards the LEDs,
+        and so on.
+        """
         return self._rotation
-    def _set_rotation(self, value):
+
+    @rotation.setter
+    def rotation(self, value):
         # TODO If rotation is modified while _pressed and _held aren't empty
         # then we potentially have bad state (unless it's just ENTER);
         # technically we should anti-rotate their current values here...
         if value % 90:
             raise ValueError('rotation must be a multiple of 90')
         self._rotation = value % 360
-    rotation = property(_get_rotation, _set_rotation, doc="""
-    TODO documentation
-    """)
 
     def read(self, timeout=None):
         """
@@ -329,6 +336,27 @@ class SenseStick(object):
             return self._buffer.get(timeout=timeout)
         except Empty:
             return None
+
+    @property
+    def stream(self):
+        """
+        When ``True``, treating the joystick as an iterator will always yield
+        immediately (yielding ``None`` if no event has occurred). When
+        ``False`` (the default), the iterator will only yield when an event
+        has occurred.
+
+        .. note::
+
+            This property can be set while an iterator is active, but if the
+            current value is ``False``, the iterator will wait indefinitely
+            for the next event *before* it will start returning ``None``. It
+            is better to set this property *prior* to obtaining the iterator.
+        """
+        return self._stream
+
+    @stream.setter
+    def stream(self, value):
+        self._stream = bool(value)
 
     @property
     def up(self):
