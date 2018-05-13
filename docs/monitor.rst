@@ -9,8 +9,8 @@ that can display the temperature, humidity, and pressure in a variety of forms.
 We've already seen a demo thermometer in :ref:`thermometer`. First we'll
 construct variants of this for the humidity and pressure sensors. Then we'll
 combine all three into an application. Finally, we'll add interactivity using
-the joystick to select the required functionality, and add outputting the
-data to an SQLite database.
+the joystick to select the required functionality, and recording the data to a
+database.
 
 
 Hygrometer
@@ -96,7 +96,7 @@ sensor? We simply use the built-in :func:`zip` function:
 
 .. note::
 
-    Exercise: can you adjust the hygrometer script so that it scrolls "100"
+    **Exercise:** can you adjust the hygrometer script so that it scrolls "100"
     when that is the reading, but smaller values stay static on the display?
     Hint: this makes the offset produced by bounce *dependant* on the reading.
 
@@ -107,34 +107,33 @@ Combining Screens
 We now have the three scripts that we want for our environmental monitor, but
 how do we combine them into a single application? Our first step will be a
 simple one: to make an function that will rotate between each of our
-transformations periodically, first showing the thermometer for a couple of
-seconds, then the hygrometer, then the barometer. By far the easiest way to do
-this is to modify our thermometer and hygrometer transforms to take a (useless)
-*offset* parameter just like the barometer transform. Then (because our
-functions all now have a common prototype, and functions are first class
-objects in Python) we can construct a :func:`cycle` of transforms and just loop
-around them.
+transformations periodically, first showing the thermometer for a few seconds,
+then the hygrometer, then the barometer.
+
+By far the easiest way to do this is to modify our thermometer and hygrometer
+transforms to take a (useless) *offset* parameter just like the barometer
+transform. Then (because our functions all now have a common prototype, and
+functions are first class objects in Python) we can construct a :func:`cycle`
+of transforms and just loop around them. The result looks like this:
+
+.. literalinclude:: examples/monitor1.py
 
 
-Control
-=======
+Interactivity!
+==============
 
-Now, it would be nice to combine these scripts together and use the joystick to
-move between the displays. For example, we could lay out our screens
-side-by-side with thermometer at the far left, then hygrometer, then pressure
-at the far right, and when the user presses left or right we scroll between the
-displays. Let's tackle our hygrometer script first. We essentially want it to
-exit when the joystick is pressed left or right, and we want it to indicate
-which direction to move next.
+Switching automatically between things is okay, but it would be nicer if we
+could *control* the switching with the joystick. For example, we could lay out
+our screens side-by-side with thermometer at the far left, then hygrometer,
+then pressure at the far right, and when the user presses left or right we
+could scroll between the displays.
 
-The core of t he hygrometer script is currently a transformation that takes in
-readings, and outputs displays. Now our inputs consist of readings *and
-joystick events*, and our outputs consist of displays *and a direction* (which
-will normally be ``None`` when the joystick isn't pressed). This sounds simple
-enough:
+To do this we just need to refine our ``switcher`` function so that it depends
+on both the readings (which it will pass to whatever the current transformation
+is), *and* events from the joystick.
 
-.. literalinclude:: examples/monitor.py
-    :pyobject: hygrometer
+.. literalinclude:: examples/monitor2.py
+    :pyobject: switcher
 
 However, we have a problem: the joystick only yields events when something
 happens so if we use this as-is our display will only update when the joystick
@@ -146,4 +145,67 @@ When this is set to ``True`` the joystick will immediately yield a value
 whenever it's requested. If no event has occurred it will simply yield
 ``None``. So all our script needs to do is remember to set
 :attr:`SenseStick.stream` to ``True`` at the start and everything will work
-happily.
+happily. Just to make the exit a bit prettier we'll fade the screen to black
+too:
+
+.. literalinclude:: examples/monitor2.py
+    :pyobject: main
+
+
+Finishing Touches
+=================
+
+The fade is a nice touch, but it would be nicer if the screens would "slide"
+between each other. And we've still got to add the database output too!
+
+Thankfully this is all pretty easy to arrange. The ``main`` procedure is the
+ideal place to handle transitions like fading and sliding; it just needs to be
+told when to perform them. The ``switcher`` function can tell it when to do
+this by yielding *two* values: the array to copy to the display, and the
+transition animation to perform (if any). While we're at it, we may as well
+move the fade to black to the end of the loop in ``switcher``.
+
+.. literalinclude:: examples/monitor3.py
+    :pyobject: switcher
+
+Now we enhance the ``main`` function to perform various transitions:
+
+.. literalinclude:: examples/monitor3.py
+    :pyobject: main
+
+Finally, we did promise that we're going to store the data in a database. The
+most appropriate database for this sort of thing is a `round-robin database`_
+which we will use the excellent `rrdtool`_ project to implement (if you wish to
+understand the rrdtool calls below, I'd strongly recommend reading its
+documentation). This provides all sorts of facilities beyond just recording the
+data, including averaging it over convenient time periods and producing
+good-looking charts of the data.
+
+.. note::
+
+    Unfortunately, the Python 3 bindings for rrdtool don't appear to be
+    packaged at the moment so we'll need to install them manually. On Raspbian
+    you can do this like so:
+
+    .. code-block:: console
+
+        $ sudo apt install rrdtool librrd-dev python3-pip
+        $ sudo pip3 install rrdtool
+
+    On other platforms the ``pip`` command will likely be similar, but the
+    pre-requisites installed with ``apt`` may well differ.
+
+We'll add a little code to construct the round-robin database if it doesn't
+already, then add a tiny amount of code to record readings into the database.
+The final result (with the lines we've added highlighted) is as follows:
+
+.. literalinclude:: examples/monitor4.py
+
+.. _round-robin database: https://en.wikipedia.org/wiki/RRDtool
+.. _rrdtool: https://oss.oetiker.ch/rrdtool/
+
+.. note::
+
+    **Exercise**: At the moment, it's too easy to accidentally exit the script.
+    Can you add a red X screen to the left of the thermometer and right of the
+    barometer screens, and only exit the script if the user proceeds past it?

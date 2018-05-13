@@ -88,9 +88,9 @@ the rest of this manual.
 
 .. note::
 
-    Exercise: can you convert the rainbow demo above to use an iterable for its
-    display? Hint: the iterable doesn't need to take any input because it's not
-    really transforming anything, just yielding outputs.
+    **Exercise:** can you convert the rainbow demo above to use an iterable for
+    its display? Hint: the iterable doesn't need to take any input because it's
+    not really transforming anything, just yielding outputs.
 
 
 Orientation Sensing
@@ -149,8 +149,8 @@ the joystick demo above is the ``movements`` function:
 
 .. note::
 
-    Exercise: can you combine the orientation demo with the rainbow scroller
-    and make the rainbow scroll in different directions based on the
+    **Exercise:** can you combine the orientation demo with the rainbow
+    scroller and make the rainbow scroll in different directions based on the
     orientation of the board?
 
 
@@ -208,7 +208,7 @@ simplest to make it a straight-forward function. That said…
 
 .. note::
 
-    Exercise: can you change the script to show whether the temperature is
+    **Exercise:** can you change the script to show whether the temperature is
     rising or falling? Hint: passing the iterator to the transform is one way
     to do this, but for another way (without passing the iterator), look up
     ``pairwise`` in :mod:`itertools`.
