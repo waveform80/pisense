@@ -32,7 +32,7 @@ chart, but everything else should look fairly familiar:
 
 The one other subtle adjustment is in the caption. We can't fit "100" on our
 display; it's too wide (this wasn't a problem for the thermometer where we
-clamped the temperature range from 0° to 50°; if you guessed this was for
+clamped the temperature range from 0°C to 50°C; if you guessed this was for
 simplicity, you were right!). Instead, whenever the humidity is >99% we display
 "^^" to indicate the maximum value.
 
@@ -52,8 +52,8 @@ by now:
 
 2. Scale this to the range 0 <= n < 64.
 
-3. Draw a rudimentary chart (this time we'll use green to distinguish it from
-   our thermometer and hygrometer scripts).
+3. Draw a rudimentary chart (we'll use green to distinguish it from our
+   thermometer and hygrometer scripts).
 
 4. Draw the pressure as a number superimposed on the chart.
 
@@ -106,15 +106,16 @@ Combining Screens
 
 We now have the three scripts that we want for our environmental monitor, but
 how do we combine them into a single application? Our first step will be a
-simple one: to make an function that will rotate between each of our
+simple one: to make a function that will rotate between each of our
 transformations periodically, first showing the thermometer for a few seconds,
 then the hygrometer, then the barometer.
 
-By far the easiest way to do this is to modify our thermometer and hygrometer
+The easiest way to do this is to modify our thermometer and hygrometer
 transforms to take a (useless) *offset* parameter just like the barometer
 transform. Then (because our functions all now have a common prototype, and
-functions are first class objects in Python) we can construct a :func:`cycle`
-of transforms and just loop around them. The result looks like this:
+functions are first class objects in Python) we can construct a
+:func:`~itertools.cycle` of transforms and just loop around them. The result
+looks like this:
 
 .. literalinclude:: examples/monitor1.py
 
@@ -136,13 +137,13 @@ is), *and* events from the joystick.
     :pyobject: switcher
 
 However, we have a problem: the joystick only yields events when something
-happens so if we use this as-is our display will only update when the joystick
-emits an event (because :func:`zip` will only yield a tuple of values when
-*all* iterators it covers have yielded a value).
+happens so if we use this, our display will only update when the joystick emits
+an event (because :func:`zip` will only yield a tuple of values when *all*
+iterators it covers have each yielded a value).
 
 Thankfully, there's a simple solution: the :attr:`SenseStick.stream` attribute.
 When this is set to ``True`` the joystick will immediately yield a value
-whenever it's requested. If no event has occurred it will simply yield
+whenever one is requested. If no event has occurred it will simply yield
 ``None``. So all our script needs to do is remember to set
 :attr:`SenseStick.stream` to ``True`` at the start and everything will work
 happily. Just to make the exit a bit prettier we'll fade the screen to black
@@ -173,13 +174,12 @@ Now we enhance the ``main`` function to perform various transitions:
 .. literalinclude:: examples/monitor3.py
     :pyobject: main
 
-Finally, we did promise that we're going to store the data in a database. The
-most appropriate database for this sort of thing is a `round-robin database`_
-which we will use the excellent `rrdtool`_ project to implement (if you wish to
-understand the rrdtool calls below, I'd strongly recommend reading its
-documentation). This provides all sorts of facilities beyond just recording the
-data, including averaging it over convenient time periods and producing
-good-looking charts of the data.
+Finally, we did promise that we're going to store the data in a database.
+Ideally, we want a `round-robin database`_ for which we can use the excellent
+`rrdtool`_ project (if you wish to understand the rrdtool calls below, I'd
+strongly recommend reading its documentation). This provides all sorts of
+facilities beyond just recording the data, including averaging it over
+convenient time periods and producing good-looking charts of the data.
 
 .. note::
 
@@ -196,10 +196,31 @@ good-looking charts of the data.
     pre-requisites installed with ``apt`` may well differ.
 
 We'll add a little code to construct the round-robin database if it doesn't
-already, then add a tiny amount of code to record readings into the database.
-The final result (with the lines we've added highlighted) is as follows:
+already exist, then add a tiny amount of code to record readings into the
+database.  The final result (with the lines we've added highlighted) is as
+follows:
+
+.. TODO verify emphasize-lines
 
 .. literalinclude:: examples/monitor4.py
+    :caption:
+    :emphasize-lines: 63-75,93-99
+
+Finally, let's whip up a little web-server that we can run alongside the Sense
+HAT script to allow remote clients to query our environmental data and see some
+pretty graphs of the history:
+
+.. literalinclude:: examples/server.py
+    :caption:
+
+.. note::
+
+    We could have added this to the monitor script, but frankly there's no
+    point as rrdtool includes all the locking we need to have something reading
+    the database while something else writes to it. This also ensures that a
+    bug in one script doesn't affect the operation of the other, and means web
+    requests are far less likely to affect the operation of the Sense HAT
+    interface.
 
 .. _round-robin database: https://en.wikipedia.org/wiki/RRDtool
 .. _rrdtool: https://oss.oetiker.ch/rrdtool/
@@ -207,5 +228,7 @@ The final result (with the lines we've added highlighted) is as follows:
 .. note::
 
     **Exercise**: At the moment, it's too easy to accidentally exit the script.
-    Can you add a red X screen to the left of the thermometer and right of the
-    barometer screens, and only exit the script if the user proceeds past it?
+    Can you make the application rotate around the screens (i.e. moving right
+    from the barometer screen takes the user back to the thermometer screen,
+    and vice-versa) and pressed the joystick is required to exit the
+    application?

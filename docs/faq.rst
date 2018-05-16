@@ -16,14 +16,13 @@ Why?
 ====
 
 To be rather blunt, I'm not a fan of the Sense HAT's `official API`_. This
-probably sounds a bit strange coming from someone who played a part in it (I
-wrote the joystick handling side of it, and later the desktop Sense HAT
-emulator)!  Still, pisense was originally my attempt, back when the Sense HAT
-was relatively new, to make an API the way *I* wanted. It was a rough
-experiment back then and I didn't want to "pollute" the space by offering a
-competing API to the official one, so I left it as just that: an experiment
-available from my GitHub pages, but not properly documented, tested, or
-packaged.
+probably sounds a bit strange coming from someone who played a small part in
+making it (I wrote the joystick handling side of it, and later the desktop
+Sense HAT emulator)!  Originally pisense was my attempt, back when the Sense
+HAT was relatively new, to design an API the way *I* wanted. It was a rough
+experiment and I didn't want to "pollute" the space by offering a competing API
+to the official one, so I left it as just that: an experiment available from my
+GitHub pages, but not properly documented, tested, or packaged.
 
 Over the years, I've wanted to actually use the Sense HAT in a few applications
 and each time I've tried, I've found myself frustrated by the inconsistencies
@@ -64,8 +63,8 @@ API`_, but here's what I *don't* like about it:
 * The stick interface (yes, the one I wrote …) isn't *bad*, but it's not
   *great*. The real stroke of genius in pisense (which sadly I can't take
   credit for: yet again, it was one of Ben Nuttall's fabulous notions) was
-  separating ``held`` into its own value in the event so that ``released``
-  events can tell if the button was *previously* held.
+  separating ``held`` into its own value in the :class:`StickEvent` tuple so
+  that ``released`` events can tell if the button was *previously* held.
 
 * Everything is conflated into a single class (except the joystick) so if you
   don't want certain functionality: tough, you still have to deal with all the
@@ -83,6 +82,11 @@ API`_, but here's what I *don't* like about it:
   ``compass_raw`` (or call their duplicated methods). However, under the covers
   this causes two *separate* IMU reads with all the attendant overhead that
   implies. There's no way to get this set of data from a single IMU read.
+
+I'm not intending this to be the simplest interface to the Sense HAT. The
+official API is probably easier to get going with. My feeling is that I'd
+prefer an API that was a little harder to get started with if it allowed me
+more scope to "get things done".
 
 
 Why are you using *single* precision floats in the display?!

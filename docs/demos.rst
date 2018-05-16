@@ -41,6 +41,8 @@ each time round. For example:
 .. _colorzero: https://colorzero.readthedocs.io/
 
 
+.. _joystick_movement:
+
 Joystick Movement
 =================
 
@@ -165,7 +167,7 @@ number (in a small font), and a very basic chart which lights more elements as
 the temperature increases.
 
 We'll start with a function that takes a *reading*, limits the range of
-temperatures we're interested in (0° to 50°), and distributes that over the
+temperatures we're interested in (0°C to 50°C), and distributes that over the
 range 0 <= n < 64 (representing all 64 elements of the HAT's display):
 
 .. literalinclude:: examples/thermometer.py
