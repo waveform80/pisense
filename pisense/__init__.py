@@ -55,6 +55,25 @@ from .settings import SenseSettings
 
 
 class SenseHAT(object):
+    """
+    An instance of this class represents the Sense HAT as a whole. It provides
+    attributes for objects that represent each component of the HAT, including:
+
+    * :attr:`stick` for the joystick
+
+    * :attr:`screen` for the display
+
+    * :attr:`environ` for the environmental sensors
+
+    * :attr:`imu` for the Inertial Measurement Unit (IMU)
+
+    The *settings* parameter can be used to point to alternate settings files
+    but it is strongly recommended you leave this at the default as this can
+    affect the calibration of the IMU. Other keyword arguments are used in the
+    initialization of the subordinate objects; see the documentation for their
+    classes for further information.
+    """
+
     def __init__(self, settings='/etc/RTIMULib.ini', **kwargs):
         super(SenseHAT, self).__init__()
         # Old-style kw-only args...
@@ -93,25 +112,49 @@ class SenseHAT(object):
 
     @property
     def screen(self):
+        """
+        Returns a :class:`SenseScreen` object representing the Sense HAT's
+        display.
+        """
         return self._screen
 
     @property
     def stick(self):
+        """
+        Returns a :class:`SenseStick` object representing the Sense HAT's
+        joystick.
+        """
         return self._stick
 
     @property
     def imu(self):
+        """
+        Returns a :class:`SenseIMU` object representing the `Inertial
+        Measurement Unit`_ (IMU) on the Sense HAT.
+
+        .. _Inertial Measurement Unit: https://en.wikipedia.org/wiki/Inertial_measurement_unit
+        """
         return self._imu
 
     @property
     def environ(self):
+        """
+        Returns a :class:`SenseEnviron` object representing the environmental
+        sensors on the Sense HAT.
+        """
         return self._environ
 
     @property
     def rotation(self):
+        """
+        Gets or sets the rotation (around the Z-axis) of the Sense HAT. When
+        querying this attribute, only the screen's rotation is queried. When
+        set, the attribute affects the screen, joystick, *and* IMU.
+        """
         return self._screen.rotation
 
     @rotation.setter
     def rotation(self, value):
         self._screen.rotation = value
         self._stick.rotation = value
+        # TODO update IMU

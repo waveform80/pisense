@@ -294,8 +294,15 @@ class SenseStick(object):
         """
         Specifies the rotation (really, the orientation) of the joystick as a
         multiple of 90 degrees. When rotation is 0 (the default), "up" is
-        toward the GPIO pins, when rotation is 90, "up" is towards the LEDs,
-        and so on.
+        toward the GPIO pins:
+
+        .. image:: images/rotation_0.*
+
+        When rotation is 90, "up" is towards the LEDs, and so on:
+
+        .. image:: images/rotation_90.*
+
+        The other two rotations are trivial to derive from this.
         """
         return self._rotation
 
@@ -311,7 +318,7 @@ class SenseStick(object):
     def read(self, timeout=None):
         """
         Wait up to *timeout* seconds for another joystick event. If one occurs,
-        return it, otherwise return ``None``.
+        return it as a :class:`StickEvent`, otherwise return ``None``.
 
         .. note::
 
@@ -322,12 +329,6 @@ class SenseStick(object):
             joystick events (removing them from the queue that :meth:`read`
             accesses). Mixing these programming styles can result in missing
             events.
-
-        :param float timeout:
-            The number of seconds to wait for an event to occur.
-
-        :returns StickEvent:
-            The event that occurred, or ``None``.
         """
         if self._callbacks_thread is not None:
             warnings.warn(SenseStickCallbackRead(

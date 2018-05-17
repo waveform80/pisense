@@ -65,7 +65,6 @@ from .images import (
     rgb565_to_rgb,
 )
 
-
 default_gamma = [0,  0,  0,  0,  0,  0,  1,  1,
                  2,  2,  3,  3,  4,  5,  6,  7,
                  8,  9,  10, 11, 12, 14, 15, 17,
@@ -142,11 +141,11 @@ class ScreenArray(np.ndarray):
         super(ScreenArray, self).__setitem__(index, value)
         if self._screen:
             # If we're a slice of the original pixels value, find the parent
-            # that contains the complete array and send that to _set_pixels
+            # that contains the complete array and send that to the setter
             orig = self
             while orig.shape != (8, 8) and orig.base is not None:
                 orig = orig.base
-            self._screen._set_array(orig)
+            self._screen.array = orig
 
     def __setslice__(self, i, j, sequence):
         # pylint: disable=protected-access
@@ -155,7 +154,7 @@ class ScreenArray(np.ndarray):
             orig = self
             while orig.shape != (8, 8) and orig.base is not None:
                 orig = orig.base
-            self._screen._set_array(orig)
+            self._screen.array = orig
 
     def __format__(self, format_spec):
         if format_spec.endswith('p'):
@@ -184,6 +183,28 @@ class ScreenArray(np.ndarray):
 
 
 class SenseScreen(object):
+    """
+    The :class:`SenseScreen` class represents the LED matrix on the Sense HAT.
+    Users can either instantiate this class themselves, or can access an
+    instance from :attr:`SenseHAT.screen`.
+
+    The two primary means of accessing and manipulating the screen are:
+
+    * The :attr:`array` attribute which returns an 8x8 numpy
+      :class:`~numpy.ndarray`.  If the array is manipulated, it will update the
+      screen "live".
+
+    * The :meth:`image` and :meth:`draw` methods. The former returns the
+      current state of the display as an 8x8 PIL :class:`~PIL.Image.Image`,
+      while the latter updates the screen to display the provided image.
+
+    Attributes are provided to modify the :attr:`rotation` of the display, and
+    the :attr:`gamma` table. The :attr:`hflip` and :attr:`vflip` attributes can
+    be used to mirror the display horizontally and vertically. Finally, several
+    methods are provided for playing animations: :meth:`slide_to`,
+    :meth:`fade_to`, :meth:`zoom_to`, and :meth:`scroll_text` each of which
+    accept either image or array representations of the screen.
+    """
     # pylint: disable=too-many-instance-attributes
     SENSE_HAT_FB_NAME = 'RPi-Sense FB'
 
@@ -209,9 +230,18 @@ class SenseScreen(object):
         self.easing = easing
 
     def close(self):
-        self._fb_array = None
-        self._fb_mmap.close()
-        self._fb_file.close()
+        """
+        Call the :meth:`close` method to close the screen interface and free
+        up any background resources. The method is idempotent (you can call it
+        multiple times without error) and after it is called, any operations on
+        the screen may return an error (but are not guaranteed to do so).
+        """
+        if self._fb_array is not None:
+            self._fb_array = None
+            self._fb_mmap.close()
+            self._fb_file.close()
+            self._array._screen = None
+            self._array = None
 
     def __enter__(self):
         return self
@@ -230,17 +260,73 @@ class SenseScreen(object):
                     raise
         raise RuntimeError('unable to locate SenseHAT framebuffer device')
 
-    def _get_raw(self):
-        return self._fb_array
-    def _set_raw(self, value):
-        self._fb_array[:] = value
-    raw = property(_get_raw, _set_raw)
+    @property
+    def raw(self):
+        """
+        Provides direct access to the Sense HAT's RGB565 framebuffer.
 
-    def _get_gamma(self):
+        This attribute returns a numpy :class:`~numpy.ndarray` containing 8x8
+        unsigned 16-bit integer elements, each of which represents a single
+        pixel on the display in RGB565 format (5-bits for red, 6-bits for
+        green, 5-bits for blue). Internally, the screen actually uses 5-bits
+        for all colors (the LSB of green is dropped); see :attr:`gamma` for
+        more information.
+
+        The array that is returned is built upon the framebuffer's memory. In
+        other words, manipulating the array directly mainpulates the
+        framebuffer. As such, this property will *not* be affected by
+        :attr:`hflip`, :attr:`vflip` or :attr:`rotation`.
+
+        .. note::
+
+            Generally you should have no need to use this property. The
+            :attr:`array` attribute and :meth:`image` method are far simpler to
+            work with.
+        """
+        return self._fb_array
+
+    @raw.setter
+    def raw(self, value):
+        self._fb_array[:] = value
+
+    @property
+    def gamma(self):
+        """
+        Returns the gamma lookup table for the screen.
+
+        This property returns a 32-element array of integer values each of
+        which is in the range 0 to 31 (5-bits). This forms the "gamma table" of
+        the Sense HAT's screen and is used to map intensities to their final
+        values on the screen.
+
+        Internally, the Sense HAT's framebuffer uses 5-bits (values 0 to 31) to
+        represent each color. After a color's `Least significant bits` have
+        been stripped to reduce it to 5-bits, the resulting value is then used
+        as an index into this list. The value obtained from this lookup will be
+        the final value used when lighting the corresponding LED.
+
+        Two "standard" gamma tables are provided: :data:`default_gamma` and
+        :data:`low_gamma` which can be assigned directly to this property::
+
+            >>> import pisense
+            >>> hat = pisense.SenseHAT()
+            >>> hat.screen.gamma = pisense.low_gamma
+
+        .. note::
+
+            This property is designed to be assigned to in its entirety. The
+            list returned by it is not "live" (it is a copy of the actual gamma
+            table) and changing individual elements in it will *not* change the
+            gamma settings.
+
+        .. _Least significant bits: https://en.wikipedia.org/wiki/Bit_numbering#Least_significant_bit
+        """
         buf = bytearray(32)
         fcntl.ioctl(self._fb_file, SenseScreen.GET_GAMMA, buf)
         return list(buf)
-    def _set_gamma(self, value):
+
+    @gamma.setter
+    def gamma(self, value):
         if value is None:
             fcntl.ioctl(self._fb_file, SenseScreen.RESET_GAMMA, 0)
         else:
@@ -250,9 +336,10 @@ class SenseScreen(object):
                 raise ValueError('gamma values must be in the range 0..31')
             buf = struct.pack(native_str('32B'), *value)
             fcntl.ioctl(self._fb_file, SenseScreen.SET_GAMMA, buf)
-    gamma = property(_get_gamma, _set_gamma)
 
-    def _get_array(self):
+    @property
+    def array(self):
+        # XXX Document me
         arr = self._array
         arr._screen = None
         try:
@@ -261,40 +348,74 @@ class SenseScreen(object):
         finally:
             arr._screen = self
         return arr
-    def _set_array(self, value):
+
+    @array.setter
+    def array(self, value):
+        # XXX Document me
         if isinstance(value, np.ndarray):
             value = value.view(color).reshape((8, 8))
         else:
             value = np.array(value, dtype=color).reshape((8, 8))
         value = self._apply_transforms(value)
         rgb_to_rgb565(value, self.raw)
-    array = property(_get_array, _set_array)
 
-    def _get_vflip(self):
+    @property
+    def vflip(self):
+        """
+        When set to ``True`` the display will be mirrored vertically. Defaults
+        to ``False``.
+        """
         return self._vflip
-    def _set_vflip(self, value):
+
+    @vflip.setter
+    def vflip(self, value):
         p = self._undo_transforms(self.raw)
         self._vflip = bool(value)
         self.raw = self._apply_transforms(p)
-    vflip = property(_get_vflip, _set_vflip)
 
-    def _get_hflip(self):
+    @property
+    def hflip(self):
+        """
+        When set to ``True`` the display will be mirrored horizontally.
+        Defaults to ``False``.
+        """
         return self._hflip
-    def _set_hflip(self, value):
+
+    @hflip.setter
+    def hflip(self, value):
         p = self._undo_transforms(self.raw)
         self._hflip = bool(value)
         self.raw = self._apply_transforms(p)
-    hflip = property(_get_hflip, _set_hflip)
 
-    def _get_rotation(self):
+    @property
+    def rotation(self):
+        """
+        Specifies the rotation (really, the orientation) of the screen as a
+        multiple of 90 degrees.
+
+        When rotation is 0 (the default), Y is 0 near the GPIO pins and
+        increases towards the Raspberry Pi logo, while X is 0 near the notch at
+        the edge of the board and increases towards the joystick:
+
+        .. image:: images/rotation_0.*
+
+        When rotation is 90, Y is 0 near the notch at the edge of the board and
+        increases towards the joystick, while X is 0 near the Raspberry Pi
+        logo, and increases towards the GPIO pins:
+
+        .. image:: images/rotation_90.*
+
+        The other two rotations are trivial to derive from this.
+        """
         return self._rotation
-    def _set_rotation(self, value):
+
+    @rotation.setter
+    def rotation(self, value):
         if value % 90:
             raise ValueError('rotation must be a multiple of 90')
         p = self._undo_transforms(self.raw)
         self._rotation = value % 360
         self.raw = self._apply_transforms(p)
-    rotation = property(_get_rotation, _set_rotation)
 
     def _apply_transforms(self, arr):
         if self._vflip:
@@ -313,17 +434,48 @@ class SenseScreen(object):
         return arr
 
     def clear(self, color=Color('black')):
+        """
+        Set all pixels in the display to the same *color*, which defaults to
+        black (off). *color* can be a :class:`~colorzero.Color` instance, or
+        anything that could be used to construct a :class:`~colorzero.Color`
+        instance.
+        """
         if not isinstance(color, Color):
             color = Color(*color)
         self.raw = color.rgb565
 
     def image(self):
+        """
+        Return an 8x8 PIL :class:`~PIL.Image.Image` representing the current
+        state of the display.
+
+        The image returned is a copy of the display's state. Drawing on the
+        image will *not* update the display. Instead, it is recommended that
+        you perform whatever drawing you wish (e.g. with
+        :class:`~PIL.ImageDraw.ImageDraw`), then call :meth:`draw` with the
+        image to update the display.
+        """
         arr = self._undo_transforms(self.raw)
         arr = rgb565_to_image(arr)
         return arr
 
-    def draw(self, buf):
-        img = buf_to_image(buf)
+    def draw(self, image):
+        """
+        Draw the provided image (or array) on the display.
+
+        The *image* passed to this method can be any of the following:
+
+        * An 8x8 PIL :class:`~PIL.Image.Image`.
+
+        * An 8x8 numpy :class:`~numpy.ndarray` with a compatible data-type.
+
+        * A buffer of 64 bytes, each of which will be taken as a gray-scale
+          level for a pixel working across then down the display.
+
+        * A buffer of 192 bytes; each 3 bytes will be taken as RGB levels for
+          pixels, working across then down the display.
+        """
+        img = buf_to_image(image)
         if img.size != (8, 8):
             raise ValueError('image must be an 8x8 RGB PIL Image')
         arr = image_to_rgb565(img)
@@ -331,6 +483,14 @@ class SenseScreen(object):
         self.raw = arr
 
     def play(self, frames):
+        """
+        Play an animation on the display.
+
+        The *frames* provided to this method must be in one of the formats
+        accepted by the :attr:`draw` method; *frames* itself can be any
+        iterable, including a generator. Frames will be played back at a rate
+        governed by the :attr:`fps` attribute.
+        """
         delay = 1 / self.fps
         for frame in frames:
             if (isinstance(frame, np.ndarray) and
@@ -345,6 +505,14 @@ class SenseScreen(object):
     def scroll_text(self, text, font='default.pil', size=8,
                     foreground=Color('white'), background=Color('black'),
                     direction='left', duration=None, fps=None):
+        """
+        Renders *text* in the specified *font* and *size*, and scrolls the
+        result across the display.
+
+        See the :func:`scroll_text` function for more information on the
+        meaning of the parameters. This method simply calls that function with
+        the provided parameters, and passes the result to :meth:`play`.
+        """
         frames = scroll_text(text, font, size, foreground, background,
                              direction, duration,
                              self.fps if fps is None else fps)
@@ -355,6 +523,15 @@ class SenseScreen(object):
         self.play(frames)
 
     def fade_to(self, image, duration=1, fps=None, easing=None):
+        """
+        Smoothly fades the display from its current state to the provided
+        *image* (which can be anything compatible with :meth:`draw`).
+
+        See the :func:`fade_to` function for more information on the meaning of
+        the parameters. This method simply calls that function with the current
+        state of the display (via :meth:`image`) and the provided parameters,
+        and passes the result to :meth:`play`.
+        """
         frames = fade_to(self.image(), image, duration,
                          self.fps if fps is None else fps,
                          self.easing if easing is None else easing)
@@ -363,6 +540,15 @@ class SenseScreen(object):
 
     def slide_to(self, image, direction='left', cover=False, duration=1,
                  fps=None, easing=None):
+        """
+        Slide *image* (which can be anything compatible with :meth:`draw`) over
+        the display in the specified *direction*.
+
+        See the :func:`slide_to` function for more information on the meaning
+        of the parameters. This method simply calls that function with the
+        current state of the display (via :meth:`image`) and the provided
+        parameters, and passes the result to :meth:`play`.
+        """
         frames = slide_to(self.image(), image, direction, cover, duration,
                           self.fps if fps is None else fps,
                           self.easing if easing is None else easing)
@@ -371,6 +557,15 @@ class SenseScreen(object):
 
     def zoom_to(self, image, center=(4, 4), direction='in', duration=1,
                 fps=None, easing=None):
+        """
+        Zoom the display in or out (specified by *direction*) to *image* (which
+        can be anything compatible with :meth:`draw`).
+
+        See the :func:`zoom_to` function for more information on the meaning of
+        the parameters. This method simply calls that function with the current
+        state of the display (via :meth:`image`) and the provided parameters,
+        and passes the result to :meth:`play`.
+        """
         frames = zoom_to(self.image(), image, center,
                          direction, duration,
                          self.fps if fps is None else fps,

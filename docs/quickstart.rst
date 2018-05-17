@@ -95,7 +95,9 @@ Let's try controlling the screen first of all. The screen's state is
 represented as a `numpy`_ :class:`~numpy.ndarray` of ``(red, green, blue)``
 values.  The structure of the values is compatible with
 :class:`~colorzero.Color` class from the `colorzero`_ library which makes them
-quite easy to work with::
+quite easy to work with:
+
+.. code-block:: pycon
 
     >>> from colorzero import Color
     >>> hat.screen.array[0, 0] = Color('red')
@@ -116,46 +118,60 @@ first before moving *down* a line. Hence the "X" coordinate is "smaller"; it
 moves "faster" than the Y coordinate, changing with every step along the
 display whereas the Y coordinate only changes when we reach the end of a line.
 
-Hence, just as we put "bigger" values first when writing out the time (hours,
-then minutes, the seconds), we write the "bigger" coordinate (the Y coordinate)
-first when addressing pixels in the display::
+Hence, just as we put "bigger" values first when writing out numbers
+(thousands, then hundreds, then tens, then units), or the time (hours, minutes,
+seconds), we write the "bigger" coordinate (the Y coordinate) first when
+addressing pixels in the display:
+
+.. code-block:: pycon
 
     >>> hat.screen.array[0, 1] = Color('green')
     >>> hat.screen.array[1, 0] = Color('blue')
 
-Numpy's arrays allow us to address more than one value at one, by "slicing" the
-array. We won't cover all the details of `slicing`_ here but here's some
-examples of what we can do with slicing (and what bits are optional). We can
-turn four pixels along the top red in a single command::
+Numpy's arrays allow us to address more than one value at once, by "slicing"
+the array. We won't cover all the details of Python `slicing`_ (see the linked
+manual page for full details), but here's some examples of what we can do with
+slicing (and what bits are optional). We can turn four pixels along the top red
+in a single command:
+
+.. code-block:: pycon
 
     >>> hat.screen.array[0, 0:4] = Color('red')
 
-In fact, if the start of a slice is zero it can be omitted (if the end of a
-slice is unspecified it is the length of whatever you're slicing). Hence we can
-change the entire upper left quadrant red with a single command::
+If the start of a slice is zero it can be omitted (if the end of a slice is
+unspecified it is the length of whatever you're slicing). Hence we can change
+the entire upper left quadrant red with a single command:
+
+.. code-block:: pycon
 
     >>> hat.screen.array[:4, :4] = Color('red')
 
 We can omit both the start and end of a slice (by specifying ":") to indicate
 we want the entire length of whatever we're slicing. For example, to draw a
-couple of white lines next to our quadrant::
+couple of white lines next to our quadrant:
+
+.. code-block:: pycon
 
     >>> hat.screen.array[:, 4] = Color('white')
     >>> hat.screen.array[4, :] = Color('white')
 
 We can also *read* the display as well as write to it. We can read individual
-elements or slices, just as with writing::
+elements or slices, just as with writing:
+
+.. code-block:: pycon
 
     >>> hat.screen.array[0, 0]
     (1., 0., 0.)
     >>> hat.screen.array[4, :]
     ScreenArray([(1., 1., 1.), (1., 1., 1.), (1., 1., 1.), (1., 1., 1.),
                  (1., 1., 1.), (1., 1., 1.), (1., 1., 1.), (1., 1., 1.)],
-                dtype=[('r', '<f2'), ('g', '<f2'), ('b', '<f2')])
+                dtype=[('r', '<f4'), ('g', '<f4'), ('b', '<f4')])
 
 This means we can *scroll* our display by assigning a slice to another
 (similarly shaped) slice. First we'll take a copy of our display so we can get
-it back later, then we'll use a loop with a delay to slide our display left::
+it back later, then we'll use a loop with a delay to slide our display left:
+
+.. code-block:: pycon
 
     >>> original = hat.screen.array.copy()
     >>> from time import sleep
@@ -165,19 +181,25 @@ it back later, then we'll use a loop with a delay to slide our display left::
     ...
 
 Neat as that was, the screen object actually has several methods to make
-animations like this easy. Let's slide our original back onto the display::
+animations like this easy. Let's slide our original back onto the display:
+
+.. code-block:: pycon
 
     >>> hat.screen.slide_to(original, direction='right')
 
 We can construct images for the display with the :func:`array` function. Let's
-construct a blue screen (thankfully not of death!) and fade to it::
+construct a blue screen (thankfully not of death!) and fade to it:
+
+.. code-block:: pycon
 
     >>> blue_screen = pisense.array(Color('blue'))
     >>> hat.screen.fade_to(blue_screen)
 
 The :func:`array` function can also be given a list of values to initialize
 itself. This is particularly useful with :class:`~colorzero.Color` aliases a
-single letter long. For example, to draw a French flag on our display::
+single letter long. For example, to draw a French flag on our display:
+
+.. code-block:: pycon
 
     >>> B = Color('black')
     >>> r = Color('red')
@@ -206,7 +228,9 @@ actually emulates a keyboard (which in some circumstances is very annoying) but
 it's simpler, and more useful, to use the library's facilities to read the
 joystick rather than trying to read the keyboard. The :meth:`~SenseStick.read`
 method can be used to wait for an event from the joystick. Type the following
-then briefly tap the joystick to the right::
+then briefly tap the joystick to the right:
+
+.. code-block:: pycon
 
     >>> hat.stick.read()
     StickEvent(timestamp=datetime.datetime(2018, 5, 4, 22, 52, 35, 961776),
@@ -215,7 +239,9 @@ then briefly tap the joystick to the right::
 As you've released the joystick there should be a "release" event waiting to be
 retrieved. Notice that its timestamp is shortly after the former event (because
 the timestamp is the time at which the event *occurred*, not when it was
-retrieved)::
+retrieved):
+
+.. code-block:: pycon
 
     >>> hat.stick.read()
     StickEvent(timestamp=datetime.datetime(2018, 5, 4, 22, 52, 36, 47511),
@@ -223,7 +249,9 @@ retrieved)::
 
 The :meth:`~SenseStick.read` method can also take a timeout value (measured in
 seconds). If an event has not occurred before the timeout elapses, it will
-return ``None``::
+return ``None``:
+
+.. code-block:: pycon
 
     >>> print(repr(hat.stick.read(1.0)))
     None
@@ -277,7 +305,9 @@ right     False   True
 
 Finally, the joystick can be treated as an iterator which yields events
 whenever they occur. This is particularly useful for driving interfaces as
-we'll see in later sections. For now, you can try this on the command line::
+we'll see in later sections. For now, you can try this on the command line:
+
+.. code-block:: pycon
 
     >>> for event in hat.stick:
     ...     print(repr(event))
@@ -306,7 +336,9 @@ The environmental sensors on the Sense HAT consist of two components: a
 pressure sensor and a humidity sensor. Both of these components are also
 capable of measuring temperature. For the sake of simplicity, both sensors are
 wrapped in a single item in pisense which can be queried for pressure,
-humidity, or temperature::
+humidity, or temperature:
+
+.. code-block:: pycon
 
     >>> hat.environ.pressure
     1025.3486328125
@@ -322,7 +354,9 @@ Finally, the temperature is returned in `celsius`_.
 Despite there being effectively two temperature sensors there's only a single
 ``temperature`` property. By default it returns the reading from the humidity
 sensor, but you configure this with the
-:attr:`~SenseEnvironment.temperature_source` attribute::
+:attr:`~SenseEnvironment.temperature_source` attribute:
+
+.. code-block:: pycon
 
     >>> hat.environ.temperature_source
     <function temp_humidity at 0x7515b588>
@@ -334,7 +368,9 @@ sensor, but you configure this with the
     25.24289321899414
 
 Note that both temperature readings can be quite different!  You can also
-configure it to take the average of the two readings::
+configure it to take the average of the two readings:
+
+.. code-block:: pycon
 
     >>> hat.environ.temperature_source = pisense.temp_average
     27.206080436706543
@@ -343,7 +379,9 @@ However, if you think this will give you more accuracy, `Dilbert`_ may take
 exception to your notion!
 
 Like the joystick, the environment sensor(s) can also be treated as an
-iterator::
+iterator:
+
+.. code-block:: pycon
 
     >>> for reading in hat.environ:
     ...     print(repr(reading))
@@ -374,7 +412,9 @@ three different sensors (an `accelerometer`_, a `gyroscope`_, and a
 why you may also hear the sensor referred to as a 9-DoF (9 Degrees of Freedom)
 sensor; it returns 9 independent values.
 
-You can read values from the sensors independently::
+You can read values from the sensors independently:
+
+.. code-block:: pycon
 
     >>> hat.imu.accel
     IMUReadings(x=0.0351547, y=0.052686, z=1.015)
@@ -393,7 +433,9 @@ be close to 1 (because gravity is pulling it straight down).
 The gyroscope returns values in `radians per second`_. With the Sense HAT lying
 stationary all values should be close to zero. If you wish to test the
 gyroscope, set the console to continually print values and slowly rotate the
-HAT::
+HAT:
+
+.. code-block:: pycon
 
     >>> while True:
     ...     print(hat.imu.gyro)
@@ -411,14 +453,16 @@ reaction in the readings.
 
 The readings from these three components are combined by the underlying library
 to form a composite "orientation" reading which provides the `roll, pitch, and
-yaw`_ of the HAT in `radians`_::
+yaw`_ of the HAT in `radians`_:
+
+.. code-block:: pycon
 
     >>> hat.imu.orient
     IMUOrient(roll=-0.461751, pitch=1.10459, yaw=-0.508346)
 
 .. TODO correct this
 
-Like all the other sensors on the HAT, the IMU can be treated as an iterator::
+Like all the other sensors on the HAT, the IMU can be treated as an iterator:
 
     >>> for state in hat.imu:
     ...     print(repr(state))
@@ -426,7 +470,7 @@ Like all the other sensors on the HAT, the IMU can be treated as an iterator::
 
 .. TODO output
 
-The concludes the tour of the Raspberry Pi Sense HAT, and of the bare
+This concludes the tour of the Raspberry Pi Sense HAT, and of the bare
 functionality of the pisense library. The next sections will introduce some
 simple projects to give you an idea of how the library can be used to combine
 these facilities to useful or fun effect!
