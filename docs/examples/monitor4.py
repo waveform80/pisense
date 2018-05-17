@@ -59,20 +59,35 @@ def bounce(it):
     return cycle(chain(it, reversed(it)))
 
 
+def create_database(database):
+    try:
+        rrdtool.create(
+            database,            # Filename of the database
+            '--no-overwrite',    # Don't overwrite the file if it exists
+            '--step', '5s',      # Data will be fed at least every 5 seconds
+            'DS:temperature:GAUGE:1m:-70:70',  # Primary store for temperatures
+            'DS:humidity:GAUGE:1m:0:100',      # Primary store for humidities
+            'DS:pressure:GAUGE:1m:900:1100',   # Primary store for pressures
+            'RRA:AVERAGE:0.5:5s:1d',  # Keep 1 day's worth of full-res data
+            'RRA:AVERAGE:0.5:5m:1M',  # Keep 1 month of 5-minute-res data
+            'RRA:AVERAGE:0.5:1h:1y',  # Keep 1 year of hourly data
+            'RRA:MIN:0.5:1h:1y',      # ... including minimums
+            'RRA:MAX:0.5:1h:1y',      # ... and maximums
+            'RRA:AVERAGE:0.5:1d:10y', # Keep 10 years of daily data
+            'RRA:MIN:0.5:1d:10y',     # ... including minimums
+            'RRA:MAX:0.5:1d:10y',     # ... and maximums
+        )
+    except rrdtool.OperationalError:
+        pass # file exists; ignore the error
+
+
+def update_database(database, reading):
+    data = 'N:{r.temperature}:{r.humidity}:{r.pressure}'.format(r=reading)
+    rrdtool.update(database, data)
+
+
 def switcher(events, readings, database='environ.rrd'):
-    rrdtool.create(
-        database,            # Filename of the database
-        '--no-overwrite',    # Don't overwrite the file if it exists
-        '--step', '5s',      # Data will be fed every 5 seconds
-        'DS:temperature:GAUGE:1:-70:70',  # Primary store for temperatures
-        'DS:humidity:GAUGE:1:0:100',      # Primary store for humidities
-        'DS:pressure:GAUGE:1:900:1100',   # Primary store for pressures
-        'RRA:AVERAGE:0.5:1:17280',   # Keep 1 day's worth of full-res data
-        'RRA:AVERAGE:0.5:60:8064',   # Keep 4 week's worth of 5-minute-res data
-        'RRA:AVERAGE:0.5:720:8766',  # Keep 1 year's worth of hour-res data
-        'RRA:MIN:0.5:720:8766',      # ... including minimums
-        'RRA:MAX:0.5:720:8766',      # ... and maximums
-    )
+    create_database(database)
     screens = {
         (thermometer, 'right'): hygrometer,
         (hygrometer, 'left'): thermometer,
@@ -92,11 +107,9 @@ def switcher(events, readings, database='environ.rrd'):
                 break
         now = time()
         if last_update is None or now - last_update > 5:
+            # Only update the database every 5 seconds
             last_update = now
-            rrdtool.update(
-                database,
-                'N:{r.temperature}:{r.humidity}:{r.pressure}'.format(r=reading),
-            )
+            update_database(database, reading)
         yield screen(offset, reading), anim
         sleep(0.2)
 
