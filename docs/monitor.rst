@@ -94,11 +94,11 @@ sensor? We simply use the built-in :func:`zip` function:
     lazily. In Python 2, this will crash as zip attempts to construct a list
     for an infinite iterator (use ``izip`` from :mod:`itertools` in Python 2).
 
-.. note::
+.. admonition:: Exercise
 
-    **Exercise:** can you adjust the hygrometer script so that it scrolls "100"
-    when that is the reading, but smaller values stay static on the display?
-    Hint: this makes the offset produced by bounce *dependant* on the reading.
+    Can you adjust the hygrometer script so that it scrolls "100" when that is
+    the reading, but smaller values stay static on the display?  Hint: this
+    makes the offset produced by bounce *dependant* on the reading.
 
 
 Combining Screens
@@ -117,7 +117,7 @@ functions are first class objects in Python) we can construct a
 :func:`~itertools.cycle` of transforms and just loop around them. The result
 looks like this:
 
-.. literalinclude:: examples/monitor1.py
+.. literalinclude:: examples/monitor_auto.py
 
 
 Interactivity!
@@ -133,7 +133,7 @@ To do this we just need to refine our ``switcher`` function so that it depends
 on both the readings (which it will pass to whatever the current transformation
 is), *and* events from the joystick.
 
-.. literalinclude:: examples/monitor2.py
+.. literalinclude:: examples/monitor_manual.py
     :pyobject: switcher
 
 However, we have a problem: the joystick only yields events when something
@@ -149,7 +149,7 @@ whenever one is requested. If no event has occurred it will simply yield
 happily. Just to make the exit a bit prettier we'll fade the screen to black
 too:
 
-.. literalinclude:: examples/monitor2.py
+.. literalinclude:: examples/monitor_manual.py
     :pyobject: main
 
 
@@ -166,12 +166,12 @@ this by yielding *two* values: the array to copy to the display, and the
 transition animation to perform (if any). While we're at it, we may as well
 move the fade to black to the end of the loop in ``switcher``.
 
-.. literalinclude:: examples/monitor3.py
+.. literalinclude:: examples/monitor_fancy.py
     :pyobject: switcher
 
 Now we enhance the ``main`` function to perform various transitions:
 
-.. literalinclude:: examples/monitor3.py
+.. literalinclude:: examples/monitor_fancy.py
     :pyobject: main
 
 Finally, we did promise that we're going to store the data in a database.
@@ -202,16 +202,27 @@ follows:
 
 .. TODO verify emphasize-lines
 
-.. literalinclude:: examples/monitor4.py
+.. literalinclude:: examples/monitor_final.py
     :caption:
-    :emphasize-lines: 63-75,93-99
+    :emphasize-lines: 62-86,90,98,108-112
+
+.. admonition:: Exercise
+
+    At the moment, it's too easy to accidentally exit the script.  Can you make
+    the application rotate around the screens (i.e. moving right from the
+    barometer screen takes the user back to the thermometer screen, and
+    vice-versa) and pressed the joystick is required to exit the application?
 
 Finally, let's whip up a little web-server that we can run alongside the Sense
 HAT script to allow remote clients to query our environmental data and see some
 pretty graphs of the history:
 
-.. literalinclude:: examples/server.py
+.. literalinclude:: examples/monitor_server.py
     :caption:
+
+Run this alongside the monitor script, make sure your Pi is accessible on your
+local network and then visit http://your-pis-address-here:8000/ in a
+web-browser.
 
 .. note::
 
@@ -224,11 +235,3 @@ pretty graphs of the history:
 
 .. _round-robin database: https://en.wikipedia.org/wiki/RRDtool
 .. _rrdtool: https://oss.oetiker.ch/rrdtool/
-
-.. note::
-
-    **Exercise**: At the moment, it's too easy to accidentally exit the script.
-    Can you make the application rotate around the screens (i.e. moving right
-    from the barometer screen takes the user back to the thermometer screen,
-    and vice-versa) and pressed the joystick is required to exit the
-    application?

@@ -159,9 +159,11 @@ At this point we should have a fully functioning maze game that looks quite
 pretty. You can play it simply by running ``main()``. Once you've verified it
 works, it's a simple matter to switch out the joystick for the IMU (in exactly
 the same manner as in :doc:`demos`). Here's the full listing of the final
-version in which the HAT is tilted to roll the ball through the maze:
+version in which the HAT is tilted to roll the ball through the maze (with the
+switched out lines highlighted):
 
 .. literalinclude:: examples/maze_imu.py
     :caption:
+    :emphasize-lines: 23-29
 
 .. _Kruskal's Algorithm: https://en.wikipedia.org/wiki/Maze_generation_algorithm#Randomized_Kruskal's_algorithm

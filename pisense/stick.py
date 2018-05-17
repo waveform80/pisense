@@ -112,8 +112,8 @@ class SenseStick(object):
 
     Alternatively, handler functions can be assigned to the attributes
     :attr:`when_up`, :attr:`when_down`, :attr:`when_left`, :attr:`when_right`,
-    :attr:`when_enter`, and/or :attr:`when_any`. The assigned functions will
-    be called when any matching event occurs.
+    :attr:`when_enter`. The assigned functions will be called when any matching
+    event occurs.
 
     Finally, the attributes :attr:`up`, :attr:`down`, :attr:`left`,
     :attr:`right`, and attr:`enter` can be polled to determine the current
@@ -513,5 +513,3 @@ class SenseStick(object):
             else:
                 self._callbacks.pop('enter', None)
         self._start_stop_callbacks()
-
-        # TODO any callback

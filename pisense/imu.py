@@ -75,15 +75,18 @@ class IMUState(namedtuple('IMUState', ('compass', 'gyro', 'accel', 'orient'))):
     """
     __slots__ = ()
 
+
 class IMUVector(namedtuple('IMUVector', ('x', 'y', 'z'))):
     """
     Represents a three-dimensional vector with X, Y, and Z components. This is
     mostly used to represent the output of the major IMU sensors (magnetometer,
     gryoscope, and accelerometer).
     """
+    # TODO Consider splitting Vector out of picraft and re-using it here
     __slots__ = ()
     def __repr__(self):
         return 'IMUVector(x=%g, y=%g, z=%g)' % self
+
 
 class IMUOrient(namedtuple('IMUOrient', ('roll', 'pitch', 'yaw'))):
     """

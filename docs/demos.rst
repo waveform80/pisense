@@ -88,11 +88,11 @@ This pattern of programming, treating inputs as iterators and writing a series
 of transforms to produce screen arrays, will become a common theme in much of
 the rest of this manual.
 
-.. note::
+.. admonition:: Exercise
 
-    **Exercise:** can you convert the rainbow demo above to use an iterable for
-    its display? Hint: the iterable doesn't need to take any input because it's
-    not really transforming anything, just yielding outputs.
+    Can you convert the rainbow demo above to use an iterable for its display?
+    Hint: the iterable doesn't need to take any input because it's not really
+    transforming anything, just yielding outputs.
 
 
 Orientation Sensing
@@ -149,11 +149,11 @@ the joystick demo above is the ``movements`` function:
 .. literalinclude:: examples/imu_basic.py
     :caption:
 
-.. note::
+.. admonition:: Exercise
 
-    **Exercise:** can you combine the orientation demo with the rainbow
-    scroller and make the rainbow scroll in different directions based on the
-    orientation of the board?
+    Can you combine the orientation demo with the rainbow scroller and make the
+    rainbow scroll in different directions based on the orientation of the
+    board?
 
 
 .. _thermometer:
@@ -208,9 +208,9 @@ we could: the transformation works from a single reading. It doesn't have any
 need to know prior readings, or to keep any state between frames, so it's
 simplest to make it a straight-forward function. That said…
 
-.. note::
+.. admonition:: Exercise
 
-    **Exercise:** can you change the script to show whether the temperature is
-    rising or falling? Hint: passing the iterator to the transform is one way
-    to do this, but for another way (without passing the iterator), look up
-    ``pairwise`` in :mod:`itertools`.
+    Can you change the script to show whether the temperature is rising or
+    falling? Hint: passing the iterator to the transform is one way to do this,
+    but for another way (without passing the iterator), look up ``pairwise`` in
+    :mod:`itertools`.

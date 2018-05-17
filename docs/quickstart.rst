@@ -14,7 +14,7 @@ Hardware
 
 Remove the sense HAT from its packaging. You should have the following parts:
 
-.. TODO package pictures
+.. attention:: TODO package pictures
 
 1. The Sense HAT itself
 
@@ -26,7 +26,7 @@ Remove the sense HAT from its packaging. You should have the following parts:
 
 To install the Sense HAT:
 
-.. TODO installation pictures
+.. attention:: TODO installation pictures
 
 1. Screw the stand-off posts onto the Pi from the bottom.
 
@@ -64,7 +64,7 @@ Start a Python environment (this documentation assumes you use Python 3, though
 the pisense library is compatible with both Python 2 and 3), and import the
 pisense library, then construct an object to interface to the HAT:
 
-.. code-block:: console
+.. code-block:: pycon
 
     $ python3
     Python 3.5.3 (default, Jan 19 2017, 14:11:04)
@@ -90,6 +90,9 @@ which represent the different components on the HAT. Specifically:
 
 The Screen
 ==========
+
+.. image:: images/highlight_screen.*
+    :align: center
 
 Let's try controlling the screen first of all. The screen's state is
 represented as a `numpy`_ :class:`~numpy.ndarray` of ``(red, green, blue)``
@@ -222,6 +225,9 @@ representation).
 The Joystick
 ============
 
+.. image:: images/highlight_stick.*
+    :align: center
+
 The miniature joystick at the bottom right of the Sense HAT is exceedingly
 useful as a basic interface for Raspberry Pis without a keyboard. The joystick
 actually emulates a keyboard (which in some circumstances is very annoying) but
@@ -332,6 +338,9 @@ we'll see in later sections. For now, you can try this on the command line:
 Environmental Sensors
 =====================
 
+.. image:: images/highlight_environ.*
+    :align: center
+
 The environmental sensors on the Sense HAT consist of two components: a
 pressure sensor and a humidity sensor. Both of these components are also
 capable of measuring temperature. For the sake of simplicity, both sensors are
@@ -406,6 +415,9 @@ sensor.
 Inertial Measurement Unit (IMU)
 ===============================
 
+.. image:: images/highlight_imu.*
+    :align: center
+
 The `Inertial Measurement Unit`_ (IMU) on the Sense HAT actually consists of
 three different sensors (an `accelerometer`_, a `gyroscope`_, and a
 `magnetometer`_) each of which provide three readings (X, Y, and Z). This is
@@ -442,7 +454,7 @@ HAT:
     ...     sleep(0.1)
     ...
 
-.. TODO output
+.. attention:: TODO output
 
 Finally, the magnetometer returns values in µT (`micro-Teslas`_, where 1µT is
 equal to 10mG or `milli-Gauss`_). The Earth's magnetic field is incredibly
@@ -460,7 +472,7 @@ yaw`_ of the HAT in `radians`_:
     >>> hat.imu.orient
     IMUOrient(roll=-0.461751, pitch=1.10459, yaw=-0.508346)
 
-.. TODO correct this
+.. attention:: TODO correct this
 
 Like all the other sensors on the HAT, the IMU can be treated as an iterator:
 
@@ -468,7 +480,7 @@ Like all the other sensors on the HAT, the IMU can be treated as an iterator:
     ...     print(repr(state))
     ...
 
-.. TODO output
+.. attention:: TODO output
 
 This concludes the tour of the Raspberry Pi Sense HAT, and of the bare
 functionality of the pisense library. The next sections will introduce some

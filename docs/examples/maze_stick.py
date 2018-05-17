@@ -1,5 +1,5 @@
 import numpy as np
-import pisense as zs
+import pisense as ps
 from random import sample
 from colorzero import Color
 from time import sleep
@@ -13,7 +13,7 @@ def main(width=8, height=8):
         'ball':      Color('red'),
         'goal':      Color('yellow'),
     }
-    with zs.SenseHAT() as hat:
+    with ps.SenseHAT() as hat:
         maze = generate_maze(width, height, colors)
         inputs = moves(hat.stick)
         outputs = game(maze, colors, inputs)
@@ -69,12 +69,12 @@ def game(maze, colors, moves):
                 left, right = clamp(x, width)
                 top, bottom = clamp(y, height)
                 yield 'show', maze[top:bottom, left:right]
-    yield 'fade', zs.array(Color('black'))
+    yield 'fade', ps.array(Color('black'))
 
 
 def generate_maze(width, height, colors):
     walls = generate_walls(width, height)
-    maze = zs.array(shape=(2 * height + 1, 2 * width + 1))
+    maze = ps.array(shape=(2 * height + 1, 2 * width + 1))
     maze[...] = colors['unvisited']
     maze[::2, ::2] = colors['wall']
     for a, b in walls:
@@ -147,7 +147,7 @@ def winners_cup():
     r = Color('red')
     y = Color('yellow')
     W = Color('white')
-    yield 'zoom', zs.array([
+    yield 'zoom', ps.array([
         r, r, W, y, y, y, r, r,
         r, r, W, y, y, y, r, r,
         r, r, W, y, y, y, r, r,
@@ -158,7 +158,7 @@ def winners_cup():
         r, r, W, y, y, y, r, r,
     ])
     sleep(2)
-    yield 'fade', zs.array(r)
+    yield 'fade', ps.array(r)
     yield 'scroll', 'You win!'
 
 
