@@ -17,6 +17,15 @@ else
 SETUPTOOLS:=$(shell wget https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py -O - | $(PYTHON))
 endif
 
+# Find the location of the customized RTIMULib (required for the develop
+# target)
+PYVER:=$(shell $(PYTHON) $(PYFLAGS) -c "import sys; print(sys.version_info[0])")
+ifeq ($(PYVER),3)
+RTIMULIB:=$(wildcard /usr/lib/python3/dist-packages/RTIMU.*)
+else
+RTIMULIB:=$(wildcard /usr/lib/python2.7/dist-packages/RTIMU.*)
+endif
+
 # Calculate the base names of the distribution, the location of all source,
 # documentation, packaging, icon, and executable script files
 NAME:=$(shell $(PYTHON) $(PYFLAGS) setup.py --name)
@@ -27,7 +36,6 @@ else
 DEB_SUFFIX:=
 endif
 DEB_ARCH:=$(shell dpkg --print-architecture)
-PYVER:=$(shell $(PYTHON) $(PYFLAGS) -c "import sys; print('py%d.%d' % sys.version_info[:2])")
 PY_SOURCES:=$(shell \
 	$(PYTHON) $(PYFLAGS) setup.py egg_info >/dev/null 2>&1 && \
 	grep -v "\.egg-info" $(NAME).egg-info/SOURCES.txt)
@@ -111,6 +119,17 @@ develop: tags
 	$(PIP) install -U setuptools
 	$(PIP) install -U pip
 	$(PIP) install -e .[doc,test]
+	@# If we're in a venv, link the system's RTIMULib into it
+	@if [ -z $(VIRTUAL_ENV) ]; then \
+		echo "Virtualenv not detected! You may need to link RTIMULib manually"; \
+	else \
+		if [ -f $(RTIMULIB) ]; then \
+			echo "Linking $(RTIMULIB) into virtualenv"; \
+			ln -sf $(RTIMULIB) $(VIRTUAL_ENV)/lib/python*/site-packages/; \
+		else \
+			echo "ERROR: RTIMULib not found. If this is a Pi, something is wrong"; \
+		fi; \
+	fi
 
 test:
 	$(COVERAGE) run --rcfile coverage.cfg -m $(PYTEST) tests

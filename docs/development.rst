@@ -26,7 +26,8 @@ If you wish to develop pisense itself, it is easiest to obtain the source by
 cloning the GitHub repository and then use the "develop" target of the Makefile
 which will install the package as a link to the cloned repository allowing
 in-place development (it also builds a tags file for use with vim/emacs with
-Exuberant’s ctags utility). The following example demonstrates this method
+Exuberant’s ctags utility, and links the Sense HAT's customized RTIMULib into
+your virtual environment). The following example demonstrates this method
 within a virtual Python environment:
 
 .. code-block:: console
@@ -39,8 +40,6 @@ within a virtual Python environment:
     (pisense) $ git clone https://github.com/waveform80/pisense.git
     (pisense) $ cd pisense
     (pisense) $ make develop
-
-.. TODO What about RTIMULib?
 
 To pull the latest changes from git into your clone and update your
 installation:
