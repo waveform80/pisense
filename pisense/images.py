@@ -55,16 +55,12 @@ color = np.dtype([
 
 def image_to_rgb888(img):
     """
-    Convert *img* (a PIL :class:`Image`) to RGB888 format in a numpy
-    :class:`ndarray` with shape (8, 8, 3).
+    Convert *img* (an :class:`~PIL.Image.Image`) to RGB888 format in an
+    :class:`~numpy.ndarray` with shape (8, 8, 3).
     """
     if img.mode != 'RGB':
         img = img.convert('RGB')
-    try:
-        buf = img.tobytes()
-    except AttributeError:
-        # Ooooooold PIL
-        buf = img.tostring()
+    buf = img.tobytes()
     return np.frombuffer(buf, dtype=np.uint8).reshape(
         (img.size[1], img.size[0], 3)
     )
@@ -72,24 +68,34 @@ def image_to_rgb888(img):
 
 def image_to_rgb565(img):
     """
-    Convert *img* (a PIL :class:`Image`) to RGB565 format in a numpy
-    :class:`ndarray` with shape (8, 8).
+    Convert *img* (an :class:`~PIL.Image.Image`) to RGB565 format in an
+    :class:`~numpy.ndarray` with shape (8, 8).
     """
     return rgb888_to_rgb565(image_to_rgb888(img))
 
 
 def image_to_rgb(img):
     """
-    Convert *img* (a PIL:class:`Image`) to a numpy :class:`ndarray` in RGB
-    format (structured floating-point type with 3 values each between 0 and 1).
+    Convert *img* (an :class:`~PIL.Image.Image`) to an :class:`~numpy.ndarray`
+    in RGB format (structured floating-point type with 3 values each between 0
+    and 1).
     """
     return rgb888_to_rgb(image_to_rgb888(img))
 
 
+def rgb_to_image(arr):
+    """
+    Convert *arr* (an :class:`~numpy.ndarray` in RGB format, structured
+    floating-point type with 3 values each between 0 and 1) to an
+    :class:`~PIL.Image.Image`.
+    """
+    return rgb888_to_image(rgb_to_rgb888(arr))
+
+
 def rgb888_to_image(arr):
     """
-    Convert a numpy :class:`ndarray` in RGB888 format (unsigned 8-bit values in
-    3 planes) to a PIL :class:`Image`.
+    Convert an :class:`~numpy.ndarray` in RGB888 format (unsigned 8-bit
+    values in 3 planes) to an :class:`~PIL.Image.Image`.
     """
     # XXX Change to exception
     assert arr.dtype == np.uint8 and len(arr.shape) == 3 and arr.shape[2] == 3
@@ -98,6 +104,12 @@ def rgb888_to_image(arr):
 
 
 def rgb888_to_rgb565(arr, out=None):
+    """
+    Convert an :class:`~numpy.ndarray` in RGB888 format (unsigned 8-bit values
+    in 3 planes) to an :class:`~numpy.ndarray` in RGB565 format (unsigned
+    16-bit values with 5 bits for red and blue, and 6 bits for green laid out
+    RRRRRGGGGGGBBBBB).
+    """
     if out is None:
         out = np.empty(arr.shape[:2], np.uint16)
     else:
@@ -112,6 +124,12 @@ def rgb888_to_rgb565(arr, out=None):
 
 
 def rgb565_to_rgb888(arr, out=None):
+    """
+    Convert an :class:`~numpy.ndarray` in RGB565 format (unsigned 16-bit values
+    with 5 bits for red and blue, and 6 bits for green laid out
+    RRRRRGGGGGGBBBBB) to an :class:`~numpy.ndarray` in RGB888 format (unsigned
+    8-bit values in 3 planes).
+    """
     if out is None:
         out = np.empty(arr.shape + (3,), np.uint8)
     else:
@@ -128,6 +146,11 @@ def rgb565_to_rgb888(arr, out=None):
 
 
 def rgb565_to_image(arr):
+    """
+    Convert an :class:`~numpy.ndarray` in RGB565 format (unsigned 16-bit values
+    with 5 bits for red and blue, and 6 bits for green laid out
+    RRRRRGGGGGGBBBBB) to an :class:`~PIL.Image.Image`.
+    """
     return rgb888_to_image(rgb565_to_rgb888(arr))
 
 
@@ -203,19 +226,27 @@ def rgb565_to_rgb(arr, out=None):
     return out
 
 
-def buf_to_image(buf):
-    if isinstance(buf, Image.Image):
-        if buf.mode != 'RGB':
-            return buf.convert('RGB')
-        else:
-            return buf
-    else:
-        arr = buf_to_rgb888(buf)
-        return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
-                                arr, 'raw', 'RGB', 0, 1)
-
-
 def buf_to_rgb888(buf):
+    """
+    Converts *buf* to a 3-dimensional numpy :class:`~numpy.ndarray` containing
+    bytes (RGB888 format). The *buf* parameter can be any of the following
+    types:
+
+    * An PIL :class:`~PIL.Image.Image`.
+
+    * An numpy :class:`~numpy.ndarray` with a compatible data-type (the 3-tuple
+      of floats used by :class:`ScreenArray`, or simple bytes).
+
+    * A buffer of 64 bytes, each of which will be taken as a gray-scale level
+      for a pixel working across then down the display.
+
+    * A buffer of 192 bytes; each 3 bytes will be taken as RGB levels for
+      pixels, working across then down the display.
+
+    The last two formats are fixed size as a linear buffer has no shape and
+    those are two sizes we can reasonably guess a shape for. However, the other
+    formats are not size limited.
+    """
     if isinstance(buf, Image.Image):
         arr = image_to_rgb888(buf)
     elif isinstance(buf, np.ndarray) and 2 <= len(buf.shape) <= 3:
@@ -231,7 +262,10 @@ def buf_to_rgb888(buf):
                 raise ValueError("can't coerce dtype %s to uint8" % buf.dtype)
             arr = buf
     else:
-        arr = np.frombuffer(buf, np.uint8)
+        try:
+            arr = np.frombuffer(buf, np.uint8)
+        except AttributeError:
+            arr = np.fromiter(buf, np.uint8)
         if len(arr) == 192:
             arr = arr.reshape((8, 8, 3))
         elif len(arr) == 64:
@@ -242,9 +276,30 @@ def buf_to_rgb888(buf):
     return arr
 
 
-def buf_to_rgb(buf):
-    if isinstance(buf, np.ndarray) and buf.dtype == color:
-        return buf
+def buf_to_image(buf):
+    """
+    Converts *buf* to an RGB PIL :class:`~PIL.Image.Image`. The *buf* parameter
+    can be any of the types accepted by :func:`buf_to_rgb888`.
+    """
+    if isinstance(buf, Image.Image):
+        if buf.mode != 'RGB':
+            return buf.convert('RGB')
+        else:
+            return buf
     else:
         arr = buf_to_rgb888(buf)
-        return arr.astype(np.float32) / 255
+        return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
+                                arr, 'raw', 'RGB', 0, 1)
+
+
+def buf_to_rgb(buf):
+    """
+    Converts *buf* to a 2-dimensional numpy :class:`~numpy.ndarray` containing
+    3-tuples of floats between 0.0 and 1.0 (in other words, the same format as
+    :class:`ScreenArray`). The *buf* parameter can be any of the types accepted
+    by :func:`buf_to_rgb888`.
+    """
+    if isinstance(buf, np.ndarray) and len(buf.shape) == 2 and buf.dtype == color:
+        return buf
+    else:
+        rgb888_to_rgb(buf_to_rgb888(buf))

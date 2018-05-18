@@ -41,7 +41,16 @@ from .exc import (
     SenseStickBufferFull,
     SenseStickCallbackRead,
 )
-from .images import color, image_to_rgb565, image_to_rgb888, image_to_rgb
+from .images import (
+    color,
+    buf_to_image, buf_to_rgb888, buf_to_rgb,
+    image_to_rgb565, rgb565_to_image,
+    image_to_rgb888, rgb888_to_image,
+    image_to_rgb,
+    rgb888_to_rgb565, rgb565_to_rgb888,
+    rgb_to_rgb888, rgb888_to_rgb,
+    rgb_to_rgb565, rgb565_to_rgb,
+)
 from .screen import SenseScreen, ScreenArray, array, default_gamma, low_gamma
 from .easings import linear, ease_in, ease_out, ease_in_out
 from .anim import draw_text, scroll_text, fade_to, slide_to, zoom_to

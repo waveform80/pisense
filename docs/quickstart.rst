@@ -429,13 +429,11 @@ You can read values from the sensors independently:
 .. code-block:: pycon
 
     >>> hat.imu.accel
-    IMUReadings(x=0.0351547, y=0.052686, z=1.015)
+    IMUVector(x=0.0404885, y=0.0551139, z=1.01719)
     >>> hat.imu.gyro
-    IMUReadings(x=0.0180783, 0.000277532, z=-0.0179323)
+    IMUVector(x=0.044841, y=0.00200727, z=-0.0528594)
     >>> hat.imu.compass
-    IMUReadings(x=-47.4917, y=-22.4575, z=38.9144)
-
-.. TODO update these
+    IMUVector(x=-21.1644, y=-12.2358, z=18.4494)
 
 The accelerometer returns values in g (`standard gravities`_, equivalent to
 9.80665m/s²). Hence, with the Sense HAT lying flat on a table, the X and Y
@@ -453,8 +451,22 @@ HAT:
     ...     print(hat.imu.gyro)
     ...     sleep(0.1)
     ...
-
-.. attention:: TODO output
+    IMUVector(x=0.0437177, y=0.00241541, z=-0.0463548)
+    IMUVector(x=0.0408809, y=0.00207451, z=-0.0443745)
+    IMUVector(x=0.0428965, y=0.00294054, z=-0.0448299)
+    IMUVector(x=0.0376711, y=0.00259082, z=-0.0440765)
+    IMUVector(x=0.0376385, y=0.00705177, z=-0.0457381)
+    IMUVector(x=0.0276967, y=-0.00117483, z=-0.0446691)
+    IMUVector(x=-0.206876, y=-0.0201117, z=-0.128358)
+    IMUVector(x=-0.0773721, y=-0.523465, z=-0.318948)
+    IMUVector(x=-0.429841, y=-0.663047, z=0.0814746)
+    IMUVector(x=0.288231, y=-1.13005, z=-0.0245105)
+    IMUVector(x=-0.450611, y=-1.86431, z=-0.382783)
+    IMUVector(x=-0.173889, y=-1.05461, z=-0.238619)
+    IMUVector(x=-0.225202, y=-2.61934, z=-0.0840699)
+    IMUVector(x=-0.00529005, y=-1.86309, z=-0.000686785)
+    IMUVector(x=-0.00254116, y=-1.85271, z=0.115072)
+    IMUVector(x=-0.0382768, y=-0.26965, z=-0.374536)
 
 Finally, the magnetometer returns values in µT (`micro-Teslas`_, where 1µT is
 equal to 10mG or `milli-Gauss`_). The Earth's magnetic field is incredibly
@@ -470,17 +482,24 @@ yaw`_ of the HAT in `radians`_:
 .. code-block:: pycon
 
     >>> hat.imu.orient
-    IMUOrient(roll=-0.461751, pitch=1.10459, yaw=-0.508346)
-
-.. attention:: TODO correct this
+    IMUOrient(roll=0.868906 (49.8°), pitch=1.2295 (70.4°), yaw=0.818843 (46.9°))
 
 Like all the other sensors on the HAT, the IMU can be treated as an iterator:
+
+.. code-block:: pycon
 
     >>> for state in hat.imu:
     ...     print(repr(state))
     ...
-
-.. attention:: TODO output
+    IMUState(compass=IMUVector(x=-13.9255, y=-30.4649, z=-18.815), gyro=IMUVector(x=0.0393031, y=0.00371209, z=-0.0437528), accel=IMUVector(x=0.0409734, y=0.0517148, z=1.00427), orient=IMUOrient(roll=2.17333 (124.5°), pitch=-1.18527 (-67.9°), yaw=2.81119 (161.1°)))
+    IMUState(compass=IMUVector(x=-19.879, y=-29.4562, z=-7.37771), gyro=IMUVector(x=0.040144, y=-0.00145538, z=-0.0430174), accel=IMUVector(x=0.0431554, y=0.0495297, z=1.00939), orient=IMUOrient(roll=2.09063 (119.8°), pitch=-1.15771 (-66.3°), yaw=2.85458 (163.6°)))
+    IMUState(compass=IMUVector(x=-19.879, y=-29.4562, z=-7.37771), gyro=IMUVector(x=0.040144, y=-0.00145538, z=-0.0430174), accel=IMUVector(x=0.0431554, y=0.0495297, z=1.00939), orient=IMUOrient(roll=2.09063 (119.8°), pitch=-1.15771 (-66.3°), yaw=2.85458 (163.6°)))
+    IMUState(compass=IMUVector(x=-19.879, y=-29.4562, z=-7.37771), gyro=IMUVector(x=0.040144, y=-0.00145538, z=-0.0430174), accel=IMUVector(x=0.0431554, y=0.0495297, z=1.00939), orient=IMUOrient(roll=2.09063 (119.8°), pitch=-1.15771 (-66.3°), yaw=2.85458 (163.6°)))
+    IMUState(compass=IMUVector(x=-19.879, y=-29.4562, z=-7.37771), gyro=IMUVector(x=0.040144, y=-0.00145538, z=-0.0430174), accel=IMUVector(x=0.0431554, y=0.0495297, z=1.00939), orient=IMUOrient(roll=2.09063 (119.8°), pitch=-1.15771 (-66.3°), yaw=2.85458 (163.6°)))
+    IMUState(compass=IMUVector(x=-24.5605, y=-28.5779, z=1.99134), gyro=IMUVector(x=0.0379679, y=0.00247297, z=-0.0392915), accel=IMUVector(x=0.0421856, y=0.0500153, z=1.01597), orient=IMUOrient(roll=2.01459 (115.4°), pitch=-1.13169 (-64.8°), yaw=2.89324 (165.8°)))
+    IMUState(compass=IMUVector(x=-24.5605, y=-28.5779, z=1.99134), gyro=IMUVector(x=0.0379679, y=0.00247297, z=-0.0392915), accel=IMUVector(x=0.0421856, y=0.0500153, z=1.01597), orient=IMUOrient(roll=2.01459 (115.4°), pitch=-1.13169 (-64.8°), yaw=2.89324 (165.8°)))
+    IMUState(compass=IMUVector(x=-24.5605, y=-28.5779, z=1.99134), gyro=IMUVector(x=0.0379679, y=0.00247297, z=-0.0392915), accel=IMUVector(x=0.0421856, y=0.0500153, z=1.01597), orient=IMUOrient(roll=2.01459 (115.4°), pitch=-1.13169 (-64.8°), yaw=2.89324 (165.8°)))
+    IMUState(compass=IMUVector(x=-24.5605, y=-28.5779, z=1.99134), gyro=IMUVector(x=0.0379679, y=0.00247297, z=-0.0392915), accel=IMUVector(x=0.0421856, y=0.0500153, z=1.01597), orient=IMUOrient(roll=2.01459 (115.4°), pitch=-1.13169 (-64.8°), yaw=2.89324 (165.8°)))
 
 This concludes the tour of the Raspberry Pi Sense HAT, and of the bare
 functionality of the pisense library. The next sections will introduce some

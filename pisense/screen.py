@@ -59,6 +59,7 @@ from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .images import (
     color,
     buf_to_image,
+    buf_to_rgb,
     image_to_rgb565,
     rgb565_to_image,
     rgb_to_rgb565,
@@ -80,9 +81,8 @@ def array(data=None, shape=(8, 8)):
     """
     Use this function to construct a new :class:`ScreenArray` and fill it
     with an initial source of *data*, which can be a single :class:`Color`,
-    a list of :class:`Color` values, or another (compatible) array.
+    a list of 64 :class:`Color` values, or any another (compatible) array.
     """
-    # TODO what about an Image?
     result = ScreenArray(shape)
     if data is None:
         result[...] = 0
@@ -95,6 +95,7 @@ def array(data=None, shape=(8, 8)):
 
 
 class ScreenArray(np.ndarray):
+    # TODO document me
     # pylint: disable=too-few-public-methods
 
     def __new__(cls, shape=(8, 8)):
@@ -216,7 +217,6 @@ class SenseScreen(object):
     GAMMA_USER = 2
 
     def __init__(self, fps=15, easing=linear):
-        # TODO gamma
         self._fb_file = io.open(self._fb_device(), 'wb+')
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
@@ -339,7 +339,12 @@ class SenseScreen(object):
 
     @property
     def array(self):
-        # XXX Document me
+        """
+        Returns the screen as a :class:`ScreenArray`. The returned array is
+        "live" and modifications to it will modify the state of the screen.
+        See :class:`ScreenArray` for more information on the usage and
+        facilities of this class.
+        """
         arr = self._array
         arr._screen = None
         try:
@@ -351,7 +356,6 @@ class SenseScreen(object):
 
     @array.setter
     def array(self, value):
-        # XXX Document me
         if isinstance(value, np.ndarray):
             value = value.view(color).reshape((8, 8))
         else:
@@ -463,17 +467,9 @@ class SenseScreen(object):
         """
         Draw the provided image (or array) on the display.
 
-        The *image* passed to this method can be any of the following:
-
-        * An 8x8 PIL :class:`~PIL.Image.Image`.
-
-        * An 8x8 numpy :class:`~numpy.ndarray` with a compatible data-type.
-
-        * A buffer of 64 bytes, each of which will be taken as a gray-scale
-          level for a pixel working across then down the display.
-
-        * A buffer of 192 bytes; each 3 bytes will be taken as RGB levels for
-          pixels, working across then down the display.
+        The *image* passed to this method can be anything accepted by
+        :func:`buf_to_image`. The only restriction is that the result must be
+        an 8x8 image.
         """
         img = buf_to_image(image)
         if img.size != (8, 8):

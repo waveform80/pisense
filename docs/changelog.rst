@@ -2,14 +2,10 @@
 Change log
 ==========
 
-.. currentmodule:: colorzero
+.. currentmodule:: pisense
 
 
-Release 1.0 (2018-03-10)
-========================
+Release 1.0 (???)
+=================
 
-1.0 is the first release after breaking the library out of the `picamera`_
-project. As this is a 1.x release, API stability will be maintained.
-
-
-.. _picamera: https://github.com/waveform80/picamera
+Initial release.
