@@ -113,6 +113,7 @@ intersphinx_cache_limit = 7
 
 if on_rtd:
     html_theme = 'sphinx_rtd_theme'
+    pygments_style = 'default'
     #html_theme_options = {}
     #html_sidebars = {}
 else:

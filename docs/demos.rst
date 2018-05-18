@@ -38,8 +38,6 @@ each time round. For example:
 .. literalinclude:: examples/rainbow.py
     :caption:
 
-.. _colorzero: https://colorzero.readthedocs.io/
-
 
 .. _joystick_movement:
 
@@ -61,7 +59,6 @@ events into relative X, Y movements:
 
 You can try this out from the command line like so::
 
-    >>> from pisense import SenseHAT
     >>> hat = SenseHAT()
     >>> for x, y in movements(hat.stick):
     ...     print('x:', x, 'y:', y)
@@ -214,3 +211,5 @@ simplest to make it a straight-forward function. That said…
     falling? Hint: passing the iterator to the transform is one way to do this,
     but for another way (without passing the iterator), look up ``pairwise`` in
     :mod:`itertools`.
+
+.. _colorzero: https://colorzero.readthedocs.io/

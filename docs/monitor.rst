@@ -200,8 +200,6 @@ already exist, then add a tiny amount of code to record readings into the
 database.  The final result (with the lines we've added highlighted) is as
 follows:
 
-.. TODO verify emphasize-lines
-
 .. literalinclude:: examples/monitor_final.py
     :caption:
     :emphasize-lines: 62-86,90,98,108-112

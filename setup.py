@@ -83,8 +83,8 @@ __keywords__ = [
 
 __requires__ = [
     'numpy',
-    'pillow',
-    'colorzero',
+    'pillowi>=3.4.0',
+    'colorzero>=1.1',
 ]
 
 __extra_requires__ = {

@@ -384,8 +384,8 @@ configure it to take the average of the two readings:
     >>> hat.environ.temperature_source = pisense.temp_average
     27.206080436706543
 
-However, if you think this will give you more accuracy, `Dilbert`_ may take
-exception to your notion!
+However, if you think this will give you more accuracy, `Dilbert`_ may have a
+pithy word or two!
 
 Like the joystick, the environment sensor(s) can also be treated as an
 iterator:
