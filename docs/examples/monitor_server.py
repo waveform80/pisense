@@ -15,6 +15,22 @@ class SensorData():
     def date(self):
         return self._data['date']
 
+    def __format__(self, format_spec):
+        element, units = format_spec.split(':')
+        template = """
+<div class="sensor">
+    <h2>{title}</h2>
+    <span class="reading">{current:.1f}{units}</span>
+    <img class="recent" src="{element}_recent.svg" />
+    <img class="history" src="{element}_history.svg" />
+</div>
+"""
+        return template.format(
+            element=element,
+            title=element.title(),
+            units=units,
+            current=self._data['ds'][element])
+
     def image(self, path):
         try:
             image = self._images[path]
@@ -46,22 +62,6 @@ class SensorData():
             )['image']
         return image
 
-    def __format__(self, format_spec):
-        element, units = format_spec.split(':')
-        template = """
-<div class="sensor">
-    <h2>{title}</h2>
-    <span class="reading">{current:.1f}{units}</span>
-    <img class="recent" src="{element}_recent.svg" />
-    <img class="history" src="{element}_history.svg" />
-</div>
-"""
-        return template.format(
-            element=element,
-            title=element.title(),
-            units=units,
-            current=self._data['ds'][element])
-
 
 class RequestHandler(BaseHTTPRequestHandler):
     database = 'environ.rrd'
@@ -71,45 +71,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     <head>
         <title>Sense HAT Environment Sensors</title>
         <link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
-        <style>
-body {{
-    font-family: "Raleway", sans-serif;
-    max-width: 700px;
-    margin: 1em auto;
-}}
-
-h1 {{ text-align: center; }}
-
-div {{
-    padding: 8px;
-    margin: 1em 0;
-    border-radius: 8px;
-}}
-
-div#timestamp {{
-    font-size: 16pt;
-    background-color: #bbf;
-    text-align: center;
-}}
-
-div.sensor {{ background-color: #ddd; }}
-
-div.sensor h2 {{
-    font-size: 20pt;
-    margin-top: 0;
-    padding-top: 0;
-    float: left;
-}}
-
-span.reading {{
-    font-size: 20pt;
-    float: right;
-    background-color: #ccc;
-    border-radius: 8px;
-    box-shadow: inset 0 0 4px black;
-    padding: 4px 8px;
-}}
-        </style>
+        <style>{style_sheet}</style>
     </head>
     <body>
         <h1>Sense HAT Environment Sensors</h1>
@@ -122,6 +84,45 @@ span.reading {{
         </script>
     </body>
 </html>
+"""
+    style_sheet = """
+body {
+    font-family: "Raleway", sans-serif;
+    max-width: 700px;
+    margin: 1em auto;
+}
+
+h1 { text-align: center; }
+
+div {
+    padding: 8px;
+    margin: 1em 0;
+    border-radius: 8px;
+}
+
+div#timestamp {
+    font-size: 16pt;
+    background-color: #bbf;
+    text-align: center;
+}
+
+div.sensor { background-color: #ddd; }
+
+div.sensor h2 {
+    font-size: 20pt;
+    margin-top: 0;
+    padding-top: 0;
+    float: left;
+}
+
+span.reading {
+    font-size: 20pt;
+    float: right;
+    background-color: #ccc;
+    border-radius: 8px;
+    box-shadow: inset 0 0 4px black;
+    padding: 4px 8px;
+}
 """
 
     def get_sensor_data(self):
@@ -143,6 +144,7 @@ span.reading {{
         elif self.path == '/index.html':
             data = self.get_sensor_data()
             content = RequestHandler.index_template.format(
+                style_sheet=RequestHandler.style_sheet,
                 data=data).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
@@ -166,9 +168,11 @@ span.reading {{
         else:
             self.send_error(404)
 
+
 def main():
     httpd = HTTPServer(('', 8000), RequestHandler)
     httpd.serve_forever()
+
 
 if __name__ == '__main__':
     main()
