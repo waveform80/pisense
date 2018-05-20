@@ -27,17 +27,40 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+Defines the :class:`SenseSettings` class representing the Sense HAT's
+calibration settings.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
-    )
-str = type('')
+)
 
 import RTIMU
 
 class SenseSettings(object):
+    """
+    Represents the calibration settings for the Sense HAT.
+
+    The *settings_file* refers to the INI-style file containing all calibration
+    settings for the Sense HAT. For no particularly good reason, the underlying
+    library requires that this filename ends with '.ini'.
+
+    .. warning::
+
+        If the specified file does not exist, it will be created with default
+        calibration settings. Hence you *must* ensure that the location
+        specified either exists or is writeable by the current user.
+
+        Yes, this is a ridiculous requirement and while I would dearly love to
+        re-write this chunk of the underlying library it's not something I
+        have time for currently!
+    """
+    # pylint: disable=too-few-public-methods
+
     def __init__(self, settings_file='/etc/RTIMULib.ini'):
         if not settings_file.endswith('.ini'):
             raise ValueError("RTIMULib doesn't accept settings filenames "
@@ -88,4 +111,7 @@ class SenseSettings(object):
 
     @property
     def settings(self):
+        """
+        Returns the underlying RTIMULib settings object.
+        """
         return self._settings

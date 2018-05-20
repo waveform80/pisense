@@ -27,13 +27,17 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+Defines the :class:`SenseEnviron` and :class:`EnvironReadings` classes for
+querying the environmental sensors on the Sense HAT.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
-    )
-str = type('')
+)
 
 import time
 from collections import namedtuple
@@ -44,6 +48,11 @@ from .settings import SenseSettings
 
 
 class EnvironReadings(namedtuple('EnvironReadings', ('pressure', 'humidity', 'temperature'))):
+    """
+    Represents the readings from the environmental sensors as a named 3-tuple
+    containing the fields *pressure* (in mbar or hPa), *humidity* (in %RH),
+    and *temperature* (in °C) respectively.
+    """
     __slots__ = ()
     def __repr__(self):
         return 'EnvironReadings(pressure=%g, humidity=%g, temperature=%g)' % self
@@ -54,6 +63,7 @@ def temp_pressure(p_temp, h_temp):
     Use this function as :attr:`~SenseEnviron.temperature_source` if you want
     to read temperature from the pressure sensor only. This is the default.
     """
+    # pylint: disable=unused-argument
     return p_temp
 
 
@@ -62,6 +72,7 @@ def temp_humidity(p_temp, h_temp):
     Use this function as :attr:`~SenseEnviron.temperature_source` if you want
     to read temperature from the humidity sensor only.
     """
+    # pylint: disable=unused-argument
     return h_temp
 
 
@@ -109,6 +120,16 @@ class SenseEnviron(object):
     :attr:`temperature_source` which, given the two temperature readings
     returns the reading you are interested in, or some combination there-of.
     """
+    __slots__ = (
+        '_settings',
+        '_p_sensor',
+        '_h_sensor',
+        '_readings',
+        '_temp_source',
+        '_interval',
+        '_last_read',
+    )
+
     def __init__(self, settings=None, temperature_source=temp_humidity):
         if not isinstance(settings, SenseSettings):
             settings = SenseSettings(settings)
@@ -125,6 +146,13 @@ class SenseEnviron(object):
         self._last_read = None
 
     def close(self):
+        """
+        Call the :meth:`close` method to close the environmental sensor
+        interface and free up any background resources. The method is
+        idempotent (you can call it multiple times without error) and after it
+        is called, any operations on the environmental sensors may return an
+        error (but are not guaranteed to do so).
+        """
         self._p_sensor = None
         self._h_sensor = None
         self._settings = None
@@ -140,6 +168,21 @@ class SenseEnviron(object):
             yield self.read()
 
     def read(self):
+        """
+        Return the current state of all environmental sensors as an
+        :class:`EnvironReadings` tuple.
+
+        .. note::
+
+            This method will wait until the next set of readings are available,
+            and then return them. Hence it is suitable for use in a loop
+            without additional waits, although it may be simpler to simply
+            treat the instance as an iterator in that case.
+
+            This is in contrast to reading the :attr:`pressure`,
+            :attr:`humidity`, and :attr:`temperature` attributes which always
+            return immediately.
+        """
         self._read(True)
         return self._readings
 
@@ -163,26 +206,69 @@ class SenseEnviron(object):
 
     @property
     def pressure(self):
+        """
+        Return the current pressure reading from the environmental sensors.
+        The pressure is measured in `millibars`_ (aka `hectopascals`_).
+
+        .. _millibars: https://en.wikipedia.org/wiki/Bar_(unit)
+        .. _hectopascals: https://en.wikipedia.org/wiki/Pascal_(unit)
+        """
         self._read(False)
         return self._readings.pressure
 
     @property
     def humidity(self):
+        """
+        Return the current humidity reading from the environmental sensors.
+        The humidity is measured as a % of `relative humidity`_.
+
+        .. _relative humidity: https://en.wikipedia.org/wiki/Relative_humidity
+        """
         self._read(False)
         return self._readings.humidity
 
     @property
     def temperature(self):
+        """
+        Return the current temperature reading from the environment sensors.
+        The temperature is measured in degrees `celsius`_.
+
+        .. _celsius: https://en.wikipedia.org/wiki/Celsius
+        """
         self._read(False)
         return self._readings.temperature
 
-    def _get_temp_source(self):
+    @property
+    def temp_source(self):
+        """
+        Specify the conversion function for the temperature sensors.
+
+        The Sense HAT contains two temperature sensors, one in the humidity
+        sensor, and one in the pressure sensor. The :attr:`temp_source`
+        property contains the function that is used to determine how the
+        temperature is reported from the two sources. The function must take
+        two parameters (the readings from the humidity and pressure sensors
+        respectively) and can return whatever you wish to see as the value of
+        the :attr:`temperature` property (including a tuple of both
+        temperatures).
+
+        The default value is :func:`temp_humidity` which simply returns the
+        reading from the humidity sensor, discarding the the pressure sensor
+        reading.
+
+        .. warning::
+
+            You may be tempted to average the two readings under the assumption
+            that this will provide more accuracy. This is almost certainly not
+            the case!
+        """
         return self._temp_source
-    def _set_temp_source(self, value):
+
+    @temp_source.setter
+    def temp_source(self, value):
         try:
             value(20, 22)
         except TypeError:
             raise ValueError('temp_source must be a callable that accepts '
                              '2 parameters')
         self._temp_source = value
-    temperature_source = property(_get_temp_source, _set_temp_source)

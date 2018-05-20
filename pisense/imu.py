@@ -27,13 +27,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+Defines the :class:`SenseIMU`, :class:`IMUState`, :class:`IMUVector`, and
+:class:`IMUOrient` classes for querying the inertial measurement unit on the
+Sense HAT.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
-    )
-str = type('')
+)
 
 import time
 from math import degrees
@@ -42,6 +47,9 @@ from collections import namedtuple
 import RTIMU
 
 from .settings import SenseSettings
+
+# Make Py2's str and range equivalent to Py3's
+str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
 
 class IMUState(namedtuple('IMUState', ('compass', 'gyro', 'accel', 'orient'))):
@@ -81,6 +89,8 @@ class IMUVector(namedtuple('IMUVector', ('x', 'y', 'z'))):
     Represents a three-dimensional vector with X, Y, and Z components. This is
     mostly used to represent the output of the major IMU sensors (magnetometer,
     gryoscope, and accelerometer).
+
+    .. attention:: TODO Add HAT-specific vector directions diagram
     """
     # TODO Consider splitting Vector out of picraft and re-using it here
     __slots__ = ()
@@ -91,7 +101,11 @@ class IMUVector(namedtuple('IMUVector', ('x', 'y', 'z'))):
 class IMUOrient(namedtuple('IMUOrient', ('roll', 'pitch', 'yaw'))):
     """
     Represents the orientation of the Sense HAT in radians (though the display
-    is provided in degrees for human comfort.
+    is provided in degrees for human convenience) as `roll, pitch, and yaw`_.
+
+    .. attention:: TODO add HAT-specific roll, pitch, yaw diagram
+
+    .. _roll, pitch, and yaw: https://en.wikipedia.org/wiki/Aircraft_principal_axes
     """
     __slots__ = ()
     def __repr__(self):
@@ -104,8 +118,17 @@ class SenseIMU(object):
     """
     The :class:`SenseIMU` class represents the Inertial Measurement Unit (IMU)
     on the Sense HAT. Users can either instantiate the class themselves, or can
-    access an instance from :attr:`???`
+    access an instance from :attr:`SenseHAT.imu`.
     """
+    __slots__ = (
+        '_settings',
+        '_imu',
+        '_interval',
+        '_sensors',
+        '_readings',
+        '_last_read',
+    )
+
     def __init__(self, settings=None):
         # TODO rotation
         if not isinstance(settings, SenseSettings):
@@ -128,6 +151,13 @@ class SenseIMU(object):
         self._last_read = None
 
     def close(self):
+        """
+        Call the :meth:`close` method to close the inertial measurement unit
+        interface and free up any background resources. The method is
+        idempotent (you can call it multiple times without error) and after it
+        is called, any operations on the inertial measurement unit may return
+        an error (but are not guaranteed to do so).
+        """
         self._imu = None
         self._settings = None
 
@@ -144,6 +174,21 @@ class SenseIMU(object):
                 yield value
 
     def read(self):
+        """
+        Return the current state of the inertial measurement unit as an
+        :class:`IMUState` tuple.
+
+        .. note::
+
+            This method will wait until the next set of readings are available,
+            and then return them. Hence it is suitable for use in a loop
+            without additional waits, although it may be simpler to simply
+            treat the instance as an iterator in that case.
+
+            This is in contrast to reading the :attr:`gyro`, :attr:`accel`,
+            :attr:`compass`, and :attr:`orient` attributes which always return
+            immediately.
+        """
         self._read(True)
         return self._readings
 
@@ -155,42 +200,92 @@ class SenseIMU(object):
             elif now - self._last_read < self._interval:
                 return
         if self._imu.IMURead():
-            d = self._imu.getIMUData()
+            dat = self._imu.getIMUData()
             self._readings = IMUState(
-                IMUVector(*d['compass']) if d.get('compassValid', False) else None,
-                IMUVector(*d['gyro']) if d.get('gyroValid', False) else None,
-                IMUVector(*d['accel']) if d.get('accelValid', False) else None,
-                IMUOrient(*d['fusionPose']) if d.get('fusionPoseValid', False) else None,
+                IMUVector(*dat['compass']) if dat.get('compassValid', False) else None,
+                IMUVector(*dat['gyro']) if dat.get('gyroValid', False) else None,
+                IMUVector(*dat['accel']) if dat.get('accelValid', False) else None,
+                IMUOrient(*dat['fusionPose']) if dat.get('fusionPoseValid', False) else None,
             )
             self._last_read = now
 
     @property
     def name(self):
+        """
+        Returns the name of the IMU chip. On the Sense HAT this should always
+        be "LSM9DS1".
+        """
         return self._imu.IMUName()
 
     @property
     def compass(self):
+        """
+        Return the current reading from the magnetometer as a 3-dimensional
+        :class:`IMUVector` tuple. The reading is measured in in µT
+        (`micro-teslas`_).
+
+        .. _micro-teslas: https://en.wikipedia.org/wiki/Tesla_(unit)
+        """
         self._read(False)
         return self._readings.compass
 
     @property
     def gyro(self):
+        """
+        Return the current reading from the gyroscope as a 3-dimensional
+        :class:`IMUVector` tuple. The reading is measured in
+        `radians-per-second`_.
+
+        .. _radians-per-second: https://en.wikipedia.org/wiki/Radian_per_second
+        """
         self._read(False)
         return self._readings.gyro
 
     @property
     def accel(self):
+        """
+        Return the current reading from the accelerometer as a 3-dimensional
+        :class:`IMUVector` tuple. The reading is measured in
+        `standard gravities`_.
+
+        .. _standard gravities: https://en.wikipedia.org/wiki/Standard_gravity
+        """
         self._read(False)
         return self._readings.accel
 
     @property
     def orient(self):
+        """
+        Return the current calculated orientation of the board as a
+        :class:`IMUOrient` tuple containing `roll, pitch, and yaw`_ in
+        `radians`_.
+
+        .. note::
+
+            The sensors that are used in determining the orientation are
+            specified in the :attr:`sensors` property.
+
+            The orientation of the board is only calculated when the sensors
+            are read. The drift of certain sensors (the gyroscope in
+            particular) mean that reading the orientation more frequently can
+            result in more accuracy.
+
+        .. _radians: https://en.wikipedia.org/wiki/Radian
+        .. _roll, pitch, and yaw: https://en.wikipedia.org/wiki/Aircraft_principal_axes
+        """
         self._read(False)
         return self._readings.orient
 
-    def _get_sensors(self):
+    @property
+    def sensors(self):
+        """
+        Controls which sensors are used for calculating the :attr:`orient`
+        property.
+        """
         return self._sensors
-    def _set_sensors(self, value):
+
+    @sensors.setter
+    def sensors(self, value):
         if isinstance(value, bytes):
             value = value.decode('ascii')
         if isinstance(value, str):
@@ -202,4 +297,3 @@ class SenseIMU(object):
         self._imu.setCompassEnable('compass' in self._sensors)
         self._imu.setGyroEnable('gyro' in self._sensors)
         self._imu.setAccelEnable('accel' in self._sensors)
-    orient_sensors = property(_get_sensors, _set_sensors)

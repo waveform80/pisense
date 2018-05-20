@@ -27,31 +27,40 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+The :mod:`pisense` module is the main namespace for the pisense package; it
+imports (and exposes) all publically accessible classes, functions, and
+constants from all the modules beneath it for convenience. It also defines
+the top-level :class:`SenseHAT` class.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
-    )
-str = type('')
+)
+
+import warnings
 
 from .exc import (
     SenseWarning,
+    SenseHATReinit,
     SenseStickWarning,
     SenseStickBufferFull,
     SenseStickCallbackRead,
 )
-from .images import (
+from .formats import (
     color,
-    buf_to_image, buf_to_rgb888, buf_to_rgb,
+    buf_to_image, buf_to_rgb888, buf_to_rgb, iter_to_rgb,
     image_to_rgb565, rgb565_to_image,
     image_to_rgb888, rgb888_to_image,
-    image_to_rgb,
+    image_to_rgb, rgb_to_image,
     rgb888_to_rgb565, rgb565_to_rgb888,
     rgb_to_rgb888, rgb888_to_rgb,
     rgb_to_rgb565, rgb565_to_rgb,
 )
-from .screen import SenseScreen, ScreenArray, array, default_gamma, low_gamma
+from .screen import SenseScreen, ScreenArray, array, DEFAULT_GAMMA, LOW_GAMMA
 from .easings import linear, ease_in, ease_out, ease_in_out
 from .anim import draw_text, scroll_text, fade_to, slide_to, zoom_to
 from .stick import SenseStick, StickEvent
@@ -82,24 +91,40 @@ class SenseHAT(object):
     initialization of the subordinate objects; see the documentation for their
     classes for further information.
     """
+    __slots__ = ('_settings', '_screen', '_stick', '_imu', '_environ')
+    hat = None
 
-    def __init__(self, settings='/etc/RTIMULib.ini', **kwargs):
-        super(SenseHAT, self).__init__()
-        # Old-style kw-only args...
-        fps = kwargs.pop('fps', 15)
-        easing = kwargs.pop('easing', linear)
-        max_events = kwargs.pop('max_events', 100)
-        flush_input = kwargs.pop('flush_input', True)
-        if kwargs:
-            raise TypeError("unexpected keyword argument %r" %
-                            kwargs.popitem()[0])
-        self._settings = SenseSettings(settings)
-        self._screen = SenseScreen(fps, easing)
-        self._stick = SenseStick(max_events, flush_input)
-        self._imu = SenseIMU(self._settings)
-        self._environ = SenseEnviron(self._settings)
+    def __new__(cls, settings='/etc/RTIMULib.ini', **kwargs):
+        if SenseHAT.hat is not None:
+            warnings.warn(
+                SenseHATReinit("The SenseHAT class has already been "
+                               "instantiated; returning existing instance"))
+            self = SenseHAT.hat
+        else:
+            self = super(SenseHAT, cls).__new__(cls, settings, **kwargs)
+            # Old-style kw-only args...
+            fps = kwargs.pop('fps', 15)
+            easing = kwargs.pop('easing', linear)
+            max_events = kwargs.pop('max_events', 100)
+            flush_input = kwargs.pop('flush_input', True)
+            if kwargs:
+                raise TypeError("unexpected keyword argument %r" %
+                                kwargs.popitem()[0])
+            # pylint: disable=protected-access
+            self._settings = SenseSettings(settings)
+            self._screen = SenseScreen(fps, easing)
+            self._stick = SenseStick(max_events, flush_input)
+            self._imu = SenseIMU(self._settings)
+            self._environ = SenseEnviron(self._settings)
+        return self
 
     def close(self):
+        """
+        Call the :meth:`close` method to close the Sense HAT interface and free
+        up any background resources. The method is idempotent (you can call it
+        multiple times without error) and after it is called, any operations on
+        the Sense HAT may return an error (but are not guaranteed to do so).
+        """
         if self._environ is not None:
             self._environ.close()
             self._environ = None

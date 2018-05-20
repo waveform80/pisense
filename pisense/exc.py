@@ -32,6 +32,9 @@
 class SenseWarning(Warning):
     "Base class for warnings raised by the Sense HAT"
 
+class SenseHATReinit(SenseWarning):
+    "Warning raised when the SenseHAT class is initialized twice (or more)"
+
 class SenseStickWarning(SenseWarning):
     "Base class for warnings raised by the joystick on the Sense HAT"
 
@@ -43,4 +46,3 @@ class SenseStickCallbackRead(SenseStickWarning):
     Warning raised when :meth:`SenseStick.read` is called while callbacks are
     active
     """
-

@@ -38,15 +38,15 @@ from __future__ import (
     print_function,
     division,
 )
-native_str = str
-str = type('')
-
 
 import numpy as np
 from PIL import Image
 
+# Make Py2's str and range equivalent to Py3's
+native_str = str  # pylint: disable=invalid-name
+str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
-color = np.dtype([
+color = np.dtype([  # pylint: disable=invalid-name
     (native_str('r'), np.float32),
     (native_str('g'), np.float32),
     (native_str('b'), np.float32),
@@ -97,8 +97,12 @@ def rgb888_to_image(arr):
     Convert an :class:`~numpy.ndarray` in RGB888 format (unsigned 8-bit
     values in 3 planes) to an :class:`~PIL.Image.Image`.
     """
-    # TODO Change to exception
-    assert arr.dtype == np.uint8 and len(arr.shape) == 3 and arr.shape[2] == 3
+    if not (
+            isinstance(arr, np.ndarray) and
+            arr.dtype == np.uint8 and
+            len(arr.shape) == 3
+            and arr.shape[2] == 3):
+        raise ValueError("arr must be a 3-dimensional numpy array of bytes")
     return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
                             arr, 'raw', 'RGB', 0, 1)
 
@@ -112,9 +116,11 @@ def rgb888_to_rgb565(arr, out=None):
     """
     if out is None:
         out = np.empty(arr.shape[:2], np.uint16)
-    else:
-        # TODO Change to exception
-        assert out.shape == arr.shape[:2] and out.dtype == np.uint16
+    elif not (
+            isinstance(out, np.ndarray) and
+            out.shape == arr.shape[:2] and
+            out.dtype == np.uint16):
+        raise ValueError("output array has wrong shape or dtype")
     out[...] = (
         ((arr[..., 0] & 0xF8).astype(np.uint16) << 8) |
         ((arr[..., 1] & 0xFC).astype(np.uint16) << 3) |
@@ -132,9 +138,11 @@ def rgb565_to_rgb888(arr, out=None):
     """
     if out is None:
         out = np.empty(arr.shape + (3,), np.uint8)
-    else:
-        # TODO Change to exception
-        assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
+    elif not (
+            isinstance(out, np.ndarray) and
+            out.shape == arr.shape + (3,) and
+            out.dtype == np.uint8):
+        raise ValueError("output array has wrong shape or dtype")
     out[..., 0] = ((arr & 0xF800) >> 8).astype(np.uint8)
     out[..., 1] = ((arr & 0x07E0) >> 3).astype(np.uint8)
     out[..., 2] = ((arr & 0x001F) << 3).astype(np.uint8)
@@ -162,9 +170,11 @@ def rgb_to_rgb888(arr, out=None):
     """
     if out is None:
         out = np.empty(arr.shape + (3,), np.uint8)
-    else:
-        # TODO Change to exception
-        assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
+    elif not (
+            isinstance(out, np.ndarray) and
+            out.shape == arr.shape + (3,) and
+            out.dtype == np.uint8):
+        raise ValueError("output array has wrong shape or dtype")
     out[..., 0] = arr['r'] * 255
     out[..., 1] = arr['g'] * 255
     out[..., 2] = arr['b'] * 255
@@ -180,9 +190,11 @@ def rgb888_to_rgb(arr, out=None):
     """
     if out is None:
         out = np.empty(arr.shape[:2], color)
-    else:
-        # TODO Change to exception
-        assert out.shape == arr.shape[:2] and out.dtype == color
+    elif not (
+            isinstance(out, np.ndarray) and
+            out.shape == arr.shape[:2] and
+            out.dtype == color):
+        raise ValueError("output array has wrong shape or dtype")
     arr = arr.astype(np.float32) / 255
     out['r'] = arr[..., 0]
     out['g'] = arr[..., 1]
@@ -199,9 +211,12 @@ def rgb_to_rgb565(arr, out=None):
     """
     if out is None:
         out = np.zeros(arr.shape, np.uint16)
+    elif not (
+            isinstance(out, np.ndarray) and
+            out.shape == arr.shape and
+            out.dtype == np.uint16):
+        raise ValueError("output array has wrong shape or dtype")
     else:
-        # TODO Change to exception
-        assert out.shape == arr.shape and out.dtype == np.uint16
         out[...] = 0
     out |= (arr['r'] * 0x1F).astype(np.uint16) << 11
     out |= (arr['g'] * 0x3F).astype(np.uint16) << 5
@@ -218,8 +233,11 @@ def rgb565_to_rgb(arr, out=None):
     """
     if out is None:
         out = np.empty(arr.shape, color)
-    else:
-        assert out.shape == arr.shape and out.dtype == color
+    elif not (
+            isinstance(out, np.ndarray) and
+            out.shape == arr.shape and
+            out.dtype == color):
+        raise ValueError("output array has wrong shape or dtype")
     out['r'] = ((arr & 0xF800) / 0xF800).astype(np.float32)
     out['g'] = ((arr & 0x07E0) / 0x07E0).astype(np.float32)
     out['b'] = ((arr & 0x001F) / 0x001F).astype(np.float32)
@@ -296,7 +314,7 @@ def buf_to_rgb(buf):
     if isinstance(buf, np.ndarray) and len(buf.shape) == 2 and buf.dtype == color:
         return buf
     else:
-        rgb888_to_rgb(buf_to_rgb888(buf))
+        return rgb888_to_rgb(buf_to_rgb888(buf))
 
 
 def iter_to_rgb(it, shape=(8, 8)):
@@ -305,5 +323,6 @@ def iter_to_rgb(it, shape=(8, 8)):
     1.0) to a 2-dimensional numpy :class:`~numpy.ndarray` containing the same
     values with the specified *shape*.
     """
+    # pylint: disable=invalid-name
     assert len(shape) == 2
     return np.fromiter(it, color, shape[0] * shape[1]).reshape(shape)

@@ -36,7 +36,7 @@ from __future__ import (
     absolute_import,
     print_function,
     division,
-    )
+)
 
 import io
 import os
@@ -199,14 +199,15 @@ class SenseStick(object):
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.close()
 
-    def _stick_device(self):
+    @staticmethod
+    def _stick_device():
         for evdev in glob.glob('/sys/class/input/event*'):
             try:
                 with io.open(os.path.join(evdev, 'device', 'name'), 'r') as f:
                     if f.read().strip() == SenseStick.SENSE_HAT_EVDEV_NAME:
                         return os.path.join('/dev', 'input', os.path.basename(evdev))
-            except IOError as e:
-                if e.errno != errno.ENOENT:
+            except IOError as exc:
+                if exc.errno != errno.ENOENT:
                     raise
         raise RuntimeError('unable to locate SenseHAT joystick device')
 
@@ -218,7 +219,7 @@ class SenseStick(object):
                     (
                         tv_sec,
                         tv_usec,
-                        type,
+                        evt_type,
                         code,
                         value,
                     ) = struct.unpack(SenseStick.EVENT_FORMAT, event)
@@ -226,13 +227,13 @@ class SenseStick(object):
                     while r:
                         code = self._rot_map[code]
                         r -= 90
-                    if type == SenseStick.EV_KEY:
+                    if evt_type == SenseStick.EV_KEY:
                         if self._buffer.full():
                             warnings.warn(SenseStickBufferFull(
                                 "The internal SenseStick buffer is full; "
                                 "try reading some events!"))
                             self._buffer.get()
-                        e = StickEvent(
+                        evt = StickEvent(
                             timestamp=datetime.fromtimestamp(
                                 tv_sec + (tv_usec / 1000000)
                             ),
@@ -248,10 +249,10 @@ class SenseStick(object):
                                 value == SenseStick.STATE_RELEASE and
                                 code in self._held))
                         )
-                        if not e.pressed:
+                        if not evt.pressed:
                             self._pressed -= {code}
                             self._held -= {code}
-                        elif e.held:
+                        elif evt.held:
                             self._pressed |= {code}  # to correct state
                             self._held |= {code}
                         else: # pressed
@@ -262,7 +263,7 @@ class SenseStick(object):
                         # properties will be accurate for event handlers that
                         # subsequently fire (although if they take too long the
                         # state may change again before the next handler fires)
-                        self._buffer.put(e)
+                        self._buffer.put(evt)
         finally:
             stick_file.close()
 
@@ -272,10 +273,10 @@ class SenseStick(object):
             if event is not None:
                 with self._callbacks_lock:
                     try:
-                        cb = self._callbacks[event.direction]
+                        callback = self._callbacks[event.direction]
                     except KeyError:
                         pass
-                cb(event)
+                callback(event)
 
     def _start_stop_callbacks(self):
         with self._callbacks_lock:
@@ -364,6 +365,7 @@ class SenseStick(object):
         """
         Returns ``True`` if the joystick is currently pressed upward.
         """
+        # pylint: disable=invalid-name
         return SenseStick.KEY_UP in self._pressed
 
     @property
