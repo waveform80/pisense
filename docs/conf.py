@@ -34,6 +34,8 @@ from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 import setup as _setup
+import colorzero
+colorzero.Color.repr_style = 'rgb'
 
 # Mock out certain modules while building documentation
 class Mock(object):
@@ -64,7 +66,6 @@ class Mock(object):
         else:
             return Mock()
 
-sys.modules['colorzero'] = Mock()
 sys.modules['numpy'] = Mock()
 sys.modules['numpy.lib'] = sys.modules['numpy'].lib
 sys.modules['numpy.lib.stride_tricks'] = sys.modules['numpy'].lib.stride_tricks
