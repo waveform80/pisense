@@ -97,7 +97,7 @@ def rgb888_to_image(arr):
     Convert an :class:`~numpy.ndarray` in RGB888 format (unsigned 8-bit
     values in 3 planes) to an :class:`~PIL.Image.Image`.
     """
-    # XXX Change to exception
+    # TODO Change to exception
     assert arr.dtype == np.uint8 and len(arr.shape) == 3 and arr.shape[2] == 3
     return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
                             arr, 'raw', 'RGB', 0, 1)
@@ -113,7 +113,7 @@ def rgb888_to_rgb565(arr, out=None):
     if out is None:
         out = np.empty(arr.shape[:2], np.uint16)
     else:
-        # XXX Change to exception
+        # TODO Change to exception
         assert out.shape == arr.shape[:2] and out.dtype == np.uint16
     out[...] = (
         ((arr[..., 0] & 0xF8).astype(np.uint16) << 8) |
@@ -133,7 +133,7 @@ def rgb565_to_rgb888(arr, out=None):
     if out is None:
         out = np.empty(arr.shape + (3,), np.uint8)
     else:
-        # XXX Change to exception
+        # TODO Change to exception
         assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
     out[..., 0] = ((arr & 0xF800) >> 8).astype(np.uint8)
     out[..., 1] = ((arr & 0x07E0) >> 3).astype(np.uint8)
@@ -163,7 +163,7 @@ def rgb_to_rgb888(arr, out=None):
     if out is None:
         out = np.empty(arr.shape + (3,), np.uint8)
     else:
-        # XXX Change to exception
+        # TODO Change to exception
         assert out.shape == arr.shape + (3,) and out.dtype == np.uint8
     out[..., 0] = arr['r'] * 255
     out[..., 1] = arr['g'] * 255
@@ -181,7 +181,7 @@ def rgb888_to_rgb(arr, out=None):
     if out is None:
         out = np.empty(arr.shape[:2], color)
     else:
-        # XXX Change to exception
+        # TODO Change to exception
         assert out.shape == arr.shape[:2] and out.dtype == color
     arr = arr.astype(np.float32) / 255
     out['r'] = arr[..., 0]
@@ -200,7 +200,7 @@ def rgb_to_rgb565(arr, out=None):
     if out is None:
         out = np.zeros(arr.shape, np.uint16)
     else:
-        # XXX Change to exception
+        # TODO Change to exception
         assert out.shape == arr.shape and out.dtype == np.uint16
         out[...] = 0
     out |= (arr['r'] * 0x1F).astype(np.uint16) << 11
@@ -237,14 +237,11 @@ def buf_to_rgb888(buf):
     * An numpy :class:`~numpy.ndarray` with a compatible data-type (the 3-tuple
       of floats used by :class:`ScreenArray`, or simple bytes).
 
-    * A buffer of 64 bytes, each of which will be taken as a gray-scale level
-      for a pixel working across then down the display.
-
     * A buffer of 192 bytes; each 3 bytes will be taken as RGB levels for
       pixels, working across then down the display.
 
-    The last two formats are fixed size as a linear buffer has no shape and
-    those are two sizes we can reasonably guess a shape for. However, the other
+    The last format is fixed size as a linear buffer has no shape and that is
+    the one size we can reasonably guess a shape for. However, the other
     formats are not size limited.
     """
     if isinstance(buf, Image.Image):
@@ -265,12 +262,9 @@ def buf_to_rgb888(buf):
         try:
             arr = np.frombuffer(buf, np.uint8)
         except AttributeError:
-            arr = np.fromiter(buf, np.uint8)
+            raise TypeError('buf must implement the buffer protocol')
         if len(arr) == 192:
             arr = arr.reshape((8, 8, 3))
-        elif len(arr) == 64:
-            arr = arr.reshape((8, 8))
-            arr = np.dstack((arr, arr, arr)) # me hearties!
         else:
             raise ValueError("buffer must be 8x8 pixels in size")
     return arr
@@ -303,3 +297,13 @@ def buf_to_rgb(buf):
         return buf
     else:
         rgb888_to_rgb(buf_to_rgb888(buf))
+
+
+def iter_to_rgb(it, shape=(8, 8)):
+    """
+    Converts *it* (an iterator containing 3-tuples of floats between 0.0 and
+    1.0) to a 2-dimensional numpy :class:`~numpy.ndarray` containing the same
+    values with the specified *shape*.
+    """
+    assert len(shape) == 2
+    return np.fromiter(it, color, shape[0] * shape[1]).reshape(shape)

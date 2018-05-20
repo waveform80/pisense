@@ -31,6 +31,8 @@ for each frame of the animation.
 
 .. autofunction:: zoom_to
 
+.. autofunction:: draw_text
+
 
 Easing
 ======

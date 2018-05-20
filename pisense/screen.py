@@ -60,6 +60,7 @@ from .images import (
     color,
     buf_to_image,
     buf_to_rgb,
+    iter_to_rgb,
     image_to_rgb565,
     rgb565_to_image,
     rgb_to_rgb565,
@@ -79,18 +80,33 @@ low_gamma = [0, 1, 1, 1, 1, 1, 1,  1,
 
 def array(data=None, shape=(8, 8)):
     """
-    Use this function to construct a new :class:`ScreenArray` and fill it
-    with an initial source of *data*, which can be a single :class:`Color`,
-    a list of 64 :class:`Color` values, or any another (compatible) array.
+    Use this function to construct a new :class:`ScreenArray` and fill it with
+    an initial source of *data*, which can be:
+
+    * A single :class:`Color`. The resulting array will have the specified
+      *shape*.
+
+    * A list of :class:`Color` values. The resulting array will have the
+      specified *shape*.
+
+    * An :class:`~PIL.Image.Image`. The resulting array will have the shape
+      of the image (the *shape* parameter is ignored).
+
+    * Any compatible :class:`~numpy.ndarray`. In this case the shape of the
+      array is preserved (the *shape* parameter is ignored).
     """
-    result = ScreenArray(shape)
     if data is None:
+        result = ScreenArray(shape)
         result[...] = 0
+    elif isinstance(data, Color):
+        result = ScreenArray(shape)
+        result[...] = data
     else:
         try:
-            result[...] = data
-        except ValueError:
-            result.ravel()[...] = data
+            result = buf_to_rgb(data)
+        except TypeError:
+            result = iter_to_rgb(data, shape)
+        result = result.view(color, ScreenArray)
     return result
 
 
@@ -103,6 +119,17 @@ class ScreenArray(np.ndarray):
         result = np.ndarray.__new__(cls, shape=shape, dtype=color)
         result._screen = None
         return result
+
+    @classmethod
+    def from_list(cls, data, shape=(8, 8)):
+        result = cls(shape)
+        result.ravel()[...] = data
+
+    @classmethod
+    def from_image(cls, img):
+        arr = image_to_rgb(img)
+        result = cls(arr.shape)
+        result[...] = arr
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         inputs = [
