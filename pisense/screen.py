@@ -42,14 +42,13 @@ from __future__ import (
 import sys
 import io
 import os
-import fcntl
-import termios
 import glob
 import mmap
 import errno
 import time
 import struct
 import fcntl
+import termios
 
 import numpy as np
 from colorzero import Color
@@ -87,11 +86,11 @@ def array(data=None, shape=(8, 8)):
     Use this function to construct a new :class:`ScreenArray` and fill it with
     an initial source of *data*, which can be:
 
-    * A single :class:`Color`. The resulting array will have the specified
-      *shape*.
-
-    * A list of :class:`Color` values. The resulting array will have the
+    * A single :class:`~colorzero.Color`. The resulting array will have the
       specified *shape*.
+
+    * A list of :class:`~colorzero.Color` values. The resulting array will have
+      the specified *shape*.
 
     * An :class:`~PIL.Image.Image`. The resulting array will have the shape
       of the image (the *shape* parameter is ignored).

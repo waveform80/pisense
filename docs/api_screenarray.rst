@@ -106,7 +106,9 @@ colon-separated sections:
   :meth:`~ScreenArray.show` method for more information on valid values for
   this parameter.
 
-For example::
+For example:
+
+.. code-block:: pycon
 
     >>> from pisense import *
     >>> arr = array(draw_text('Hello!'))
@@ -156,16 +158,40 @@ A more formal description of the format string specification for
 
 .. code-block:: bnf
 
-    format_spec ::= format_part (":" format_part)*
-    format_part ::= (elements | overflow | colors | width)
-    elements    ::= "e" <any characters>+
-    overflow    ::= "o" <any characters>+
-    colors      ::= "c" ("0" | "8" | "256" | "16m")
-    width       ::= "w" digit+
+    <format_spec> ::= <format_part> (":" <format_part>)*
+    <format_part> ::= (<elements> | <overflow> | <colors> | <width>)
+    <elements>    ::= "e" <any characters>+
+    <overflow>    ::= "o" <any characters>+
+    <colors>      ::= "c" ("0" | "8" | "256" | "16m")
+    <width>       ::= "w" <digit>+
 
-    digit       ::= "0"..."9"
+    <digit>       ::= "0"..."9"
 
-A method is also provided for convenient command line previewing:
+A method is also provided for convenient command line previewing which accepts
+these options as straight forward parameters. This is generally more convenient
+for command line usage:
+
+.. code-block:: pycon
+
+    >>> arr.show()
+
+    ██      ██              ████    ████                ██
+    ██      ██                ██      ██                ██
+    ██      ██    ██████      ██      ██      ██████    ██
+    ██████████  ██      ██    ██      ██    ██      ██  ██
+    ██      ██  ██████████    ██      ██    ██      ██  ██
+    ██      ██  ██            ██      ██    ██      ██
+    ██      ██    ██████    ██████  ██████    ██████    ██
+    >>> arr.show('##', width=16, overflow='$')
+                  $
+    ##      ##    $
+    ##      ##    $
+    ##      ##    $
+    ##########  ##$
+    ##      ##  ##$
+    ##      ##  ##$
+    ##      ##    $
+
 
 .. method:: ScreenArray.show(element='\\u2588\\u2588', colors=None, \
                              width=None, overflow='\\u00BB')
