@@ -49,9 +49,10 @@ from .settings import SenseSettings
 
 class EnvironReadings(namedtuple('EnvironReadings', ('pressure', 'humidity', 'temperature'))):
     """
-    Represents the readings from the environmental sensors as a named 3-tuple
-    containing the fields *pressure* (in mbar or hPa), *humidity* (in %RH),
-    and *temperature* (in °C) respectively.
+    A :func:`~collections.namedtuple` representing the readings from the
+    environmental sensors as a named 3-tuple containing the fields *pressure*
+    (in mbar or hPa), *humidity* (in %RH), and *temperature* (in °C)
+    respectively.
     """
     __slots__ = ()
     def __repr__(self):

@@ -64,9 +64,10 @@ str = type('')  # pylint: disable=redefined-builtin,invalid-name
 class StickEvent(namedtuple('StickEvent',
                             ('timestamp', 'direction', 'pressed', 'held'))):
     """
-    Represents a joystick event. The fields of the event are defined below:
+    Represents a joystick event as a :func:`~collections.namedtuple`. The
+    fields of the event are defined below:
 
-    .. attribute;: timestamp
+    .. attribute:: timestamp
 
         A :class:`~datetime.datetime` object specifying when the event took
         place. This timestamp is derived from the kernel event so it should be

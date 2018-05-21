@@ -54,7 +54,7 @@ your application.
 Hence our first step is to define a generator function that transforms joystick
 events into relative X, Y movements:
 
-.. literalinclude:: examples/joystick_basic.py
+.. literalinclude:: examples/joystick_dot.py
     :pyobject: movements
 
 You can try this out from the command line like so::
@@ -78,7 +78,7 @@ You can try this out from the command line like so::
 Now, we'll define another simple generator that transforms these into arrays
 for the display. Finally, we'll use that output to drive the display:
 
-.. literalinclude:: examples/joystick_basic.py
+.. literalinclude:: examples/joystick_dot.py
     :caption:
 
 This pattern of programming, treating inputs as iterators and writing a series
@@ -123,7 +123,7 @@ transformation is quite trivial:
 
 Here's the modified ``movements`` function:
 
-.. literalinclude:: examples/imu_basic.py
+.. literalinclude:: examples/imu_dot.py
     :pyobject: movements
 
 Again, you can try this function out from the command line in the same manner
@@ -143,7 +143,7 @@ as the joystick; just pass the IMU component to it instead::
 Here's the whole thing put together. Note that the only substantial change from
 the joystick demo above is the ``movements`` function:
 
-.. literalinclude:: examples/imu_basic.py
+.. literalinclude:: examples/imu_dot.py
     :caption:
 
 .. admonition:: Exercise
@@ -181,13 +181,14 @@ as we want the chart to start at the bottom and work its way up:
     :lines: 8-14
 
 Next, we call :func:`draw_text` which will return us a small
-:class:`~PIL.Image.Image` object containing the rendered text. We'll "add" that
-to the chart we've drawn (a simple method of rendering) and then clip the
-result to the range 0 to 1 (because where the text overlays the chart we'll
-probably exceed the bounds of the red channel):
+:class:`~PIL.Image.Image` object containing the rendered text (we've added some
+padding at the bottom so the text is "top aligned"). We'll "add" that to the
+chart we've drawn (a simple method of rendering) and then clip the result to
+the range 0 to 1 (because where the text overlays the chart we'll probably
+exceed the bounds of the red channel):
 
 .. literalinclude:: examples/thermometer.py
-    :lines: 15-18
+    :lines: 15-19
 
 Finally, here's the whole thing put together:
 

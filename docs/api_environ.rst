@@ -2,7 +2,13 @@
 API - Environment Sensors
 =========================
 
+.. module:: pisense.environ
+
 .. currentmodule:: pisense
+
+The Sense HAT has two environment sensors: a humidity sensor and a pressure
+sensor, which are exposed in the combined :class:`SenseEnviron` class. This
+provides readings as :class:`EnvironReadings` tuples.
 
 
 SenseEnviron
@@ -14,7 +20,7 @@ SenseEnviron
 EnvironReadings
 ===============
 
-.. autoclass:: EnvironReadings
+.. autoclass:: EnvironReadings(pressure, humidity, temperature)
 
 
 Temperature Configuration

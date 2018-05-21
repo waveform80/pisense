@@ -2,6 +2,8 @@
 API - Joystick
 ==============
 
+.. module:: pisense.stick
+
 .. currentmodule:: pisense
 
 The joystick on the Sense HAT is an excellent tool for providing a user
@@ -27,7 +29,7 @@ SenseStick
 StickEvent
 ==========
 
-.. autoclass:: StickEvent
+.. autoclass:: StickEvent(timestamp, direction, pressed, held)
 
 
 Warnings

@@ -54,8 +54,8 @@ str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
 class IMUState(namedtuple('IMUState', ('compass', 'gyro', 'accel', 'orient'))):
     """
-    Represents a single reading from the Inertial Measurement Unit (IMU). The
-    fields are as follows:
+    A :func:`~collections.namedtuple` representing a single reading from the
+    Inertial Measurement Unit (IMU). The fields are as follows:
 
     .. attribute:: compass
 
@@ -86,9 +86,9 @@ class IMUState(namedtuple('IMUState', ('compass', 'gyro', 'accel', 'orient'))):
 
 class IMUVector(namedtuple('IMUVector', ('x', 'y', 'z'))):
     """
-    Represents a three-dimensional vector with X, Y, and Z components. This is
-    mostly used to represent the output of the major IMU sensors (magnetometer,
-    gryoscope, and accelerometer).
+    A :func:`~collections.namedtuple` representing a three-dimensional vector
+    with *x*, *y*, and *z* components.  This is used to represent the output of
+    the three IMU sensors (magnetometer, gryoscope, and accelerometer).
 
     .. attention:: TODO Add HAT-specific vector directions diagram
     """
@@ -100,8 +100,9 @@ class IMUVector(namedtuple('IMUVector', ('x', 'y', 'z'))):
 
 class IMUOrient(namedtuple('IMUOrient', ('roll', 'pitch', 'yaw'))):
     """
-    Represents the orientation of the Sense HAT in radians (though the display
-    is provided in degrees for human convenience) as `roll, pitch, and yaw`_.
+    A :func:`~collections.namedtuple` representing the orientation of the Sense
+    HAT in radians (though the display is provided in degrees for human
+    convenience) as `roll, pitch, and yaw`_.
 
     .. attention:: TODO add HAT-specific roll, pitch, yaw diagram
 
