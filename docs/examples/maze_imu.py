@@ -5,7 +5,8 @@ from colorzero import Color
 from time import sleep
 
 
-def main(width=8, height=8):
+def main():
+    width = height = 8
     colors = {
         'unvisited': Color('black'),
         'visited':   Color('green'),

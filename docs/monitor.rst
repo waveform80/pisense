@@ -1,6 +1,6 @@
-===================
-Environment Monitor
-===================
+============================
+Project: Environment Monitor
+============================
 
 .. currentmodule:: pisense
 
@@ -118,6 +118,7 @@ functions are first class objects in Python) we can construct a
 looks like this:
 
 .. literalinclude:: examples/monitor_auto.py
+    :caption:
 
 
 Interactivity!
@@ -202,7 +203,7 @@ follows:
 
 .. literalinclude:: examples/monitor_final.py
     :caption:
-    :emphasize-lines: 62-86,90,98,108-112
+    :emphasize-lines: 64-88,92,100,110-114
 
 .. admonition:: Exercise
 
@@ -221,6 +222,8 @@ pretty graphs of the history:
 Run this alongside the monitor script, make sure your Pi is accessible on your
 local network and then visit http://your-pis-address-here:8000/ in a
 web-browser.
+
+.. attention:: TODO auto-start on boot
 
 .. note::
 

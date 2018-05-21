@@ -15,7 +15,8 @@ def thermometer(offset, reading):
     ])
     screen = np.flipud(screen)
     text = image_to_rgb(draw_text(str(round(reading.temperature)),
-                                  'small.pil', foreground=Color('gray')))
+                                  'small.pil', foreground=Color('gray'),
+                                  padding=(0, 0, 0, 3)))
     screen[:text.shape[0], :text.shape[1]] += text
     return screen.clip(0, 1)
 
@@ -31,7 +32,8 @@ def hygrometer(offset, reading):
     screen = np.flipud(screen)
     text = image_to_rgb(draw_text('^^' if reading.humidity > 99 else
                                   str(round(reading.humidity)),
-                                  'small.pil', foreground=Color('gray')))
+                                  'small.pil', foreground=Color('gray'),
+                                  padding=(0, 0, 0, 3)))
     screen[:text.shape[0], :text.shape[1]] += text
     return screen.clip(0, 1)
 
@@ -47,7 +49,7 @@ def barometer(offset, reading):
     screen = np.flipud(screen)
     text = image_to_rgb(draw_text(str(round(reading.pressure)),
                                   'small.pil', foreground=Color('gray'),
-                                  padding=(0, 0, 8, 0)))
+                                  padding=(0, 0, 8, 3)))
     screen[:text.shape[0], :] += text[:, offset:offset + 8]
     return screen.clip(0, 1)
 

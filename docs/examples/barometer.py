@@ -19,7 +19,7 @@ def barometer(offset, reading):
     screen = np.flipud(screen)
     text = image_to_rgb(draw_text(str(round(reading.pressure)),
                                   'small.pil', foreground=Color('gray'),
-                                  padding=(0, 0, 8, 0)))
+                                  padding=(0, 0, 8, 3)))
     screen[:text.shape[0], :] += text[:, offset:offset + 8]
     return screen.clip(0, 1)
 

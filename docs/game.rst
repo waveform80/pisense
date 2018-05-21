@@ -1,6 +1,6 @@
-=========
-Maze Game
-=========
+==================
+Project: Maze Game
+==================
 
 Here's another project for the Sense HAT that involves building a full maze
 solving game. Initially this will be controlled with the joystick (because it's
@@ -164,6 +164,8 @@ switched out lines highlighted):
 
 .. literalinclude:: examples/maze_imu.py
     :caption:
-    :emphasize-lines: 23-29
+    :emphasize-lines: 24-30
+
+.. attention:: TODO autostart on boot
 
 .. _Kruskal's Algorithm: https://en.wikipedia.org/wiki/Maze_generation_algorithm#Randomized_Kruskal's_algorithm

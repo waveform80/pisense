@@ -13,7 +13,8 @@ def thermometer(reading):
     ])
     screen = np.flipud(screen)
     text = image_to_rgb(draw_text(str(round(reading.temperature)),
-                                  'small.pil', foreground=Color('gray')))
+                                  'small.pil', foreground=Color('gray'),
+                                  padding=(0, 0, 0, 3)))
     screen[:text.shape[0], :text.shape[1]] += text
     return screen.clip(0, 1)
 
