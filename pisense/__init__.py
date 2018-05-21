@@ -90,6 +90,13 @@ class SenseHAT(object):
     affect the calibration of the IMU. Other keyword arguments are used in the
     initialization of the subordinate objects; see the documentation for their
     classes for further information.
+
+    .. warning::
+
+        Your script should not attempt to create more than one instance of this
+        class (given it represents a single piece of hardward). If you attempt
+        to do so a :exc:`SenseHATReinit` warning will be raised and the
+        existing instance will be returned.
     """
     __slots__ = ('_settings', '_screen', '_stick', '_imu', '_environ')
     hat = None

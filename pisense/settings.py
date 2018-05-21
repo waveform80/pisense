@@ -52,11 +52,15 @@ class SenseSettings(object):
     .. warning::
 
         If the specified file does not exist, it will be created with default
-        calibration settings. Hence you *must* ensure that the location
+        calibration settings. Hence you *should* ensure that the location
         specified either exists or is writeable by the current user.
+        Furthermore, if the file successfully loads the underlying library
+        will attempt to overwrite it with "cleaned" values. If you wish to
+        keep modifications to the file (comments, etc.) ensure that the file is
+        effectively read-only for the executing user.
 
         Yes, this is a ridiculous requirement and while I would dearly love to
-        re-write this chunk of the underlying library it's not something I
+        re-write this chunk of the underlying library, it's not something I
         have time for currently!
     """
     # pylint: disable=too-few-public-methods

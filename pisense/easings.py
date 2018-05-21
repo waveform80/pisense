@@ -39,6 +39,8 @@ from __future__ import (
 )
 
 
+# TODO graphs
+
 def linear(steps):
     "Linear easing function; yields *steps* values between 0.0 and 1.0"
     for t in range(steps):

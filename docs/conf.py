@@ -112,7 +112,7 @@ intersphinx_cache_limit = 7
 
 # -- Options for HTML output ----------------------------------------------
 
-if on_rtd:
+if on_rtd or True:
     html_theme = 'sphinx_rtd_theme'
     pygments_style = 'default'
     #html_theme_options = {}

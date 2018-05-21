@@ -4,7 +4,15 @@ API - Environment Sensors
 
 .. currentmodule:: pisense
 
+
+SenseEnviron
+============
+
 .. autoclass:: SenseEnviron
+
+
+EnvironReadings
+===============
 
 .. autoclass:: EnvironReadings
 
