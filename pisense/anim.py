@@ -142,7 +142,7 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
     f = _load_font(font, size)
     width, height = f.getsize(text)
     pad_left, pad_top, pad_right, pad_bottom = padding
-    pad_top = max(pad_top, min_height - pad_top - pad_bottom)
+    pad_top = max(pad_top, min_height - (pad_top + height + pad_bottom))
     img = Image.new('RGB', (
         pad_left + width + pad_right,
         pad_top + height + pad_bottom

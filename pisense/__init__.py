@@ -108,7 +108,7 @@ class SenseHAT(object):
                                "instantiated; returning existing instance"))
             self = SenseHAT.hat
         else:
-            self = super(SenseHAT, cls).__new__(cls, settings, **kwargs)
+            self = super(SenseHAT, cls).__new__(cls)
             # Old-style kw-only args...
             fps = kwargs.pop('fps', 15)
             easing = kwargs.pop('easing', linear)
