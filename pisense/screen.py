@@ -39,8 +39,11 @@ from __future__ import (
     division,
 )
 
+import sys
 import io
 import os
+import fcntl
+import termios
 import glob
 import mmap
 import errno
@@ -177,31 +180,96 @@ class ScreenArray(np.ndarray):
                 orig = orig.base
             self._screen.array = orig
 
+    @staticmethod
+    def _term_supports_color():
+        try:
+            stdout_fd = sys.stdout.fileno()
+        except IOError:
+            return False
+        else:
+            is_a_tty = os.isatty(stdout_fd)
+            is_windows = sys.platform.startswith('win')
+            return is_a_tty and not is_windows
+
+    @staticmethod
+    def _term_size():
+        "Returns the size (cols, rows) of the console"
+        try:
+            buf = fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, '12345678')
+            row, col = struct.unpack(b'hhhh', buf)[0:2]
+            return (col, row)
+        except IOError:
+            # Don't try and get clever with ctermid; this can work but gives
+            # false readings under things like IDLE. Just try the environment
+            # and fall back to a sensible default if that fails
+            try:
+                return (int(os.environ['COLUMNS']),
+                        int(os.environ['LINES']))
+            except KeyError:
+                return (80, 24)
+
     def __format__(self, format_spec):
-        if format_spec.endswith('p'):
-            char = format_spec[:-1]
+        # Parse the format_spec; we don't calculate defaults for colors and
+        # width unless they're not explicitly specified
+        elements = '\u2588\u2588'  # ██
+        colors = None
+        width = None
+        overflow = '\u00BB'  # »
+        for section in format_spec.split(':'):
+            section = section.strip()
+            if not section:
+                pass
+            elif section.startswith('e'):
+                elements = section[1:]
+            elif section.startswith('c'):
+                colors = section[1:].lower()
+            elif section.startswith('w'):
+                width = int(section[1:])
+            elif section.startswith('o'):
+                overflow = section[1:]
+            else:
+                raise ValueError('invalid section in array format spec: %s' %
+                                 section)
+        if colors is None:
+            colors = '16m' if self._term_supports_color() else '0'
+        if width is None:
+            width = self._term_size()[0]
+        if len(elements) * self.shape[1] > width:
+            x_limit = (width - len(overflow)) // len(elements)
+        else:
+            x_limit = None
+            overflow = ''
+        if colors == '0':
+            space = ' ' * len(elements)
             return '\n'.join(
-                ''.join('{0:16m}{1}{0:0}'.format(Color(*elem), char)
-                        for elem in row)
+                ''.join(
+                    elements if Color(*c).lightness >= 1/3 else space
+                    for c in row[:x_limit]
+                ) + overflow
                 for row in self
             )
         else:
-            char = format_spec[:-1]
-            space = ' ' * len(char)
             return '\n'.join(
-                ''.join(char if Color(*elem).lightness >= 0.33333 else space
-                        for elem in row)
+                ''.join(
+                    '{color:{colors}}{elements}{color:0}'.format(
+                        color=Color(*c), colors=colors, elements=elements)
+                    for c in row[:x_limit]
+                ) + overflow
                 for row in self
             )
 
-    def show(self, element='\u2588\u2588', colors=None, width=None):
+    def show(self, element='\u2588\u2588', colors=None, width=None,
+             overflow='\u00BB'):
         """
         By some curious numpy magic, anything I write here disappears from the
         __doc__ property.
         """
-        # TODO detect console tty state for default color/no color
-        # TODO detect console width for clipping
-        pass
+        specs = ['e' + element]
+        if colors is not None:
+            specs.append('c' + str(colors))
+        if width is not None:
+            specs.append('w' + str(width))
+        print('{self:{spec}}'.format(self=self, spec=':'.join(specs)))
 
     def copy(self, order='C'):
         # pylint: disable=missing-docstring,protected-access
