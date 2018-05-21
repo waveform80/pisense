@@ -103,7 +103,7 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
         >>> img.size
         # TODO insert size
         >>> arr = array(img)
-        >>> arr.preview()
+        >>> arr.show()
         # TODO insert preview
 
     As can be seen, when rendered small most TrueType and OpenType fonts don't
@@ -115,7 +115,7 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
         >>> img.size
         # TODO insert size
         >>> arr = array(img)
-        >>> arr.preview()
+        >>> arr.show()
         # TODO insert preview
 
     The *foreground* and *background* parameters specify

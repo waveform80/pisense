@@ -194,7 +194,7 @@ class ScreenArray(np.ndarray):
                 for row in self
             )
 
-    def preview(self, element='\u2588\u2588', colors=None, width=None):
+    def show(self, element='\u2588\u2588', colors=None, width=None):
         """
         By some curious numpy magic, anything I write here disappears from the
         __doc__ property.
