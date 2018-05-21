@@ -39,27 +39,57 @@ from __future__ import (
 )
 
 
-# TODO graphs
-
 def linear(steps):
-    "Linear easing function; yields *steps* values between 0.0 and 1.0"
+    """
+    Linear easing function; yields *steps* values between 0.0 and 1.0.
+
+    .. image:: images/linear.*
+        :align: center
+
+    This is the default easing function which simply progresses the animation
+    at a constant rate from start to finish.
+    """
     for t in range(steps):
         yield t / (steps - 1)
 
 
 def ease_in(steps):
-    "Quadratic ease-in function; yields *steps* values between 0.0 and 1.0"
+    """
+    Quadratic ease-in function; yields *steps* values between 0.0 and 1.0.
+
+    .. image:: images/ease_in.*
+        :align: center
+
+    This function starts the animation off slowly, and builds speed as it
+    progresses, finishing abruptly.
+    """
     for t in linear(steps):
         yield t ** 2
 
 
 def ease_out(steps):
-    "Quadratic ease-out function; yields *steps* values between 0.0 and 1.0"
+    """
+    Quadratic ease-out function; yields *steps* values between 0.0 and 1.0.
+
+    .. image:: images/ease_out.*
+        :align: center
+
+    This function starts the animation suddenly and then eases it gradually
+    to a halt.
+    """
     for t in linear(steps):
         yield t * (2 - t)
 
 
 def ease_in_out(steps):
-    "Quadratic ease-in-out function; yields *steps* values between 0.0 and 1.0"
+    """
+    Quadratic ease-in-out function; yields *steps* values between 0.0 and 1.0.
+
+    .. image:: images/ease_in_out.*
+        :align: center
+
+    This function starts the animation gradually, progresses rapidly at the
+    mid-point, and eases gently to a halt.
+    """
     for t in linear(steps):
         yield 2 * t ** 2 if t < 0.5 else (4 - 2 * t) * t - 1

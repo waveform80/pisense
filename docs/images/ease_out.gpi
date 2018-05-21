@@ -1,0 +1,11 @@
+set linetype 1 lw 2 lc rgb "red"
+set xrange [0:1]
+set yrange [0:1]
+set size 1,1
+set xlabel "Time" offset graph 0.45,0 textcolor rgb "slategray"
+set ylabel "Progress" offset graph 0,0.4 textcolor rgb "slategray"
+set tics format ""
+set grid
+unset key
+
+plot (x * (2 - x)) lt 1

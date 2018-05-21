@@ -186,8 +186,8 @@ pseudoxml:
 %.svg: %.dot
 	dot -T svg -o $@ $<
 
-%.png: %.gpi common.gp
-	gnuplot -e "set term pngcairo size 640,480" $< > $@
+%.png: %.gpi
+	gnuplot -e "set term pngcairo transparent size 400,400" $< > $@
 
 %.png: %.svg
 	inkscape -e $@ $<
@@ -195,8 +195,8 @@ pseudoxml:
 %.pdf: %.svg
 	inkscape -A $@ $<
 
-%.pdf: %.gpi common.gp
-	gnuplot -e "set term pdfcairo size 10cm,7.5cm" $< > $@
+%.pdf: %.gpi
+	gnuplot -e "set term pdfcairo size 5cm,5cm" $< > $@
 
 %.pdf: %.mscgen
 	mscgen -T eps -o - $< | ps2pdf -dEPSCrop - $@
