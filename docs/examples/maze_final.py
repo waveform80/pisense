@@ -3,9 +3,15 @@ import pisense as ps
 from random import sample
 from colorzero import Color
 from time import sleep
+from signal import signal, SIGTERM
+
+
+def sigterm(signum, frame):
+    raise SystemExit(0)
 
 
 def main():
+    signal(SIGTERM, sigterm)
     width = height = 8
     colors = {
         'unvisited': Color('black'),
@@ -32,17 +38,20 @@ def moves(imu):
 
 
 def display(screen, states):
-    for anim, data in states:
-        if anim == 'fade':
-            screen.fade_to(data)
-        elif anim == 'zoom':
-            screen.zoom_to(data)
-        elif anim == 'show':
-            screen.array = data
-        elif anim == 'scroll':
-            screen.scroll_text(data, background=Color('red'))
-        else:
-            assert False
+    try:
+        for anim, data in states:
+            if anim == 'fade':
+                screen.fade_to(data)
+            elif anim == 'zoom':
+                screen.zoom_to(data)
+            elif anim == 'show':
+                screen.array = data
+            elif anim == 'scroll':
+                screen.scroll_text(data, background=Color('red'))
+            else:
+                assert False
+    finally:
+        screen.fade_to(ps.array(Color('black')))
 
 
 def game(maze, colors, moves):

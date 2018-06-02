@@ -1,0 +1,11 @@
+[Unit]
+Description=The Sense HAT Maze IMU game
+After=local-fs.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/usr/bin/python3 /home/pi/maze_final.py
+
+[Install]
+WantedBy=multi-user.target
