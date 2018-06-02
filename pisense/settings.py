@@ -65,7 +65,9 @@ class SenseSettings(object):
     """
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, settings_file='/etc/RTIMULib.ini'):
+    def __init__(self, settings_file=None):
+        if settings_file is None:
+            settings_file = '/etc/RTIMULib.ini'
         if not settings_file.endswith('.ini'):
             raise ValueError("RTIMULib doesn't accept settings filenames "
                              "without the .ini extension; yes, it's dumb")

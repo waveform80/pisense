@@ -273,3 +273,4 @@ class SenseEnviron(object):
             raise ValueError('temp_source must be a callable that accepts '
                              '2 parameters')
         self._temp_source = value
+        self._last_read = None
