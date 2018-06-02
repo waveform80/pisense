@@ -215,8 +215,7 @@ class ScreenArray(np.ndarray):
         width = None
         overflow = '\u00BB'  # »
         for section in format_spec.split(':'):
-            section = section.strip()
-            if not section:
+            if not section.strip():
                 pass
             elif section.startswith('e'):
                 elements = section[1:]
@@ -268,6 +267,8 @@ class ScreenArray(np.ndarray):
             specs.append('c' + str(colors))
         if width is not None:
             specs.append('w' + str(width))
+        if overflow is not None:
+            specs.append('o' + overflow)
         print('{self:{spec}}'.format(self=self, spec=':'.join(specs)))
 
     def copy(self, order='C'):

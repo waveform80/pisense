@@ -158,14 +158,52 @@ its own function:
 At this point we should have a fully functioning maze game that looks quite
 pretty. You can play it simply by running ``main()``. Once you've verified it
 works, it's a simple matter to switch out the joystick for the IMU (in exactly
-the same manner as in :doc:`demos`). Here's the full listing of the final
-version in which the HAT is tilted to roll the ball through the maze (with the
-switched out lines highlighted):
+the same manner as in :doc:`demos`).  Here's the updated ``moves`` function
+which queries the IMU instead of the joystick:
 
 .. literalinclude:: examples/maze_imu.py
-    :caption:
-    :emphasize-lines: 24-30
+    :pyobject: moves
 
-.. attention:: TODO autostart on boot
+Finally, it would be nice to have the game run in a loop so that after the
+winners screen it resets with a new maze. It would also be nice to launch the
+script on boot so we can turn the Pi into a hand-held game. This is also simple
+to arrange:
+
+* We need to put an infinite loop in ``main`` to restart the game when it
+  finishes
+
+* We need to add a signal handler to shut down the game nicely when systemd
+  tells it to stop (which it does by sending the SIGTERM signal; we can handle
+  this with some simple routines from the built-in :mod:`signal` module).
+
+* Just to keep things looking good, we'll add a ``try..finally`` block to
+  ``display`` to ensure the screen always fades to black when the loop is
+  terminated.
+
+Here's the final listing with the updated lines highlighted:
+
+.. literalinclude:: examples/maze_final.py
+    :caption:
+    :emphasize-lines:
+
+Now to launch the game on boot, we'll create a systemd service to execute it
+under the unprivileged "pi" user. Copy the following into
+:file:`/etc/systemd/system/maze.service` ensuring you update the location of
+the :file:`maze_final.py` script to wherever you've created it:
+
+.. literalincluded:: examples/maze.service
+    :caption:
+
+Finally, run the following command line to enable the service on boot:
+
+.. console:: console
+
+    $ sudo systemctl enable maze
+
+If you ever wish to stop the script running on boot:
+
+.. console:: console
+
+    $ sudo systemctl disable maze
 
 .. _Kruskal's Algorithm: https://en.wikipedia.org/wiki/Maze_generation_algorithm#Randomized_Kruskal's_algorithm

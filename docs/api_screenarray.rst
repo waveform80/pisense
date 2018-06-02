@@ -76,103 +76,17 @@ exceeding this range can be useful in some calculations.
     The numpy :meth:`~numpy.ndarray.clip` method is a convenient way of
     limiting values to the 0.0 to 1.0 range before updating the display.
 
-Format Strings
-==============
+Previews
+========
 
-Screen arrays can be used in format strings to preview the state of the display
-visually. The format string specification for screen arrays consists of
-colon-separated sections:
-
-* A section prefixed with "e" specifies the string used to represent an
-  individual element of the display. This defaults to ██ (two filled Unicode
-  block characters, which usually represents the display fairly accurately).
-
-* A section prefixed with "o" specifies the string used to represent horizontal
-  overflow. When the string will be longer than the specified width (or the
-  terminal width if none is given), it will be truncated and the overflow
-  string displayed at the right.
-
-* A section prefixed with "w" specifies the maximum width that the rendered
-  array can take up in character widths. Note that ANSI color codes (which
-  render with zero width) will *not* count towards this limit, so each line
-  returned may be longer than the specified width but shouldn't *render* longer
-  than this.
-
-* A section prefixed with "c" specifies the style of ANSI color codes to use in
-  the output. If unspecified, full true-color ANSI codes will be used if the
-  terminal is detected to be a TTY. Otherwise, no ANSI codes will be used and
-  elements will only be rendered if their lightness exceeds 1/3 (an arbitrary
-  cut-off which seems to work tolerably well in practice). See the
-  :meth:`~ScreenArray.show` method for more information on valid values for
-  this parameter.
-
-For example:
+While you can see the state of the screen's array visually, what about arrays
+that you create separately with :func:`array`? For this, the
+:meth:`ScreenArray.show` method is provided:
 
 .. code-block:: pycon
 
     >>> from pisense import *
     >>> arr = array(draw_text('Hello!'))
-    >>> print('{}'.format(arr))
-
-    ██      ██              ████    ████                ██
-    ██      ██                ██      ██                ██
-    ██      ██    ██████      ██      ██      ██████    ██
-    ██████████  ██      ██    ██      ██    ██      ██  ██
-    ██      ██  ██████████    ██      ██    ██      ██  ██
-    ██      ██  ██            ██      ██    ██      ██
-    ██      ██    ██████    ██████  ██████    ██████    ██
-    >>> print('{:e#:c0}'.format(arr))
-
-    #   #       ##  ##        #
-    #   #        #   #        #
-    #   #  ###   #   #   ###  #
-    ##### #   #  #   #  #   # #
-    #   # #####  #   #  #   # #
-    #   # #      #   #  #   #
-    #   #  ###  ### ###  ###  #
-    >>> print('{:e#:o$:w16}'.format(arr))
-                   $
-    #   #       ## $
-    #   #        # $
-    #   #  ###   # $
-    ##### #   #  # $
-    #   # #####  # $
-    #   # #      # $
-    #   #  ###  ###$
-    >>> print('{:e##:o$:w16}'.format(arr))
-                  $
-    ##      ##    $
-    ##      ##    $
-    ##      ##    $
-    ##########  ##$
-    ##      ##  ##$
-    ##      ##  ##$
-    ##      ##    $
-
-Note that the last example demonstrates that elements will never be chopped in
-half by the truncation; either a display element is included in its entirety or
-not at all.
-
-A more formal description of the format string specification for
-:class:`ScreenArray` would be as follows:
-
-.. code-block:: bnf
-
-    <format_spec> ::= <format_part> (":" <format_part>)*
-    <format_part> ::= (<elements> | <overflow> | <colors> | <width>)
-    <elements>    ::= "e" <any characters>+
-    <overflow>    ::= "o" <any characters>+
-    <colors>      ::= "c" ("0" | "8" | "256" | "16m")
-    <width>       ::= "w" <digit>+
-
-    <digit>       ::= "0"..."9"
-
-A method is also provided for convenient command line previewing which accepts
-these options as straight forward parameters. This is generally more convenient
-for command line usage:
-
-.. code-block:: pycon
-
     >>> arr.show()
 
     ██      ██              ████    ████                ██
@@ -191,7 +105,19 @@ for command line usage:
     ##      ##  ##$
     ##      ##  ##$
     ##      ##    $
+    >>> arr[:8, :8].show()
 
+    ██      ██
+    ██      ██
+    ██      ██    ██
+    ██████████  ██
+    ██      ██  ████
+    ██      ██  ██
+    ██      ██    ██
+
+Note that the method is not limited to the size of the Sense HAT's screen,
+which makes it useful for previewing constructions that you intend to slice for
+display later.
 
 .. method:: ScreenArray.show(element='\\u2588\\u2588', colors=None, \
                              width=None, overflow='\\u00BB')
@@ -235,6 +161,105 @@ for command line usage:
     be used as a fallback). Pixels beyond the specified width will be
     excluded from the output, and a column of *overflow* strings will be
     shown to indicate that horizontal truncation has occurred in the output.
+
+
+Format Strings
+==============
+
+Screen arrays can also be used in format strings to return the string that the
+:meth:`~ScreenArray.show` method would print. The format string specification
+for screen arrays consists of colon-separated sections (in any order):
+
+* A section prefixed with "e" specifies the string used to represent an
+  individual element of the display. This defaults to ██ (two filled Unicode
+  block characters, which usually represents the display fairly accurately),
+  and is equivalent to the *element* parameter of :meth:`~ScreenArray.show`.
+
+* A section prefixed with "o" specifies the string used to represent horizontal
+  overflow (equivalent to the *overflow* parameter). When the string will be
+  longer than the specified width (or the terminal width if none is given), it
+  will be truncated and the overflow string displayed at the right.
+
+* A section prefixed with "w" specifies the maximum width that the rendered
+  array can take up in character widths (equivalent to the *width* parameter).
+  Note that ANSI color codes (which render with zero width) will *not* count
+  towards this limit, so each line returned may be longer than the specified
+  width but shouldn't *render* longer than this. The default is the width of
+  the terminal, if it can be detected, or 80 columns otherwise.
+
+* A section prefixed with "c" specifies the style of ANSI color codes to use in
+  the output (equivalent to the *colors* parameter). If unspecified, full
+  true-color ANSI codes will be used if the terminal is detected to be a TTY.
+  Otherwise, no ANSI codes will be used and elements will only be rendered if
+  their lightness exceeds 1/3 (an arbitrary cut-off which seems to work
+  tolerably well in practice). See the :meth:`~ScreenArray.show` method for
+  more information on valid values for this parameter.
+
+Some examples of operation:
+
+.. code-block:: pycon
+
+    >>> from pisense import *
+    >>> arr = array(draw_text('Hello!'))
+    >>> print('{}'.format(arr))
+
+    ██      ██              ████    ████                ██
+    ██      ██                ██      ██                ██
+    ██      ██    ██████      ██      ██      ██████    ██
+    ██████████  ██      ██    ██      ██    ██      ██  ██
+    ██      ██  ██████████    ██      ██    ██      ██  ██
+    ██      ██  ██            ██      ██    ██      ██
+    ██      ██    ██████    ██████  ██████    ██████    ██
+    >>> print('{:e#:c0}'.format(arr))
+
+    #   #       ##  ##        #
+    #   #        #   #        #
+    #   #  ###   #   #   ###  #
+    ##### #   #  #   #  #   # #
+    #   # #####  #   #  #   # #
+    #   # #      #   #  #   #
+    #   #  ###  ### ###  ###  #
+    >>> print('{:e#:o$:w16}'.format(arr))
+                   $
+    #   #       ## $
+    #   #        # $
+    #   #  ###   # $
+    ##### #   #  # $
+    #   # #####  # $
+    #   # #      # $
+    #   #  ###  ###$
+    >>> print('{:e##:o$:w16}'.format(arr))
+                  $
+    ##      ##    $
+    ##      ##    $
+    ##      ##    $
+    ##########  ##$
+    ##      ##  ##$
+    ##      ##  ##$
+    ##      ##    $
+
+.. note::
+
+    The last example demonstrates that elements will never be chopped in half
+    by the truncation; either a display element is included in its entirety or
+    not at all.
+
+A more formal description of the format string specification for
+:class:`ScreenArray` would be as follows:
+
+.. code-block:: bnf
+
+    <format_spec> ::= <format_part> (":" <format_part>)*
+    <format_part> ::= (<elements> | <overflow> | <colors> | <width>)
+    <elements>    ::= "e" <any characters except : or {}>+
+    <overflow>    ::= "o" <any characters except : or {}>+
+    <colors>      ::= "c" ("0" | "8" | "256" | "16m")
+    <width>       ::= "w" <digit>+
+    <digit>       ::= "0"..."9"
+
+A method is also provided for convenient command line previewing which accepts
+these options as straight forward parameters. This is generally more convenient
+for command line usage:
 
 
 Format conversions
