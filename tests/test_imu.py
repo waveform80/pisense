@@ -129,3 +129,22 @@ def test_imu_attr(Settings, RTIMU):
     assert imu.gyro == IMUVector(*GYRO_READING)
     assert imu.accel == IMUVector(*ACCEL_READING)
     assert imu.orient == IMUOrient(*FUSION_READING)
+
+
+def test_imu_sensors(Settings, RTIMU):
+    imu = SenseIMU()
+    assert imu.sensors == {'compass', 'accel', 'gyro'}
+    imu.sensors = {'accel', b'gyro'}
+    RTIMU().setCompassEnable.assert_called_with(False)
+    RTIMU().setAccelEnable.assert_called_with(True)
+    RTIMU().setGyroEnable.assert_called_with(True)
+    with pytest.raises(ValueError):
+        imu.sensors = {'foo'}
+
+
+def test_imu_sensors_str(Settings, RTIMU):
+    imu = SenseIMU()
+    imu.sensors = 'accel'
+    assert imu.sensors == {'accel'}
+    imu.sensors = b'gyro'
+    assert imu.sensors == {'gyro'}
