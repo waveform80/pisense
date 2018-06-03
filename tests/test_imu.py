@@ -37,6 +37,7 @@ from __future__ import (
 import mock
 import pytest
 from time import sleep
+from itertools import cycle
 from pisense import *
 
 
@@ -94,6 +95,12 @@ def test_imu_init(Settings, RTIMU):
     RTIMU().setAccelEnable.assert_called_with(True)
 
 
+def test_imu_init_with_settings(Settings, RTIMU):
+    settings = SenseSettings('/etc/foo.ini')
+    imu = SenseIMU(settings)
+    RTIMU.assert_called_once_with(settings.settings)
+
+
 def test_imu_init_fail(Settings, RTIMU):
     RTIMU().IMUInit.return_value = False
     with pytest.raises(RuntimeError):
@@ -120,6 +127,12 @@ def test_imu_iter(Settings, RTIMU):
     it = iter(imu)
     assert next(it) == VALID_READ
     assert next(it) == VALID_READ
+    assert RTIMU().getIMUData.call_count == 2
+    invalid_orient = VALID_RAW.copy()
+    invalid_orient['fusionPoseValid'] = False
+    RTIMU().getIMUData.side_effect = cycle([invalid_orient, VALID_RAW])
+    assert next(it) == VALID_READ
+    assert RTIMU().getIMUData.call_count == 4
 
 
 def test_imu_attr(Settings, RTIMU):
@@ -148,3 +161,14 @@ def test_imu_sensors_str(Settings, RTIMU):
     assert imu.sensors == {'accel'}
     imu.sensors = b'gyro'
     assert imu.sensors == {'gyro'}
+
+
+def test_imu_read_delay(Settings, RTIMU):
+    imu = SenseIMU()
+    next_raw = VALID_RAW.copy()
+    next_raw['accel'] = (0.0, 0.0, 0.9)
+    next_read = VALID_READ._replace(accel=IMUVector(*next_raw['accel']))
+    RTIMU().getIMUData.side_effect = cycle([VALID_RAW, next_raw])
+    assert imu.accel == IMUVector(*ACCEL_READING)
+    sleep(imu._interval)
+    assert imu.accel == next_read.accel
