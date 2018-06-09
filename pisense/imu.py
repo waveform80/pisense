@@ -287,10 +287,12 @@ class SenseIMU(object):
 
     @sensors.setter
     def sensors(self, value):
-        if isinstance(value, bytes):
-            value = value.decode('ascii')
-        if isinstance(value, str):
+        if isinstance(value, (bytes, str)):
             value = {value}
+        value = {
+            s.decode('ascii')
+            if isinstance(s, bytes) else s for s in value
+        }
         clean = {'compass', 'gyro', 'accel'} & set(value)
         if clean != value:
             raise ValueError('invalid sensor "%s"' % (value - clean).pop())

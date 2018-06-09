@@ -41,159 +41,141 @@ from time import sleep
 from pisense import *
 
 
-def test_environ_init():
+@pytest.fixture()
+def Settings(request):
+    patcher = mock.patch('RTIMU.Settings')
+    request.addfinalizer(patcher.stop)
+    return patcher.start()
+
+
+@pytest.fixture()
+def RTPressure(request, Settings):
     # ALWAYS mock out Settings as otherwise instantiation attempts to write
-    # to various files...
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        env = SenseEnviron('/etc/foo.ini')
-        Settings.assert_called_once_with('/etc/foo')
-        RTPressure.assert_called()
-        RTHumidity.assert_called()
+    # to various files
+    patcher = mock.patch('RTIMU.RTPressure')
+    request.addfinalizer(patcher.stop)
+    result = patcher.start()
+    result.return_value.pressureRead.return_value = (True, 1000.0, True, 20.0)
+    return result
 
 
-def test_environ_init_with_settings():
+@pytest.fixture()
+def RTHumidity(request, Settings):
     # ALWAYS mock out Settings as otherwise instantiation attempts to write
-    # to various files...
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        settings = SenseSettings('/etc/foo.ini')
-        env = SenseEnviron(settings)
-        RTPressure.assert_called_once_with(settings.settings)
-        RTHumidity.assert_called_once_with(settings.settings)
+    # to various files
+    patcher = mock.patch('RTIMU.RTHumidity')
+    request.addfinalizer(patcher.stop)
+    result = patcher.start()
+    result.return_value.humidityRead.return_value = (True, 50.0, True, 22.0)
+    return result
 
 
-def test_environ_init_fail():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureInit.return_value = False
-        with pytest.raises(RuntimeError):
-            SenseEnviron()
-        RTPressure().pressureInit.return_value = True
-        RTHumidity().humidityInit.return_value = False
-        with pytest.raises(RuntimeError):
-            SenseEnviron()
+def test_environ_init(Settings, RTPressure, RTHumidity):
+    env = SenseEnviron('/etc/foo.ini')
+    Settings.assert_called_once_with('/etc/foo')
+    RTPressure.assert_called()
+    RTHumidity.assert_called()
 
 
-def test_environ_read():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
-        RTHumidity().humidityRead.return_value = (True, 50.0, True, 22.0)
-        env = SenseEnviron()
+def test_environ_init_with_settings(Settings, RTPressure, RTHumidity):
+    settings = SenseSettings('/etc/foo.ini')
+    env = SenseEnviron(settings)
+    RTPressure.assert_called_once_with(settings.settings)
+    RTHumidity.assert_called_once_with(settings.settings)
+
+
+def test_environ_init_fail(Settings, RTPressure, RTHumidity):
+    RTPressure().pressureInit.return_value = False
+    with pytest.raises(RuntimeError):
+        SenseEnviron()
+    RTPressure().pressureInit.return_value = True
+    RTHumidity().humidityInit.return_value = False
+    with pytest.raises(RuntimeError):
+        SenseEnviron()
+
+
+def test_environ_read(Settings, RTPressure, RTHumidity):
+    env = SenseEnviron()
+    assert env.read() == EnvironReadings(1000.0, 50.0, 22.0)
+
+
+def test_environ_close_idempotent(Settings, RTPressure, RTHumidity):
+    env = SenseEnviron()
+    env.close()
+    with pytest.raises(AttributeError):
+        env.read()
+    env.close()
+
+
+def test_environ_context_handler(Settings, RTPressure, RTHumidity):
+    with SenseEnviron() as env:
         assert env.read() == EnvironReadings(1000.0, 50.0, 22.0)
+    with pytest.raises(AttributeError):
+        env.read()
 
 
-def test_environ_close_idempotent():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        env = SenseEnviron()
-        env.close()
-        with pytest.raises(AttributeError):
-            env.read()
-        env.close()
+def test_environ_iter(Settings, RTPressure, RTHumidity):
+    RTPressure().pressureRead.side_effect = cycle([
+        (True, 1000.0, True, 20.0),
+        (True, 1000.5, True, 20.7),
+    ])
+    RTHumidity().humidityRead.side_effect = cycle([
+        (True, 50.0, True, 22.0),
+        (True, 51.0, True, 21.7),
+    ])
+    env = SenseEnviron()
+    it = iter(env)
+    assert next(it) == (1000.0, 50.0, 22.0)
+    assert next(it) == (1000.5, 51.0, 21.7)
 
 
-def test_environ_context_handler():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
-        RTHumidity().humidityRead.return_value = (True, 50.0, True, 22.0)
-        with SenseEnviron() as env:
-            assert env.read() == EnvironReadings(1000.0, 50.0, 22.0)
-        with pytest.raises(AttributeError):
-            env.read()
+def test_environ_attr(Settings, RTPressure, RTHumidity):
+    env = SenseEnviron()
+    assert env.pressure == 1000.0
+    assert env.humidity == 50.0
+    assert env.temperature == 22.0
 
 
-def test_environ_iter():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureRead.side_effect = cycle([
-            (True, 1000.0, True, 20.0),
-            (True, 1000.5, True, 20.7),
-        ])
-        RTHumidity().humidityRead.side_effect = cycle([
-            (True, 50.0, True, 22.0),
-            (True, 51.0, True, 21.7),
-        ])
-        env = SenseEnviron()
-        it = iter(env)
-        assert next(it) == (1000.0, 50.0, 22.0)
-        assert next(it) == (1000.5, 51.0, 21.7)
+def test_environ_temp_sources(Settings, RTPressure, RTHumidity):
+    env = SenseEnviron()
+    assert env.temp_source is temp_humidity
+    assert env.temperature == 22.0
+    env.temp_source = temp_pressure
+    assert env.temperature == 20.0
+    env.temp_source = temp_both
+    assert env.temperature == (20.0, 22.0)
+    env.temp_source = temp_average
+    assert env.temperature == 21.0
+    with pytest.raises(ValueError):
+        env.temp_source = lambda x: x
 
 
-def test_environ_attr():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
-        RTHumidity().humidityRead.return_value = (True, 50.0, True, 22.0)
-        env = SenseEnviron()
-        assert env.pressure == 1000.0
-        assert env.humidity == 50.0
-        assert env.temperature == 22.0
+def test_environ_temp_average(Settings, RTPressure, RTHumidity):
+    env = SenseEnviron()
+    env.temp_source = temp_average
+    assert env.temperature == 21.0
+    RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
+    assert env.read().temperature == 22.0
+    RTHumidity().humidityRead.return_value = (True, 50.0, False, 22.0)
+    RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
+    assert env.read().temperature == 20.0
+    RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
+    assert env.read().temperature is None
 
 
-def test_environ_temp_sources():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
-        RTHumidity().humidityRead.return_value = (True, 50.0, True, 22.0)
-        env = SenseEnviron()
-        assert env.temp_source is temp_humidity
-        assert env.temperature == 22.0
-        env.temp_source = temp_pressure
-        assert env.temperature == 20.0
-        env.temp_source = temp_both
-        assert env.temperature == (20.0, 22.0)
-        env.temp_source = temp_average
-        assert env.temperature == 21.0
-        with pytest.raises(ValueError):
-            env.temp_source = lambda x: x
-
-
-def test_environ_temp_average():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
-        RTHumidity().humidityRead.return_value = (True, 50.0, True, 22.0)
-        env = SenseEnviron()
-        env.temp_source = temp_average
-        assert env.temperature == 21.0
-        RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
-        assert env.read().temperature == 22.0
-        RTHumidity().humidityRead.return_value = (True, 50.0, False, 22.0)
-        RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
-        assert env.read().temperature == 20.0
-        RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
-        assert env.read().temperature is None
-
-
-def test_environ_read_delay():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTPressure') as RTPressure, \
-            mock.patch('RTIMU.RTHumidity') as RTHumidity:
-        RTPressure().pressureRead.side_effect = cycle([
-            (True, 1000.0, True, 20.0),
-            (True, 1000.5, True, 20.7),
-        ])
-        RTHumidity().humidityRead.side_effect = cycle([
-            (True, 50.0, True, 22.0),
-            (True, 51.0, True, 21.7),
-        ])
-        env = SenseEnviron()
-        assert env.pressure == 1000.0
-        # Ensure a rapid successive read returns the same value, but a read
-        # after the interval wait returns a new value
-        assert env.pressure == 1000.0
-        sleep(env._interval)
-        assert env.pressure == 1000.5
+def test_environ_read_delay(Settings, RTPressure, RTHumidity):
+    RTPressure().pressureRead.side_effect = cycle([
+        (True, 1000.0, True, 20.0),
+        (True, 1000.5, True, 20.7),
+    ])
+    RTHumidity().humidityRead.side_effect = cycle([
+        (True, 50.0, True, 22.0),
+        (True, 51.0, True, 21.7),
+    ])
+    env = SenseEnviron()
+    assert env.pressure == 1000.0
+    # Ensure a rapid successive read returns the same value, but a read
+    # after the interval wait returns a new value
+    assert env.pressure == 1000.0
+    sleep(env._interval)
+    assert env.pressure == 1000.5

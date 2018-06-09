@@ -37,35 +37,138 @@ from __future__ import (
 import mock
 import pytest
 from time import sleep
+from itertools import cycle
 from pisense import *
 
 
-def test_imu_init():
+
+COMPASS_READING = (0.2, 5.6, 1.2)
+GYRO_READING = (0.01, 0.1, 0.0)
+ACCEL_READING = (0.0, 0.1, 1.0)
+FUSION_READING = (0.0, 0.01, 0.12)
+
+VALID_RAW = {
+    'compassValid': True,
+    'compass': COMPASS_READING,
+    'gyroValid': True,
+    'gyro': GYRO_READING,
+    'accelValid': True,
+    'accel': ACCEL_READING,
+    'fusionPoseValid': True,
+    'fusionPose': FUSION_READING,
+}
+VALID_READ = IMUState(
+    IMUVector(*COMPASS_READING),
+    IMUVector(*GYRO_READING),
+    IMUVector(*ACCEL_READING),
+    IMUOrient(*FUSION_READING),
+)
+
+
+@pytest.fixture()
+def Settings(request):
+    patcher = mock.patch('RTIMU.Settings')
+    request.addfinalizer(patcher.stop)
+    return patcher.start()
+
+
+@pytest.fixture()
+def RTIMU(request):
+    patcher = mock.patch('RTIMU.RTIMU')
+    request.addfinalizer(patcher.stop)
+    result = patcher.start()
+    result.return_value.IMUName.return_value = 'LSM9DS1'
+    result.return_value.IMUGetPollInterval.return_value = 3
+    result.return_value.IMURead.return_value = True
+    result.return_value.getIMUData.return_value = VALID_RAW
+    return result
+
+
+def test_imu_init(Settings, RTIMU):
     # ALWAYS mock out Settings as otherwise instantiation attempts to write
     # to various files...
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTIMU') as RTIMU:
-        imu = SenseIMU('/etc/foo.ini')
-        Settings.assert_called_once_with('/etc/foo')
-        RTIMU.assert_called()
-        RTIMU().setCompassEnable.assert_called_with(True)
-        RTIMU().setGyroEnable.assert_called_with(True)
-        RTIMU().setAccelEnable.assert_called_with(True)
+    imu = SenseIMU('/etc/foo.ini')
+    Settings.assert_called_once_with('/etc/foo')
+    RTIMU.assert_called()
+    RTIMU().setCompassEnable.assert_called_with(True)
+    RTIMU().setGyroEnable.assert_called_with(True)
+    RTIMU().setAccelEnable.assert_called_with(True)
 
 
-def test_imu_init_fail():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTIMU') as RTIMU:
-        RTIMU().IMUInit.return_value = False
-        with pytest.raises(RuntimeError):
-            SenseIMU()
+def test_imu_init_with_settings(Settings, RTIMU):
+    settings = SenseSettings('/etc/foo.ini')
+    imu = SenseIMU(settings)
+    RTIMU.assert_called_once_with(settings.settings)
 
 
-def test_imu_close_idempotent():
-    with mock.patch('RTIMU.Settings') as Settings, \
-            mock.patch('RTIMU.RTIMU') as RTIMU:
-        imu = SenseIMU('/etc/foo.ini')
-        imu.close()
-        with pytest.raises(AttributeError):
-            imu.read()
-        imu.close()
+def test_imu_init_fail(Settings, RTIMU):
+    RTIMU().IMUInit.return_value = False
+    with pytest.raises(RuntimeError):
+        SenseIMU()
+
+
+def test_imu_close_idempotent(Settings, RTIMU):
+    imu = SenseIMU('/etc/foo.ini')
+    imu.close()
+    with pytest.raises(AttributeError):
+        imu.read()
+    imu.close()
+
+
+def test_imu_context_handler(Settings, RTIMU):
+    with SenseIMU('/etc/foo.ini') as imu:
+        assert imu.read() == VALID_READ
+    with pytest.raises(AttributeError):
+        imu.read()
+
+
+def test_imu_iter(Settings, RTIMU):
+    imu = SenseIMU()
+    it = iter(imu)
+    assert next(it) == VALID_READ
+    assert next(it) == VALID_READ
+    assert RTIMU().getIMUData.call_count == 2
+    invalid_orient = VALID_RAW.copy()
+    invalid_orient['fusionPoseValid'] = False
+    RTIMU().getIMUData.side_effect = cycle([invalid_orient, VALID_RAW])
+    assert next(it) == VALID_READ
+    assert RTIMU().getIMUData.call_count == 4
+
+
+def test_imu_attr(Settings, RTIMU):
+    imu = SenseIMU()
+    assert imu.name == 'LSM9DS1'
+    assert imu.compass == IMUVector(*COMPASS_READING)
+    assert imu.gyro == IMUVector(*GYRO_READING)
+    assert imu.accel == IMUVector(*ACCEL_READING)
+    assert imu.orient == IMUOrient(*FUSION_READING)
+
+
+def test_imu_sensors(Settings, RTIMU):
+    imu = SenseIMU()
+    assert imu.sensors == {'compass', 'accel', 'gyro'}
+    imu.sensors = {'accel', b'gyro'}
+    RTIMU().setCompassEnable.assert_called_with(False)
+    RTIMU().setAccelEnable.assert_called_with(True)
+    RTIMU().setGyroEnable.assert_called_with(True)
+    with pytest.raises(ValueError):
+        imu.sensors = {'foo'}
+
+
+def test_imu_sensors_str(Settings, RTIMU):
+    imu = SenseIMU()
+    imu.sensors = 'accel'
+    assert imu.sensors == {'accel'}
+    imu.sensors = b'gyro'
+    assert imu.sensors == {'gyro'}
+
+
+def test_imu_read_delay(Settings, RTIMU):
+    imu = SenseIMU()
+    next_raw = VALID_RAW.copy()
+    next_raw['accel'] = (0.0, 0.0, 0.9)
+    next_read = VALID_READ._replace(accel=IMUVector(*next_raw['accel']))
+    RTIMU().getIMUData.side_effect = cycle([VALID_RAW, next_raw])
+    assert imu.accel == IMUVector(*ACCEL_READING)
+    sleep(imu._interval)
+    assert imu.accel == next_read.accel
