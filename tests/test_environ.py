@@ -72,16 +72,22 @@ def RTHumidity(request, Settings):
 
 def test_environ_init(Settings, RTPressure, RTHumidity):
     env = SenseEnviron('/etc/foo.ini')
-    Settings.assert_called_once_with('/etc/foo')
-    RTPressure.assert_called()
-    RTHumidity.assert_called()
+    try:
+        Settings.assert_called_once_with('/etc/foo')
+        RTPressure.assert_called()
+        RTHumidity.assert_called()
+    finally:
+        env.close()
 
 
 def test_environ_init_with_settings(Settings, RTPressure, RTHumidity):
     settings = SenseSettings('/etc/foo.ini')
     env = SenseEnviron(settings)
-    RTPressure.assert_called_once_with(settings.settings)
-    RTHumidity.assert_called_once_with(settings.settings)
+    try:
+        RTPressure.assert_called_once_with(settings.settings)
+        RTHumidity.assert_called_once_with(settings.settings)
+    finally:
+        env.close()
 
 
 def test_environ_init_fail(Settings, RTPressure, RTHumidity):
@@ -96,7 +102,10 @@ def test_environ_init_fail(Settings, RTPressure, RTHumidity):
 
 def test_environ_read(Settings, RTPressure, RTHumidity):
     env = SenseEnviron()
-    assert env.read() == EnvironReadings(1000.0, 50.0, 22.0)
+    try:
+        assert env.read() == EnvironReadings(1000.0, 50.0, 22.0)
+    finally:
+        env.close()
 
 
 def test_environ_close_idempotent(Settings, RTPressure, RTHumidity):
@@ -109,9 +118,14 @@ def test_environ_close_idempotent(Settings, RTPressure, RTHumidity):
 
 def test_environ_context_handler(Settings, RTPressure, RTHumidity):
     with SenseEnviron() as env:
-        assert env.read() == EnvironReadings(1000.0, 50.0, 22.0)
+        pass
     with pytest.raises(AttributeError):
         env.read()
+
+
+def test_environ_read(Settings, RTPressure, RTHumidity):
+    with SenseEnviron() as env:
+        assert env.read() == EnvironReadings(1000.0, 50.0, 22.0)
 
 
 def test_environ_iter(Settings, RTPressure, RTHumidity):
@@ -123,44 +137,44 @@ def test_environ_iter(Settings, RTPressure, RTHumidity):
         (True, 50.0, True, 22.0),
         (True, 51.0, True, 21.7),
     ])
-    env = SenseEnviron()
-    it = iter(env)
-    assert next(it) == (1000.0, 50.0, 22.0)
-    assert next(it) == (1000.5, 51.0, 21.7)
+    with SenseEnviron() as env:
+        it = iter(env)
+        assert next(it) == (1000.0, 50.0, 22.0)
+        assert next(it) == (1000.5, 51.0, 21.7)
 
 
 def test_environ_attr(Settings, RTPressure, RTHumidity):
-    env = SenseEnviron()
-    assert env.pressure == 1000.0
-    assert env.humidity == 50.0
-    assert env.temperature == 22.0
+    with SenseEnviron() as env:
+        assert env.pressure == 1000.0
+        assert env.humidity == 50.0
+        assert env.temperature == 22.0
 
 
 def test_environ_temp_sources(Settings, RTPressure, RTHumidity):
-    env = SenseEnviron()
-    assert env.temp_source is temp_humidity
-    assert env.temperature == 22.0
-    env.temp_source = temp_pressure
-    assert env.temperature == 20.0
-    env.temp_source = temp_both
-    assert env.temperature == (20.0, 22.0)
-    env.temp_source = temp_average
-    assert env.temperature == 21.0
-    with pytest.raises(ValueError):
-        env.temp_source = lambda x: x
+    with SenseEnviron() as env:
+        assert env.temp_source is temp_humidity
+        assert env.temperature == 22.0
+        env.temp_source = temp_pressure
+        assert env.temperature == 20.0
+        env.temp_source = temp_both
+        assert env.temperature == (20.0, 22.0)
+        env.temp_source = temp_average
+        assert env.temperature == 21.0
+        with pytest.raises(ValueError):
+            env.temp_source = lambda x: x
 
 
 def test_environ_temp_average(Settings, RTPressure, RTHumidity):
-    env = SenseEnviron()
-    env.temp_source = temp_average
-    assert env.temperature == 21.0
-    RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
-    assert env.read().temperature == 22.0
-    RTHumidity().humidityRead.return_value = (True, 50.0, False, 22.0)
-    RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
-    assert env.read().temperature == 20.0
-    RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
-    assert env.read().temperature is None
+    with SenseEnviron() as env:
+        env.temp_source = temp_average
+        assert env.temperature == 21.0
+        RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
+        assert env.read().temperature == 22.0
+        RTHumidity().humidityRead.return_value = (True, 50.0, False, 22.0)
+        RTPressure().pressureRead.return_value = (True, 1000.0, True, 20.0)
+        assert env.read().temperature == 20.0
+        RTPressure().pressureRead.return_value = (True, 1000.0, False, 20.0)
+        assert env.read().temperature is None
 
 
 def test_environ_read_delay(Settings, RTPressure, RTHumidity):
@@ -172,10 +186,10 @@ def test_environ_read_delay(Settings, RTPressure, RTHumidity):
         (True, 50.0, True, 22.0),
         (True, 51.0, True, 21.7),
     ])
-    env = SenseEnviron()
-    assert env.pressure == 1000.0
-    # Ensure a rapid successive read returns the same value, but a read
-    # after the interval wait returns a new value
-    assert env.pressure == 1000.0
-    sleep(env._interval)
-    assert env.pressure == 1000.5
+    with SenseEnviron() as env:
+        assert env.pressure == 1000.0
+        # Ensure a rapid successive read returns the same value, but a read
+        # after the interval wait returns a new value
+        assert env.pressure == 1000.0
+        sleep(env._interval)
+        assert env.pressure == 1000.5

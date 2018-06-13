@@ -184,11 +184,12 @@ class SenseStick(object):
             self._callbacks_thread = None
             self._buffer = None
         if self._flush:
-            termios.tcflush(0, termios.TCIFLUSH)
             self._flush = False
-
-    def __del__(self):
-        self.close()
+            try:
+                termios.tcflush(0, termios.TCIFLUSH)
+            except termios.error:
+                # If stdin isn't a tty (or isn't available), ignore the error
+                pass
 
     def __iter__(self):
         while True:
@@ -217,6 +218,10 @@ class SenseStick(object):
             while not self._closing.wait(0):
                 if select.select([stick_file], [], [], 0.1)[0]:
                     event = stick_file.read(SenseStick.EVENT_SIZE)
+                    if event == b'':
+                        # This is mostly to ease testing, but also deals with
+                        # some edge cases
+                        break
                     (
                         tv_sec,
                         tv_usec,
@@ -276,8 +281,9 @@ class SenseStick(object):
                     try:
                         callback = self._callbacks[event.direction]
                     except KeyError:
-                        pass
-                callback(event)
+                        callback = None
+                if callback is not None:
+                    callback(event)
 
     def _start_stop_callbacks(self):
         with self._callbacks_lock:

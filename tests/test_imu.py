@@ -88,17 +88,23 @@ def test_imu_init(Settings, RTIMU):
     # ALWAYS mock out Settings as otherwise instantiation attempts to write
     # to various files...
     imu = SenseIMU('/etc/foo.ini')
-    Settings.assert_called_once_with('/etc/foo')
-    RTIMU.assert_called()
-    RTIMU().setCompassEnable.assert_called_with(True)
-    RTIMU().setGyroEnable.assert_called_with(True)
-    RTIMU().setAccelEnable.assert_called_with(True)
+    try:
+        Settings.assert_called_once_with('/etc/foo')
+        RTIMU.assert_called()
+        RTIMU().setCompassEnable.assert_called_with(True)
+        RTIMU().setGyroEnable.assert_called_with(True)
+        RTIMU().setAccelEnable.assert_called_with(True)
+    finally:
+        imu.close()
 
 
 def test_imu_init_with_settings(Settings, RTIMU):
     settings = SenseSettings('/etc/foo.ini')
     imu = SenseIMU(settings)
-    RTIMU.assert_called_once_with(settings.settings)
+    try:
+        RTIMU.assert_called_once_with(settings.settings)
+    finally:
+        imu.close()
 
 
 def test_imu_init_fail(Settings, RTIMU):
@@ -123,52 +129,52 @@ def test_imu_context_handler(Settings, RTIMU):
 
 
 def test_imu_iter(Settings, RTIMU):
-    imu = SenseIMU()
-    it = iter(imu)
-    assert next(it) == VALID_READ
-    assert next(it) == VALID_READ
-    assert RTIMU().getIMUData.call_count == 2
-    invalid_orient = VALID_RAW.copy()
-    invalid_orient['fusionPoseValid'] = False
-    RTIMU().getIMUData.side_effect = cycle([invalid_orient, VALID_RAW])
-    assert next(it) == VALID_READ
-    assert RTIMU().getIMUData.call_count == 4
+    with SenseIMU() as imu:
+        it = iter(imu)
+        assert next(it) == VALID_READ
+        assert next(it) == VALID_READ
+        assert RTIMU().getIMUData.call_count == 2
+        invalid_orient = VALID_RAW.copy()
+        invalid_orient['fusionPoseValid'] = False
+        RTIMU().getIMUData.side_effect = cycle([invalid_orient, VALID_RAW])
+        assert next(it) == VALID_READ
+        assert RTIMU().getIMUData.call_count == 4
 
 
 def test_imu_attr(Settings, RTIMU):
-    imu = SenseIMU()
-    assert imu.name == 'LSM9DS1'
-    assert imu.compass == IMUVector(*COMPASS_READING)
-    assert imu.gyro == IMUVector(*GYRO_READING)
-    assert imu.accel == IMUVector(*ACCEL_READING)
-    assert imu.orient == IMUOrient(*FUSION_READING)
+    with SenseIMU() as imu:
+        assert imu.name == 'LSM9DS1'
+        assert imu.compass == IMUVector(*COMPASS_READING)
+        assert imu.gyro == IMUVector(*GYRO_READING)
+        assert imu.accel == IMUVector(*ACCEL_READING)
+        assert imu.orient == IMUOrient(*FUSION_READING)
 
 
 def test_imu_sensors(Settings, RTIMU):
-    imu = SenseIMU()
-    assert imu.sensors == {'compass', 'accel', 'gyro'}
-    imu.sensors = {'accel', b'gyro'}
-    RTIMU().setCompassEnable.assert_called_with(False)
-    RTIMU().setAccelEnable.assert_called_with(True)
-    RTIMU().setGyroEnable.assert_called_with(True)
-    with pytest.raises(ValueError):
-        imu.sensors = {'foo'}
+    with SenseIMU() as imu:
+        assert imu.sensors == {'compass', 'accel', 'gyro'}
+        imu.sensors = {'accel', b'gyro'}
+        RTIMU().setCompassEnable.assert_called_with(False)
+        RTIMU().setAccelEnable.assert_called_with(True)
+        RTIMU().setGyroEnable.assert_called_with(True)
+        with pytest.raises(ValueError):
+            imu.sensors = {'foo'}
 
 
 def test_imu_sensors_str(Settings, RTIMU):
-    imu = SenseIMU()
-    imu.sensors = 'accel'
-    assert imu.sensors == {'accel'}
-    imu.sensors = b'gyro'
-    assert imu.sensors == {'gyro'}
+    with SenseIMU() as imu:
+        imu.sensors = 'accel'
+        assert imu.sensors == {'accel'}
+        imu.sensors = b'gyro'
+        assert imu.sensors == {'gyro'}
 
 
 def test_imu_read_delay(Settings, RTIMU):
-    imu = SenseIMU()
-    next_raw = VALID_RAW.copy()
-    next_raw['accel'] = (0.0, 0.0, 0.9)
-    next_read = VALID_READ._replace(accel=IMUVector(*next_raw['accel']))
-    RTIMU().getIMUData.side_effect = cycle([VALID_RAW, next_raw])
-    assert imu.accel == IMUVector(*ACCEL_READING)
-    sleep(imu._interval)
-    assert imu.accel == next_read.accel
+    with SenseIMU() as imu:
+        next_raw = VALID_RAW.copy()
+        next_raw['accel'] = (0.0, 0.0, 0.9)
+        next_read = VALID_READ._replace(accel=IMUVector(*next_raw['accel']))
+        RTIMU().getIMUData.side_effect = cycle([VALID_RAW, next_raw])
+        assert imu.accel == IMUVector(*ACCEL_READING)
+        sleep(imu._interval)
+        assert imu.accel == next_read.accel
