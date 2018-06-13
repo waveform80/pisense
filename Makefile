@@ -123,7 +123,7 @@ develop: tags
 	@if [ -z $(VIRTUAL_ENV) ]; then \
 		echo "Virtualenv not detected! You may need to link RTIMULib manually"; \
 	else \
-		if [ -f $(RTIMULIB) ]; then \
+		if [ -n $(RTIMULIB) ]; then \
 			echo "Linking $(RTIMULIB) into virtualenv"; \
 			ln -sf $(RTIMULIB) $(VIRTUAL_ENV)/lib/python*/site-packages/; \
 		else \
@@ -194,4 +194,4 @@ release: $(DIST_DEB) $(DIST_DSC) $(DIST_TAR) $(DIST_WHEEL)
 	dput raspberrypi dist/$(NAME)_$(VER)$(DEB_SUFFIX)_source.changes
 	dput raspberrypi dist/$(NAME)_$(VER)$(DEB_SUFFIX)_$(DEB_ARCH).changes
 
-.PHONY: all install develop test doc source egg wheel zip tar deb dist clean tags release upload $(SUBDIRS)
+.PHONY: all install develop test doc source wheel zip tar deb dist clean tags release upload $(SUBDIRS)
