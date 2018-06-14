@@ -275,8 +275,11 @@ class SenseStick(object):
 
     def _run_callbacks(self):
         while not self._callbacks_close.wait(0) and not self._closing.wait(0):
-            event = self._buffer.get(timeout=0.1)
-            if event is not None:
+            try:
+                event = self._buffer.get(timeout=0.1)
+            except Empty:
+                pass
+            else:
                 with self._callbacks_lock:
                     try:
                         callback = self._callbacks[event.direction]

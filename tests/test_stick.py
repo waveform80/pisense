@@ -74,7 +74,7 @@ def stick_device(request, _open=io.open, _glob=glob.glob):
     return os.fdopen(wpipe, 'wb', buffering=0)
 
 
-def make_event(e):
+def make_event(e, event_type=SenseStick.EV_KEY):
     sec, usec = divmod(e.timestamp.timestamp(), 1)
     direction = {
         'up': SenseStick.KEY_UP,
@@ -85,7 +85,7 @@ def make_event(e):
     }[e.direction]
     return struct.pack(SenseStick.EVENT_FORMAT,
                        int(sec), int(round(usec * 1000000)),
-                       SenseStick.EV_KEY, direction,
+                       event_type, direction,
                        SenseStick.STATE_RELEASE if not e.pressed else
                        SenseStick.STATE_PRESS if not e.held else
                        SenseStick.STATE_HOLD)
@@ -166,6 +166,16 @@ def test_stick_read(stick_device):
         assert stick.read(0.01) is None
 
 
+def test_stick_read_non_key_event(stick_device):
+    with SenseStick() as stick:
+        evt = StickEvent(datetime.now(), 'up', True, False)
+        # Test the device silently ignores event types other than key
+        stick_device.write(make_event(evt, event_type=0x02))
+        stick_device.write(make_event(evt))
+        assert stick.read() == evt
+        assert stick.read(0.01) is None
+
+
 def test_stick_iter(stick_device):
     with SenseStick() as stick:
         evt1 = StickEvent(datetime.now(), 'up', True, False)
@@ -186,10 +196,12 @@ def test_stick_stream(stick_device):
         assert not stick.stream
         stick.stream = True
         assert stick.stream
-        while stick._buffer.empty():
-            sleep(0.01)
         it = iter(stick)
-        assert next(it) == evt
+        while True:
+            read_evt = next(it)
+            if read_evt is not None:
+                break
+        assert read_evt == evt
         assert next(it) is None
 
 
@@ -239,11 +251,52 @@ def test_stick_buffer_filled(stick_device):
 
 def test_stick_callbacks(stick_device):
     with SenseStick() as stick:
+        directions = ['left', 'right', 'up', 'down', 'enter']
         events = [
             StickEvent(datetime.now(), direction, pressed, False)
             for direction, pressed in [
-                    ('up', True),
-                    ('up', False),
+                (d, on_off)
+                for d in directions
+                for on_off in (True, False)
+            ]
+        ]
+        markers = [Event() for event in events]
+        def handler(e):
+            for event, marker in zip(events, markers):
+                if e == event:
+                    marker.set()
+        for d in directions:
+            setattr(stick, 'when_' + d, handler)
+        for d in directions:
+            assert getattr(stick, 'when_' + d) == handler
+        for event in events:
+            stick_device.write(make_event(event))
+        for index, marker in enumerate(markers):
+            if not marker.wait(1):
+                assert False, 'Event handler %d failed to fire' % index
+
+
+def test_stick_callbacks_no_queue(stick_device):
+    with SenseStick() as stick:
+        event = StickEvent(datetime.now(), 'left', True, False)
+        marker = Event()
+        stick.when_left = lambda evt: marker.set()
+        stick_device.write(make_event(event))
+        assert marker.wait(1)
+        sleep(0.2)
+        stick_device.write(make_event(event._replace(pressed=False)))
+        assert marker.wait(1)
+
+
+def test_stick_callbacks_unassigned(stick_device):
+    with SenseStick() as stick:
+        events = [
+            StickEvent(datetime.now(), direction, pressed, False)
+            for direction, pressed in [
+                    ('right', True),
+                    ('right', False),
+                    ('down', True),
+                    ('down', False),
                     ('left', True),
                     ('left', False),
             ]
@@ -253,10 +306,66 @@ def test_stick_callbacks(stick_device):
             for event, marker in zip(events, markers):
                 if e == event:
                     marker.set()
-        stick.when_up = handler
+        stick.when_right = handler
+        # Don't assign when_down handler
         stick.when_left = handler
         for event in events:
             stick_device.write(make_event(event))
-        for index, marker in enumerate(markers):
-            if not marker.wait(1):
-                assert False, 'Event handler %d failed to fire' % index
+        assert markers[0].wait(1)
+        assert markers[1].wait(1)
+        assert not markers[2].wait(0)
+        assert not markers[3].wait(0)
+        assert markers[4].wait(1)
+        assert markers[5].wait(1)
+
+
+def test_stick_callbacks_shutdown(stick_device):
+    with SenseStick() as stick:
+        assert stick._callbacks_thread is None
+        directions = {'left', 'right', 'up', 'down', 'enter'}
+        for d in directions:
+            setattr(stick, 'when_' + d, lambda evt: None)
+            assert stick._callbacks_thread is not None
+        for d in directions:
+            setattr(stick, 'when_' + d, None)
+        assert stick._callbacks_thread is None
+
+
+def test_stick_callbacks_warning(stick_device):
+    with SenseStick() as stick:
+        stick.when_right = lambda evt: None
+        with warnings.catch_warnings(record=True) as w:
+            stick.read(0)
+            assert len(w) == 1
+            assert w[0].category == SenseStickCallbackRead
+
+
+def test_stick_attrs(stick_device):
+    with SenseStick() as stick:
+        directions = {'left', 'right', 'up', 'down', 'enter'}
+        assert tuple(getattr(stick, d) for d in directions) == (
+            False,) * len(directions)
+        assert tuple(getattr(stick, d + '_held') for d in directions) == (
+            False,) * len(directions)
+        for d in directions:
+            stick_device.write(
+                make_event(StickEvent(datetime.now(), d, True, False)))
+            stick.read()
+            assert tuple(getattr(stick, d) for d in directions) == tuple(
+                e == d for e in directions)
+            assert tuple(getattr(stick, d + '_held') for d in directions) == (
+                False,) * len(directions)
+            stick_device.write(
+                make_event(StickEvent(datetime.now(), d, True, True)))
+            stick.read()
+            assert tuple(getattr(stick, d) for d in directions) == tuple(
+                e == d for e in directions)
+            assert tuple(getattr(stick, d) for d in directions) == tuple(
+                e == d for e in directions)
+            stick_device.write(
+                make_event(StickEvent(datetime.now(), d, False, True)))
+            stick.read()
+            assert tuple(getattr(stick, d) for d in directions) == (
+                False,) * len(directions)
+            assert tuple(getattr(stick, d + '_held') for d in directions) == (
+                False,) * len(directions)
