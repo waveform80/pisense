@@ -49,8 +49,13 @@ def linear(steps):
     This is the default easing function which simply progresses the animation
     at a constant rate from start to finish.
     """
-    for t in range(steps):
-        yield t / (steps - 1)
+    if steps == 0:
+        pass
+    elif steps == 1:
+        yield 1
+    else:
+        for t in range(steps):
+            yield t / (steps - 1)
 
 
 def ease_in(steps):
