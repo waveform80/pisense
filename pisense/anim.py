@@ -57,25 +57,30 @@ def _load_font(font, size):
     if isinstance(font, ImageFont.ImageFont):
         return font
     try:
-        f = _FONT_CACHE[font]
+        f = _FONT_CACHE[(font, None)]
     except KeyError:
-        if font.endswith('.pil') and not os.path.exists(font):
-            # PIL's internal font format is rather annoying in that it
-            # requires *two* files (of which only one is specified in the
-            # load() method). As a result, we can't use resource_stream
-            # and have to (potentially) extract the resources to the
-            # file-system (and register a manual clean-up routine).
-            atexit.register(cleanup_resources)
-            pil_file = resource_filename(__name__, font)
-            # pylint: disable=unused-variable
-            pbm_file = resource_filename(__name__, font[:-4] + '.pbm')
-            f = ImageFont.load(pil_file)
-        else:
-            try:
-                f = ImageFont.load(font)
-            except OSError:
-                f = ImageFont.truetype(font, size)
-        _FONT_CACHE[font] = f
+        try:
+            f = _FONT_CACHE[(font, size)]
+        except KeyError:
+            if font.endswith('.pil') and not os.path.exists(font):
+                # PIL's internal font format is rather annoying in that it
+                # requires *two* files (of which only one is specified in the
+                # load() method). As a result, we can't use resource_stream
+                # and have to (potentially) extract the resources to the
+                # file-system (and register a manual clean-up routine).
+                atexit.register(cleanup_resources)
+                pil_file = resource_filename(__name__, font)
+                # pylint: disable=unused-variable
+                pbm_file = resource_filename(__name__, font[:-4] + '.pbm')
+                f = ImageFont.load(pil_file)
+                _FONT_CACHE[(font, None)] = f
+            else:
+                try:
+                    f = ImageFont.load(font)
+                    _FONT_CACHE[(font, None)] = f
+                except OSError:
+                    f = ImageFont.truetype(font, size)
+                    _FONT_CACHE[(font, size)] = f
     return f
 
 
@@ -173,10 +178,12 @@ def scroll_text(text, font='default.pil', size=8, foreground=Color('white'),
     The *duration* and *fps* parameters control how many frames will be yielded
     by the function. The *duration* parameter measures the length of the
     animation in seconds, while *fps* controls how many frames should be shown
-    per second. Hence, if *duration* is 2 and *fps* is 15 (the default), the
-    generator will yield 30 frames. The default for *duration* is ``None``
-    indicating that the function should determine the duration based on the
-    length of the rendered text. In this case the generator will produce frames
+    per second. Hence, if *duration* is 2 and *fps* is 15, the
+    generator will yield 30 frames.
+
+    The default for *duration* is ``None`` indicating that the function should
+    determine the duration based on the length of the rendered text (in this
+    case *fps* is ignored). In this case the generator will produce frames
     which scroll 1 pixel horizontally per frame.
 
     The resulting animation will start with a full frame of *background* color;
@@ -232,8 +239,9 @@ def fade_to(start, finish, duration=1, fps=15, easing=linear):
     finish = buf_to_image(finish)
     if start.size != finish.size:
         raise ValueError("start and finish frames must be the same size")
-    mask = np.empty((8, 8), np.uint8)
-    mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
+    w, h = start.size
+    mask = np.empty((h, w), np.uint8)
+    mask_img = Image.frombuffer('L', (w, h), mask, 'raw', 'L', 0, 1)
     for f in easing(int(duration * fps)):
         mask[...] = int(255 * f)
         frame = start.copy()
@@ -274,26 +282,31 @@ def slide_to(start, finish, direction='left', cover=False, duration=1, fps=15,
             'down':  (0, 1),
         }[direction]
     except KeyError:
-        raise ValueError('invalid direction: ' % direction)
+        raise ValueError('invalid direction: %s' % direction)
     start = buf_to_image(start)
     finish_small = buf_to_image(finish)
     if start.size != finish_small.size:
         raise ValueError("start and finish frames must be the same size")
-    start = start.resize((64, 64))
-    finish = finish_small.resize((64, 64))
+    orig_size = start.size
+    canvas_size = (orig_size[0] * 8, orig_size[1] * 8)
+    start = start.resize(canvas_size)
+    finish = finish_small.resize(canvas_size)
     if not cover:
-        canvas = Image.new('RGB', (64, 64))
+        canvas = Image.new('RGB', canvas_size)
     for f in easing(int(duration * fps)):
-        x = int(delta_x * f * 64)
-        y = int(delta_y * f * 64)
+        x = int(delta_x * f * canvas_size[0])
+        y = int(delta_y * f * canvas_size[1])
         if cover:
             canvas = start.copy()
         else:
             canvas.paste(start, (x, y))
-        canvas.paste(finish, (64 * -delta_x + x, 64 * -delta_y + y))
-        yield canvas.resize((8, 8), Image.BOX)
-    # Ensure the final frame is the finish image (without resizing blur)
-    yield finish_small
+        canvas.paste(finish, (canvas_size[0] * -delta_x + x,
+                              canvas_size[1] * -delta_y + y))
+        if f == 1:
+            # Ensure the final frame is the finish image (no resizing blur)
+            yield finish_small
+        else:
+            yield canvas.resize(orig_size, Image.BOX)
 
 
 def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
@@ -333,9 +346,11 @@ def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
         raise ValueError('invalid direction: %s' % direction)
     if base.size != top.size:
         raise ValueError("start and finish frames must be the same size")
-    base = base.resize((64, 64))
-    mask = np.empty((8, 8), np.uint8)
-    mask_img = Image.frombuffer('L', (8, 8), mask, 'raw', 'L', 0, 1)
+    orig_size = base.size
+    canvas_size = (orig_size[0] * 8, orig_size[1] * 8)
+    base = base.resize(canvas_size)
+    mask = np.empty(orig_size[::-1], np.uint8)
+    mask_img = Image.frombuffer('L', orig_size, mask, 'raw', 'L', 0, 1)
     for f in easing(int(duration * fps)):
         if direction == 'out':
             f = 1 - f
@@ -345,9 +360,11 @@ def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
         frame = frame.crop((
             int(center[0] * f * 8),
             int(center[1] * f * 8),
-            int(64 - f * 8 * (8 - (center[0] + 1))),
-            int(64 - f * 8 * (8 - (center[1] + 1))),
+            int(canvas_size[0] - f * 8 * (orig_size[0] - (center[0] + 1))),
+            int(canvas_size[1] - f * 8 * (orig_size[1] - (center[1] + 1))),
         ))
-        yield frame.resize((8, 8), Image.BOX)
-    # Ensure the final frame is the finish image (without resizing blur)
-    yield final
+        if f == 1:
+            # Ensure the final frame is the finish image (no resizing blur)
+            yield final
+        else:
+            yield frame.resize(orig_size, Image.BOX)
