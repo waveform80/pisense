@@ -283,30 +283,35 @@ def test_slide_bad():
         list(slide_to(start, finish.crop((0, 0, 2, 2))))
 
 
-def test_zoom_to():
+def test_zoom_in():
     r = (255, 0, 0)
     g = (0, 255, 0)
     start = Image.new('RGB', (5, 5), r)
-    middle1 = Image.new('RGB', (5, 5))
-    middle1.putdata([
-        r, r, r, r, r,
-        r, r, r, r, r,
-        r, r, g, r, r,
-        r, r, r, r, r,
-        r, r, r, r, r,
-    ])
-    middle2 = Image.new('RGB', (5, 5))
-    middle2.putdata([
-        r, r, r, r, r,
-        r, g, g, g, r,
-        r, g, g, g, r,
-        r, g, g, g, r,
-        r, r, r, r, r,
-    ])
     finish = Image.new('RGB', (5, 5), g)
     frames = list(zoom_to(start, finish, center=(2, 2), duration=4, fps=1))
     assert len(frames) == 4
     compare_images(start, frames[0])
-    compare_images(middle2, frames[2])
-    compare_images(middle1, frames[1])
+    # No good test for the middle frames
     compare_images(finish, frames[3])
+
+
+def test_zoom_out():
+    r = (255, 0, 0)
+    g = (0, 255, 0)
+    start = Image.new('RGB', (5, 5), r)
+    finish = Image.new('RGB', (5, 5), g)
+    frames = list(zoom_to(start, finish, center=(2, 2), direction='out',
+                          duration=4, fps=1))
+    assert len(frames) == 4
+    compare_images(start, frames[0])
+    # No good test for the middle frames
+    compare_images(finish, frames[3])
+
+
+def test_zoom_bad():
+    start = Image.new('RGB', (5, 5))
+    finish = Image.new('RGB', (5, 5))
+    with pytest.raises(ValueError):
+        list(zoom_to(start, finish, direction='foo'))
+    with pytest.raises(ValueError):
+        list(zoom_to(start, finish.crop((0, 0, 2, 2))))

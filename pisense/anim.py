@@ -287,8 +287,8 @@ def slide_to(start, finish, direction='left', cover=False, duration=1, fps=15,
     finish_small = buf_to_image(finish)
     if start.size != finish_small.size:
         raise ValueError("start and finish frames must be the same size")
-    orig_size = start.size
-    canvas_size = (orig_size[0] * 8, orig_size[1] * 8)
+    size = start.size
+    canvas_size = (size[0] * 4, size[1] * 4)
     start = start.resize(canvas_size)
     finish = finish_small.resize(canvas_size)
     if not cover:
@@ -306,7 +306,7 @@ def slide_to(start, finish, direction='left', cover=False, duration=1, fps=15,
             # Ensure the final frame is the finish image (no resizing blur)
             yield finish_small
         else:
-            yield canvas.resize(orig_size, Image.BOX)
+            yield canvas.resize(size, Image.BOX)
 
 
 def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
@@ -344,27 +344,27 @@ def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
         top = buf_to_image(start).copy()
     else:
         raise ValueError('invalid direction: %s' % direction)
-    if base.size != top.size:
+    size = base.size
+    if top.size != size:
         raise ValueError("start and finish frames must be the same size")
-    orig_size = base.size
-    canvas_size = (orig_size[0] * 8, orig_size[1] * 8)
+    canvas_size = (size[0] ** 2, size[1] ** 2)
     base = base.resize(canvas_size)
-    mask = np.empty(orig_size[::-1], np.uint8)
-    mask_img = Image.frombuffer('L', orig_size, mask, 'raw', 'L', 0, 1)
+    mask = np.empty(size[::-1], np.uint8)
+    mask_img = Image.frombuffer('L', size, mask, 'raw', 'L', 0, 1)
     for f in easing(int(duration * fps)):
         if direction == 'out':
             f = 1 - f
         mask[...] = int(255 * f)
         frame = base.copy()
-        frame.paste(top, (center[0] * 8, center[1] * 8), mask_img)
+        frame.paste(top, (center[0] * size[0], center[1] * size[1]), mask_img)
         frame = frame.crop((
-            int(center[0] * f * 8),
-            int(center[1] * f * 8),
-            int(canvas_size[0] - f * 8 * (orig_size[0] - (center[0] + 1))),
-            int(canvas_size[1] - f * 8 * (orig_size[1] - (center[1] + 1))),
+            int(center[0] * f * size[0]),
+            int(center[1] * f * size[1]),
+            int(canvas_size[0] - f * size[0] * (size[0] - (center[0] + 1))),
+            int(canvas_size[1] - f * size[1] * (size[1] - (center[1] + 1))),
         ))
-        if f == 1:
+        if (direction == 'in' and f == 1) or (direction == 'out' and f == 0):
             # Ensure the final frame is the finish image (no resizing blur)
             yield final
         else:
-            yield frame.resize(orig_size, Image.BOX)
+            yield frame.resize(size, Image.BOX)
