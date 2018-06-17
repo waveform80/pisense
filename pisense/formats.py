@@ -53,6 +53,33 @@ color = np.dtype([  # pylint: disable=invalid-name
 ])
 
 
+def check_rgb888(arr):
+    if not (
+            isinstance(arr, np.ndarray) and
+            arr.dtype == np.uint8 and
+            len(arr.shape) == 3
+            and arr.shape[2] == 3):
+        raise ValueError("arr must be a 3-dimensional numpy array of bytes")
+
+
+def check_rgb565(arr):
+    if not (
+            isinstance(arr, np.ndarray) and
+            arr.dtype == np.uint16 and
+            len(arr.shape) == 2):
+        raise ValueError("arr must be a 2-dimensional numpy array of "
+                         "16-bit ints")
+
+
+def check_rgb(arr):
+    if not (
+            isinstance(arr, np.ndarray) and
+            arr.dtype == color and
+            len(arr.shape) == 2):
+        raise ValueError("arr must be a 2-dimensional numpy array of "
+                         "16-bit ints")
+
+
 def image_to_rgb888(img):
     """
     Convert *img* (an :class:`~PIL.Image.Image`) to RGB888 format in an
@@ -97,12 +124,7 @@ def rgb888_to_image(arr):
     Convert an :class:`~numpy.ndarray` in RGB888 format (unsigned 8-bit
     values in 3 planes) to an :class:`~PIL.Image.Image`.
     """
-    if not (
-            isinstance(arr, np.ndarray) and
-            arr.dtype == np.uint8 and
-            len(arr.shape) == 3
-            and arr.shape[2] == 3):
-        raise ValueError("arr must be a 3-dimensional numpy array of bytes")
+    check_rgb888(arr)
     return Image.frombuffer('RGB', (arr.shape[1], arr.shape[0]),
                             arr, 'raw', 'RGB', 0, 1)
 
@@ -114,13 +136,13 @@ def rgb888_to_rgb565(arr, out=None):
     16-bit values with 5 bits for red and blue, and 6 bits for green laid out
     RRRRRGGGGGGBBBBB).
     """
+    check_rgb888(arr)
     if out is None:
         out = np.empty(arr.shape[:2], np.uint16)
-    elif not (
-            isinstance(out, np.ndarray) and
-            out.shape == arr.shape[:2] and
-            out.dtype == np.uint16):
-        raise ValueError("output array has wrong shape or dtype")
+    else:
+        check_rgb565(out)
+        if out.shape != arr.shape[:2]:
+            raise ValueError("output array has wrong shape")
     out[...] = (
         ((arr[..., 0] & 0xF8).astype(np.uint16) << 8) |
         ((arr[..., 1] & 0xFC).astype(np.uint16) << 3) |
@@ -136,13 +158,13 @@ def rgb565_to_rgb888(arr, out=None):
     RRRRRGGGGGGBBBBB) to an :class:`~numpy.ndarray` in RGB888 format (unsigned
     8-bit values in 3 planes).
     """
+    check_rgb565(arr)
     if out is None:
         out = np.empty(arr.shape + (3,), np.uint8)
-    elif not (
-            isinstance(out, np.ndarray) and
-            out.shape == arr.shape + (3,) and
-            out.dtype == np.uint8):
-        raise ValueError("output array has wrong shape or dtype")
+    else:
+        check_rgb888(out)
+        if out.shape != arr.shape + (3,):
+            raise ValueError("output array has wrong shape")
     out[..., 0] = ((arr & 0xF800) >> 8).astype(np.uint8)
     out[..., 1] = ((arr & 0x07E0) >> 3).astype(np.uint8)
     out[..., 2] = ((arr & 0x001F) << 3).astype(np.uint8)
@@ -168,13 +190,13 @@ def rgb_to_rgb888(arr, out=None):
     type with 3 values each between 0 and 1) to RGB888 format (unsigned 8-bit
     values in 3 planes).
     """
+    check_rgb(arr)
     if out is None:
         out = np.empty(arr.shape + (3,), np.uint8)
-    elif not (
-            isinstance(out, np.ndarray) and
-            out.shape == arr.shape + (3,) and
-            out.dtype == np.uint8):
-        raise ValueError("output array has wrong shape or dtype")
+    else:
+        check_rgb888(out)
+        if out.shape != arr.shape + (3,):
+            raise ValueError("output array has wrong shape")
     out[..., 0] = arr['r'] * 255
     out[..., 1] = arr['g'] * 255
     out[..., 2] = arr['b'] * 255
@@ -188,13 +210,13 @@ def rgb888_to_rgb(arr, out=None):
     each between 0 and 1).
     1.
     """
+    check_rgb888(arr)
     if out is None:
         out = np.empty(arr.shape[:2], color)
-    elif not (
-            isinstance(out, np.ndarray) and
-            out.shape == arr.shape[:2] and
-            out.dtype == color):
-        raise ValueError("output array has wrong shape or dtype")
+    else:
+        check_rgb(out)
+        if out.shape != arr.shape[:2]:
+            raise ValueError("output array has wrong shape")
     arr = arr.astype(np.float32) / 255
     out['r'] = arr[..., 0]
     out['g'] = arr[..., 1]
@@ -209,14 +231,13 @@ def rgb_to_rgb565(arr, out=None):
     values with 5 bits for red and blue, and 6 bits for green laid out
     RRRRRGGGGGGBBBBB).
     """
+    check_rgb(arr)
     if out is None:
         out = np.zeros(arr.shape, np.uint16)
-    elif not (
-            isinstance(out, np.ndarray) and
-            out.shape == arr.shape and
-            out.dtype == np.uint16):
-        raise ValueError("output array has wrong shape or dtype")
     else:
+        check_rgb565(out)
+        if out.shape != arr.shape:
+            raise ValueError("output array has wrong shape")
         out[...] = 0
     out |= (arr['r'] * 0x1F).astype(np.uint16) << 11
     out |= (arr['g'] * 0x3F).astype(np.uint16) << 5
@@ -231,13 +252,13 @@ def rgb565_to_rgb(arr, out=None):
     RRRRRGGGGGGBBBBB) to RGB format (structured  floating-point type with 3
     values each between 0 and 1).
     """
+    check_rgb565(arr)
     if out is None:
         out = np.empty(arr.shape, color)
-    elif not (
-            isinstance(out, np.ndarray) and
-            out.shape == arr.shape and
-            out.dtype == color):
-        raise ValueError("output array has wrong shape or dtype")
+    else:
+        check_rgb(out)
+        if out.shape != arr.shape:
+            raise ValueError("output array has wrong shape")
     out['r'] = ((arr & 0xF800) / 0xF800).astype(np.float32)
     out['g'] = ((arr & 0x07E0) / 0x07E0).astype(np.float32)
     out['b'] = ((arr & 0x001F) / 0x001F).astype(np.float32)
