@@ -53,6 +53,13 @@ def img_bool(request):
 
 
 @pytest.fixture()
+def arr_black(request):
+    arr = np.empty((8, 8), dtype=np.uint8)
+    arr[...] = 0
+    return arr
+
+
+@pytest.fixture()
 def arr_rgb888(request):
     arr = np.empty((8, 8, 3), dtype=np.uint8)
     arr[..., 0] = 255
@@ -73,6 +80,15 @@ def arr_rgb(request):
     arr = np.empty((8, 8), dtype=color)
     arr[...] = Color('red')
     return arr
+
+
+def compare_images(a, b):
+    assert a.size == b.size
+    assert a.mode == b.mode
+    for i, (ai, bi) in enumerate(zip(a.getdata(), b.getdata())):
+        if ai != bi:
+            assert False, 'Pixels at (%d, %d) differ: %r != %r' % (
+                i % a.size[0], i // a.size[0], ai, bi)
 
 
 def test_image_to_rgb888(arr_rgb888, img_rgb, img_bool):
@@ -165,3 +181,36 @@ def test_rgb888_to_image_roundtrip(arr_rgb888, arr_rgb):
     assert (image_to_rgb888(rgb888_to_image(arr_rgb888)) == arr_rgb888).all()
     with pytest.raises(ValueError):
         rgb888_to_image(arr_rgb)
+
+
+def test_buf_to_rgb888(img_rgb, arr_rgb888, arr_rgb565, arr_rgb, arr_black):
+    assert (buf_to_rgb888(img_rgb) == arr_rgb888).all()
+    assert (buf_to_rgb888(arr_rgb888) == arr_rgb888).all()
+    assert (buf_to_rgb888(arr_rgb) == arr_rgb888).all()
+    arr = arr_rgb888.copy()
+    arr[...] = 0
+    assert (buf_to_rgb888(arr_black) == arr).all()
+    assert (buf_to_rgb888(b'\xFF\x00\x00' * 64) == arr_rgb888).all()
+    with pytest.raises(ValueError):
+        buf_to_rgb888(arr_rgb888.astype(np.uint16))
+    with pytest.raises(ValueError):
+        buf_to_rgb888(arr_rgb565)
+    with pytest.raises(ValueError):
+        buf_to_rgb888(b'\xFF\x00\x00' * 32)
+    with pytest.raises(TypeError):
+        buf_to_rgb888([0] * 192)
+
+
+def test_buf_to_image(img_rgb, arr_rgb888):
+    compare_images(buf_to_image(img_rgb), img_rgb)
+    compare_images(buf_to_image(img_rgb.convert('P')), img_rgb)
+    compare_images(buf_to_image(arr_rgb888), img_rgb)
+
+
+def test_buf_to_rgb(img_rgb, arr_rgb):
+    assert (buf_to_rgb(arr_rgb) == arr_rgb).all()
+    assert (buf_to_rgb(img_rgb) == arr_rgb).all()
+
+
+def test_iter_to_rgb(arr_rgb):
+    assert (iter_to_rgb([Color('red')] * 64) == arr_rgb).all()
