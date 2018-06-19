@@ -183,7 +183,7 @@ class ScreenArray(np.ndarray):
     def _term_supports_color():
         try:
             stdout_fd = sys.stdout.fileno()
-        except IOError:
+        except (AttributeError, IOError) as exc:
             return False
         else:
             is_a_tty = os.isatty(stdout_fd)
@@ -195,7 +195,7 @@ class ScreenArray(np.ndarray):
         "Returns the size (cols, rows) of the console"
         try:
             buf = fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, '12345678')
-            row, col = struct.unpack(b'hhhh', buf)[0:2]
+            row, col = struct.unpack(native_str('hhhh'), buf)[0:2]
             return (col, row)
         except IOError:
             # Don't try and get clever with ctermid; this can work but gives
@@ -215,14 +215,15 @@ class ScreenArray(np.ndarray):
         width = None
         overflow = '\u00BB'  # »
         for section in format_spec.split(':'):
-            if not section.strip():
+            section = section.lstrip()
+            if not section.rstrip():
                 pass
             elif section.startswith('e'):
                 elements = section[1:]
             elif section.startswith('c'):
-                colors = section[1:].lower()
+                colors = section[1:].strip().lower()
             elif section.startswith('w'):
-                width = int(section[1:])
+                width = int(section[1:].strip())
             elif section.startswith('o'):
                 overflow = section[1:]
             else:

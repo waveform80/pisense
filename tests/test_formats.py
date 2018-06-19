@@ -34,7 +34,6 @@ from __future__ import (
     division,
 )
 
-import mock
 import pytest
 import numpy as np
 from PIL import Image
