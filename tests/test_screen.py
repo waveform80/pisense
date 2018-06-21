@@ -40,6 +40,9 @@ str = type('')
 import io
 import os
 import mock
+import mmap
+import glob
+import errno
 import struct
 import pytest
 import numpy as np
@@ -63,6 +66,38 @@ def checker_array(request):
         _, _, _, _, g, g, g, g,
     ])
     return arr
+
+
+@pytest.fixture()
+def screen_device(request, tmpdir, _open=io.open, _glob=glob.glob):
+    fbfile = io.open(str(tmpdir.join('fb')), 'wb+', buffering=0)
+    fbfile.write(b'\x00' * 128)
+    fbfile.flush()
+    fbfile.seek(0)
+    fbmem = mmap.mmap(fbfile.fileno(), 128)
+    def glob_patch(pattern):
+        if pattern == '/sys/class/graphics/fb*':
+            return ['/sys/class/graphics/fb%d' % i for i in range(2)]
+        else:
+            return _glob(pattern)
+    def open_patch(filename, mode, *args, **kwargs):
+        if filename == '/sys/class/graphics/fb0/name':
+            return io.StringIO(SenseScreen.SENSE_HAT_FB_NAME)
+        elif filename == '/dev/fb0':
+            return _open(str(tmpdir.join('fb')), mode, *args, **kwargs)
+        else:
+            return _open(filename, mode, *args, **kwargs)
+    glob_mock = mock.patch('glob.glob', side_effect=glob_patch)
+    open_mock = mock.patch('io.open', side_effect=open_patch)
+    def fin():
+        fbmem.close()
+        fbfile.close()
+        glob_mock.stop()
+        open_mock.stop()
+    request.addfinalizer(fin)
+    glob_mock.start()
+    open_mock.start()
+    return np.frombuffer(fbmem, dtype=np.uint16).reshape((8, 8))
 
 
 def test_array_constructor():
@@ -196,5 +231,102 @@ def test_format_detect(checker_array):
             assert '{0:e##:o>}'.format(checker_array) == result
 
 
-def test_array_show(tmpdir, checker_array):
-    pass
+def test_array_show(checker_array):
+    with mock.patch('sys.stdout', io.StringIO()) as stdout:
+        checker_array.show('#', '0', 80, '>')
+        assert stdout.getvalue() == (
+                '####    \n'
+                '####    \n'
+                '####    \n'
+                '####    \n'
+                '        \n'
+                '        \n'
+                '        \n'
+                '        \n')
+
+
+def test_screen_init(screen_device):
+    # Ensure initialization opens the correct device (our mocked screen device)
+    # and that it doesn't alter the content of the device
+    screen_device[...] = 0xFFFF
+    screen = SenseScreen()
+    try:
+        expected = np.array([Color('white')] * 64, dtype=color).reshape((8, 8))
+        assert (screen.array == expected).all()
+    finally:
+        screen.close()
+    screen_device[...] = 0x0000
+    screen = SenseScreen()
+    try:
+        expected = np.array([Color('black')] * 64, dtype=color).reshape((8, 8))
+        assert (screen.array == expected).all()
+    finally:
+        screen.close()
+
+
+def test_screen_not_found():
+    _glob = glob.glob
+    _open = io.open
+    buffers = ['/sys/class/graphics/fb%d' % i for i in range(2)]
+    names = {buf + '/name': 'foo' for buf in buffers}
+    with mock.patch('glob.glob') as glob_mock:
+        glob_mock.side_effect = lambda pattern: (
+            buffers if pattern == '/sys/class/graphics/fb*' else _glob(pattern)
+        )
+        with mock.patch('io.open') as open_mock:
+            open_mock.side_effect = lambda filename, mode, *args, **kwargs: (
+                io.StringIO(names[filename]) if filename in names else
+                _open(filename, mode, *args, **kwargs)
+            )
+            with pytest.raises(RuntimeError):
+                SenseScreen()
+
+
+def test_screen_init_fail():
+    _glob = glob.glob
+    _open = io.open
+    buffers = ['/sys/class/graphics/fb%d' % i for i in range(2)]
+    names = {
+        buf + '/name': IOError(
+            errno.EACCES if '1' in buf else errno.ENOENT, 'Error'
+        )
+        for buf in buffers
+    }
+    with mock.patch('glob.glob') as glob_mock:
+        glob_mock.side_effect = lambda pattern: (
+            buffers if pattern == '/sys/class/graphics/fb*' else _glob(pattern)
+        )
+        with mock.patch('io.open') as open_mock:
+            def open_patch(filename, mode, *args, **kwargs):
+                if filename in names:
+                    raise names[filename]
+                else:
+                    return _open(filename, mode, *args, **kwargs)
+            open_mock.side_effect = open_patch
+            with pytest.raises(IOError):
+                SenseScreen()
+
+
+def test_screen_close_idempotent(screen_device):
+    screen = SenseScreen()
+    screen.close()
+    with pytest.raises(AttributeError):
+        screen.array
+    screen.close()
+
+
+def test_screen_context_handler(screen_device):
+    with SenseScreen() as screen:
+        pass
+    with pytest.raises(AttributeError):
+        screen.array
+
+
+def test_screen_raw(screen_device):
+    screen_device[...] = 0xFFFF
+    with SenseScreen() as screen:
+        expected = np.array([0xFFFF] * 64, np.uint16).reshape((8, 8))
+        assert (screen.raw == expected).all()
+        expected = np.array([0x0000] * 64, np.uint16).reshape((8, 8))
+        screen.raw = expected
+        assert (screen_device == expected).all()

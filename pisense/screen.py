@@ -170,7 +170,7 @@ class ScreenArray(np.ndarray):
                 orig = orig.base
             self._screen.array = orig
 
-    def __setslice__(self, i, j, sequence):
+    def __setslice__(self, i, j, sequence): # pragma: no cover
         # pylint: disable=protected-access
         super(ScreenArray, self).__setslice__(i, j, sequence)
         if self._screen:
@@ -331,7 +331,7 @@ class SenseScreen(object):
     GAMMA_USER = 2
 
     def __init__(self, fps=15, easing=linear):
-        self._fb_file = io.open(self._fb_device(), 'wb+')
+        self._fb_file = io.open(self._fb_device(), 'rb+', buffering=0)
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
         self._array = ScreenArray()
