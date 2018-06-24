@@ -186,9 +186,9 @@ def rgb565_to_image(arr):
 
 def rgb_to_rgb888(arr, out=None):
     """
-    Convert a numpy :class:`ndarray` in RGB format (structured floating-point
-    type with 3 values each between 0 and 1) to RGB888 format (unsigned 8-bit
-    values in 3 planes).
+    Convert a numpy :class:`~numpy.ndarray` in RGB format (structured
+    floating-point type with 3 values each between 0 and 1) to RGB888 format
+    (unsigned 8-bit values in 3 planes).
     """
     check_rgb(arr)
     if out is None:
@@ -205,9 +205,9 @@ def rgb_to_rgb888(arr, out=None):
 
 def rgb888_to_rgb(arr, out=None):
     """
-    Convert a numpy :class:`ndarray` in RGB888 format (unsigned 8-bit values
-    in 3 planes) to RGB format (structured floating-point type with 3 values,
-    each between 0 and 1).
+    Convert a numpy :class:`~numpy.ndarray` in RGB888 format (unsigned 8-bit
+    values in 3 planes) to RGB format (structured floating-point type with 3
+    values, each between 0 and 1).
     1.
     """
     check_rgb888(arr)
@@ -226,10 +226,10 @@ def rgb888_to_rgb(arr, out=None):
 
 def rgb_to_rgb565(arr, out=None):
     """
-    Convert a numpy :class:`ndarray` in RGB format (structured floating-point
-    type with 3 values each between 0 and 1) to RGB565 format (unsigned 16-bit
-    values with 5 bits for red and blue, and 6 bits for green laid out
-    RRRRRGGGGGGBBBBB).
+    Convert a numpy :class:`~numpy.ndarray` in RGB format (structured
+    floating-point type with 3 values each between 0 and 1) to RGB565 format
+    (unsigned 16-bit values with 5 bits for red and blue, and 6 bits for green
+    laid out RRRRRGGGGGGBBBBB).
     """
     check_rgb(arr)
     if out is None:
@@ -247,8 +247,8 @@ def rgb_to_rgb565(arr, out=None):
 
 def rgb565_to_rgb(arr, out=None):
     """
-    Convert a numpy :class:`ndarray` in RGB565 format (unsigned 16-bit values
-    with 5 bits for red and blue, and 6 bits for green laid out
+    Convert a numpy :class:`~numpy.ndarray` in RGB565 format (unsigned 16-bit
+    values with 5 bits for red and blue, and 6 bits for green laid out
     RRRRRGGGGGGBBBBB) to RGB format (structured  floating-point type with 3
     values each between 0 and 1).
     """

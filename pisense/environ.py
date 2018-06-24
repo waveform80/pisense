@@ -61,7 +61,7 @@ class EnvironReadings(namedtuple('EnvironReadings', ('pressure', 'humidity', 'te
 
 def temp_pressure(p_temp, h_temp):
     """
-    Use this function as :attr:`~SenseEnviron.temperature_source` if you want
+    Use this function as :attr:`~SenseEnviron.temp_source` if you want
     to read temperature from the pressure sensor only. This is the default.
     """
     # pylint: disable=unused-argument
@@ -70,7 +70,7 @@ def temp_pressure(p_temp, h_temp):
 
 def temp_humidity(p_temp, h_temp):
     """
-    Use this function as :attr:`~SenseEnviron.temperature_source` if you want
+    Use this function as :attr:`~SenseEnviron.temp_source` if you want
     to read temperature from the humidity sensor only.
     """
     # pylint: disable=unused-argument
@@ -79,7 +79,7 @@ def temp_humidity(p_temp, h_temp):
 
 def temp_average(p_temp, h_temp):
     """
-    Use this function as :attr:`~SenseEnviron.temperature_source` if you wish
+    Use this function as :attr:`~SenseEnviron.temp_source` if you wish
     to read the average of both the pressure and humidity sensor's
     temperatures.
     """
@@ -93,7 +93,7 @@ def temp_average(p_temp, h_temp):
 
 def temp_both(p_temp, h_temp):
     """
-    Use this function as :attr:`~SenseEnviron.temperature_source` if you wish
+    Use this function as :attr:`~SenseEnviron.temp_source` if you wish
     to return both the pressure and humidity sensor's temperature readings as a
     tuple from the :attr:`~SenseEnviron.temperature` attribute.
     """

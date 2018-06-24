@@ -94,7 +94,7 @@ class SenseHAT(object):
     .. warning::
 
         Your script should not attempt to create more than one instance of this
-        class (given it represents a single piece of hardward). If you attempt
+        class (given it represents a single piece of hardware). If you attempt
         to do so a :exc:`SenseHATReinit` warning will be raised and the
         existing instance will be returned.
     """

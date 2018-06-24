@@ -11,7 +11,7 @@ Table of Contents
     quickstart
     demos
     monitor
-    game
+    maze
     faq
     development
     api

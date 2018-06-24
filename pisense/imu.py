@@ -270,7 +270,7 @@ class SenseIMU(object):
             The orientation of the board is only calculated when the sensors
             are read. The drift of certain sensors (the gyroscope in
             particular) mean that reading the orientation more frequently can
-            result in more accuracy.
+            result in greater accuracy.
 
         .. _radians: https://en.wikipedia.org/wiki/Radian
         .. _roll, pitch, and yaw: https://en.wikipedia.org/wiki/Aircraft_principal_axes

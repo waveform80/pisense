@@ -417,7 +417,7 @@ class SenseScreen(object):
         values on the screen.
 
         Internally, the Sense HAT's framebuffer uses 5-bits (values 0 to 31) to
-        represent each color. After a color's `Least significant bits` have
+        represent each color. After a color's `Least significant bits`_ have
         been stripped to reduce it to 5-bits, the resulting value is then used
         as an index into this list. The value obtained from this lookup will be
         the final value used when lighting the corresponding LED.
@@ -577,8 +577,8 @@ class SenseScreen(object):
         The image returned is a copy of the display's state. Drawing on the
         image will *not* update the display. Instead, it is recommended that
         you perform whatever drawing you wish (e.g. with
-        :class:`~PIL.ImageDraw.ImageDraw`), then call :meth:`draw` with the
-        image to update the display.
+        :mod:`~PIL.ImageDraw`), then call :meth:`draw` with the image to update
+        the display.
         """
         return rgb565_to_image(self._undo_transforms(self.raw))
 

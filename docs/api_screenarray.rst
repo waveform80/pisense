@@ -124,7 +124,7 @@ display later.
 
     Print a preview of the screen to the console.
 
-    The *element* parameter specifics the string used to represent each
+    The *element* parameter specifies the string used to represent each
     element of the display. This defaults to "██" (two Unicode full block
     drawing characters) which is usually sufficient to provide a fairly
     accurate representation of the screen.
@@ -150,7 +150,7 @@ display later.
     |       | resort to this setting.                               |
     +-------+-------------------------------------------------------+
     | 0     | Don't use ANSI color codes. Instead, any pixel values |
-    |       | with a brightness >33% (an arbitrary cut-off) will be |
+    |       | with a brightness >25% (an arbitrary cut-off) will be |
     |       | displayed, while darker pixels will be rendered as    |
     |       | spaces. This is the default if stdout is *not* a TTY. |
     +-------+-------------------------------------------------------+
@@ -191,7 +191,7 @@ for screen arrays consists of colon-separated sections (in any order):
   the output (equivalent to the *colors* parameter). If unspecified, full
   true-color ANSI codes will be used if the terminal is detected to be a TTY.
   Otherwise, no ANSI codes will be used and elements will only be rendered if
-  their lightness exceeds 1/3 (an arbitrary cut-off which seems to work
+  their lightness exceeds 1/4 (an arbitrary cut-off which seems to work
   tolerably well in practice). See the :meth:`~ScreenArray.show` method for
   more information on valid values for this parameter.
 
@@ -256,10 +256,6 @@ A more formal description of the format string specification for
     <colors>      ::= "c" ("0" | "8" | "256" | "16m")
     <width>       ::= "w" <digit>+
     <digit>       ::= "0"..."9"
-
-A method is also provided for convenient command line previewing which accepts
-these options as straight forward parameters. This is generally more convenient
-for command line usage:
 
 
 Format conversions
