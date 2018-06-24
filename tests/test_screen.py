@@ -133,28 +133,28 @@ def test_array_format_spec(checker_array):
         '####    \n'
         '####    \n'
         '####    \n'
-        '        \n'
-        '        \n'
-        '        \n'
-        '        ')
+        '    ####\n'
+        '    ####\n'
+        '    ####\n'
+        '    ####')
     assert '{0:e##: c0: w12 : o>}'.format(checker_array) == (
         '########  >\n'
         '########  >\n'
         '########  >\n'
         '########  >\n'
-        '          >\n'
-        '          >\n'
-        '          >\n'
-        '          >')
+        '        ##>\n'
+        '        ##>\n'
+        '        ##>\n'
+        '        ##>')
     assert '{0: e##: c0 :w11:o>}'.format(checker_array) == (
         '########  >\n'
         '########  >\n'
         '########  >\n'
         '########  >\n'
-        '          >\n'
-        '          >\n'
-        '          >\n'
-        '          >')
+        '        ##>\n'
+        '        ##>\n'
+        '        ##>\n'
+        '        ##>')
     r = '\x1b[1;31m##\x1b[0m'
     g = '\x1b[32m##\x1b[0m'
     _ = '\x1b[30m##\x1b[0m'
@@ -178,10 +178,10 @@ def test_array_format_detect(checker_array):
         '########  >\n'
         '########  >\n'
         '########  >\n'
-        '          >\n'
-        '          >\n'
-        '          >\n'
-        '          >'
+        '        ##>\n'
+        '        ##>\n'
+        '        ##>\n'
+        '        ##>'
     )
     with mock.patch('sys.stdout') as stdout, \
             mock.patch('os.isatty') as isatty:
@@ -197,10 +197,10 @@ def test_array_format_detect(checker_array):
                 '####    \n'
                 '####    \n'
                 '####    \n'
-                '        \n'
-                '        \n'
-                '        \n'
-                '        ')
+                '    ####\n'
+                '    ####\n'
+                '    ####\n'
+                '    ####')
         with mock.patch('fcntl.ioctl') as ioctl:
             ioctl.side_effect = lambda fn, ctl, data: struct.pack(
                 native_str('hhhh'), 20, 12, 0, 0)
