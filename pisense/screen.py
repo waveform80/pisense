@@ -242,7 +242,7 @@ class ScreenArray(np.ndarray):
             space = ' ' * len(elements)
             return '\n'.join(
                 ''.join(
-                    elements if Color(*c).lightness >= 1/3 else space
+                    elements if Color(*c).lightness >= 1/4 else space
                     for c in row[:x_limit]
                 ) + overflow
                 for row in self

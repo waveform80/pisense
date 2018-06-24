@@ -106,22 +106,35 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
         >>> from pisense import *
         >>> img = draw_text('Hello!', font='Piboto-Light.ttf')
         >>> img.size
-        # TODO insert size
+        (20, 8)
         >>> arr = array(img)
         >>> arr.show()
-        # TODO insert preview
+         
+                ██          ██  ██
+        ██      ██          ██  ██          ██
+        ██      ██    ██  ████  ██    ██  ████
+        ██████████  ██████████  ██  ██    ████
+        ██      ██  ██      ██  ██  ██    ██
+        ██      ██    ████████  ██    ██████
 
     As can be seen, when rendered small most TrueType and OpenType fonts don't
-    look very good (although there are some exceptions) although they do look
-    "smoother" due to the anti-aliasing used. Here's the default font for
-    comparison:
+    look very good (although there are some exceptions), although they do look
+    "smoother" than shown above due to the anti-aliasing used. Here's the
+    default font for comparison:
 
         >>> img = draw_text('Hello!')
         >>> img.size
-        # TODO insert size
+        (28, 8)
         >>> arr = array(img)
         >>> arr.show()
-        # TODO insert preview
+         
+        ██      ██              ████    ████                ██
+        ██      ██                ██      ██                ██
+        ██      ██    ██████      ██      ██      ██████    ██
+        ██████████  ██      ██    ██      ██    ██      ██  ██
+        ██      ██  ██████████    ██      ██    ██      ██  ██
+        ██      ██  ██            ██      ██    ██      ██
+        ██      ██    ██████    ██████  ██████    ██████    ██
 
     The *foreground* and *background* parameters specify
     :class:`~colorzero.Color` instances for the text and background colors
