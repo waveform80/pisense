@@ -121,6 +121,7 @@ class SenseEnviron(object):
     :attr:`temperature_source` which, given the two temperature readings
     returns the reading you are interested in, or some combination there-of.
     """
+
     __slots__ = (
         '_settings',
         '_p_sensor',

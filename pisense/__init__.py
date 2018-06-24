@@ -109,20 +109,30 @@ class SenseHAT(object):
             self = SenseHAT.hat
         else:
             self = super(SenseHAT, cls).__new__(cls)
-            # Old-style kw-only args...
-            fps = kwargs.pop('fps', 15)
-            easing = kwargs.pop('easing', linear)
-            max_events = kwargs.pop('max_events', 100)
-            flush_input = kwargs.pop('flush_input', True)
-            if kwargs:
-                raise TypeError("unexpected keyword argument %r" %
-                                kwargs.popitem()[0])
-            # pylint: disable=protected-access
-            self._settings = SenseSettings(settings)
-            self._screen = SenseScreen(fps, easing)
-            self._stick = SenseStick(max_events, flush_input)
-            self._imu = SenseIMU(self._settings)
-            self._environ = SenseEnviron(self._settings)
+            self._settings = None
+            self._screen = None
+            self._stick = None
+            self._imu = None
+            self._environ = None
+            try:
+                SenseHAT.hat = self
+                # Old-style kw-only args...
+                fps = kwargs.pop('fps', 15)
+                easing = kwargs.pop('easing', linear)
+                max_events = kwargs.pop('max_events', 100)
+                flush_input = kwargs.pop('flush_input', True)
+                if kwargs:
+                    raise TypeError("unexpected keyword argument %r" %
+                                    kwargs.popitem()[0])
+                # pylint: disable=protected-access
+                self._settings = SenseSettings(settings)
+                self._screen = SenseScreen(fps, easing)
+                self._stick = SenseStick(max_events, flush_input)
+                self._imu = SenseIMU(self._settings)
+                self._environ = SenseEnviron(self._settings)
+            except:
+                self.close()
+                raise
         return self
 
     def close(self):
@@ -144,12 +154,21 @@ class SenseHAT(object):
         if self._screen is not None:
             self._screen.close()
             self._screen = None
+        SenseHAT.hat = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.close()
+
+    @property
+    def settings(self):
+        """
+        Returns a :class:`SenseSettings` object representing the Sense HAT's
+        configuration settings.
+        """
+        return self._settings
 
     @property
     def screen(self):

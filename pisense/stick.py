@@ -124,6 +124,23 @@ class SenseStick(object):
     events, and the aforementioned attributes.
     """
     # pylint: disable=too-many-instance-attributes
+
+    __slots__ = (
+        '_flush',
+        '_callbacks_lock',
+        '_callbacks_close',
+        '_callbacks',
+        '_callbacks_thread',
+        '_closing',
+        '_stream',
+        '_buffer',
+        '_read_thread',
+        '_pressed',
+        '_held',
+        '_rotation',
+        '_rot_map',
+    )
+
     SENSE_HAT_EVDEV_NAME = 'Raspberry Pi Sense HAT Joystick'
     EVENT_FORMAT = native_str('llHHI')
     EVENT_SIZE = struct.calcsize(EVENT_FORMAT)

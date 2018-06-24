@@ -224,3 +224,8 @@ def stick_device(request, _open=io.open, _glob=glob.glob):
     return os.fdopen(wpipe, 'wb', buffering=0)
 
 
+@pytest.fixture()
+def HAT(Settings, RTIMU, RTPressure, RTHumidity, stick_device, screen_array):
+    # This fixture is a convenience for the "full HAT" tests that just ensures
+    # all hardware is being emulated for the duration of the test
+    return

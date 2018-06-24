@@ -121,6 +121,7 @@ class SenseIMU(object):
     on the Sense HAT. Users can either instantiate the class themselves, or can
     access an instance from :attr:`SenseHAT.imu`.
     """
+
     __slots__ = (
         '_settings',
         '_imu',

@@ -65,6 +65,8 @@ class SenseSettings(object):
     """
     # pylint: disable=too-few-public-methods
 
+    __slots__ = ('_settings',)
+
     def __init__(self, settings_file=None):
         if settings_file is None:
             settings_file = '/etc/RTIMULib.ini'

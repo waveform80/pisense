@@ -41,6 +41,7 @@ from __future__ import (
     division,
 )
 
+import warnings
 
 import pytest
 
@@ -55,5 +56,60 @@ except ImportError:
 # See conftest for custom fixture definitions
 
 
-def test_hat_init(Settings, RTIMU, RTPressure, RTHumidity, stick_device, screen_array):
-    pass
+def test_hat_init(HAT):
+    hat = SenseHAT()
+    try:
+        assert isinstance(hat.settings, SenseSettings)
+        assert isinstance(hat.screen, SenseScreen)
+        assert isinstance(hat.stick, SenseStick)
+        assert isinstance(hat.environ, SenseEnviron)
+        assert isinstance(hat.imu, SenseIMU)
+    finally:
+        hat.close()
+
+
+def test_hat_init_bad_args(HAT):
+    with pytest.raises(TypeError):
+        SenseHAT(foo=1)
+
+
+def test_hat_singleton(HAT):
+    with warnings.catch_warnings(record=True) as w:
+        hat = SenseHAT()
+        try:
+            hat2 = SenseHAT()
+            assert len(w) == 1
+            assert w[0].category == SenseHATReinit
+            assert hat is hat2
+        finally:
+            hat.close()
+
+
+def test_hat_close_idempotent(HAT):
+    hat = SenseHAT()
+    hat.close()
+    with pytest.raises(AttributeError):
+        hat.stick.read()
+    with pytest.raises(AttributeError):
+        hat.rotation
+    hat.close()
+
+
+def test_hat_context_handler(HAT):
+    with SenseHAT() as hat:
+        pass
+    with pytest.raises(AttributeError):
+        hat.stick.read()
+    with pytest.raises(AttributeError):
+        hat.rotation
+
+
+def test_hat_rotation(HAT):
+    with SenseHAT() as hat:
+        assert hat.rotation == 0
+        hat.rotation = 90
+        assert hat.screen.rotation == 90
+        assert hat.stick.rotation == 90
+        #assert hat.imu.rotation == 90
+        with pytest.raises(ValueError):
+            hat.rotation = 45
