@@ -123,6 +123,7 @@ class SenseIMU(object):
     """
 
     __slots__ = (
+        '_rotation',
         '_settings',
         '_imu',
         '_interval',
@@ -132,7 +133,6 @@ class SenseIMU(object):
     )
 
     def __init__(self, settings=None):
-        # TODO rotation
         if not isinstance(settings, SenseSettings):
             settings = SenseSettings(settings)
         self._settings = settings
@@ -150,6 +150,7 @@ class SenseIMU(object):
             IMUVector(None, None, None),
             IMUOrient(None, None, None)
         )
+        self._rotation = 0
         self._last_read = None
 
     def close(self):
@@ -204,12 +205,25 @@ class SenseIMU(object):
         if self._imu.IMURead():
             dat = self._imu.getIMUData()
             self._readings = IMUState(
-                IMUVector(*dat['compass']) if dat.get('compassValid', False) else None,
-                IMUVector(*dat['gyro']) if dat.get('gyroValid', False) else None,
-                IMUVector(*dat['accel']) if dat.get('accelValid', False) else None,
-                IMUOrient(*dat['fusionPose']) if dat.get('fusionPoseValid', False) else None,
+                IMUVector(*self._rotate(*dat['compass']))
+                    if dat.get('compassValid', False) else None,
+                IMUVector(*self._rotate(*dat['gyro']))
+                    if dat.get('gyroValid', False) else None,
+                IMUVector(*self._rotate(*dat['accel']))
+                    if dat.get('accelValid', False) else None,
+                # TODO what about rotation for fusion-pose?
+                IMUOrient(*dat['fusionPose'])
+                    if dat.get('fusionPoseValid', False) else None,
             )
             self._last_read = now
+
+    def _rotate(self, x, y, z):
+        return {
+            0: (x, y, z),
+            90: (-y, x, z),
+            180: (-x, -y, z),
+            270: (y, -x, z),
+        }[self._rotation]
 
     @property
     def name(self):
@@ -301,3 +315,34 @@ class SenseIMU(object):
         self._imu.setCompassEnable('compass' in self._sensors)
         self._imu.setGyroEnable('gyro' in self._sensors)
         self._imu.setAccelEnable('accel' in self._sensors)
+
+    @property
+    def rotation(self):
+        """
+        Specifies the rotation about the Z axis applied to IMU readings as a
+        multiple of 90 degrees. When rotation is 0 (the default), positive X
+        is toward the joystick, and positive Y is away from the GPIO pins:
+
+        .. image:: images/rotation_0.*
+
+        When rotation is 90, positive X is toward the GPIO pins, and positive
+        Y is toward the joystick:
+
+        .. image:: images/rotation_90.*
+
+        The other two rotations are trivial to derive from this.
+
+        .. note::
+
+            This property is updated by the unifying :attr:`SenseHAT.rotation`
+            attribute.
+        """
+        return self._rotation
+
+    @rotation.setter
+    def rotation(self, value):
+        # TODO If rotation is modified we should update the current
+        # self._readings
+        if value % 90:
+            raise ValueError('rotation must be a multiple of 90')
+        self._rotation = value % 360

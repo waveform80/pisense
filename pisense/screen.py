@@ -531,6 +531,11 @@ class SenseScreen(object):
         .. image:: images/rotation_90.*
 
         The other two rotations are trivial to derive from this.
+
+        .. note::
+
+            This property is updated by the unifying :attr:`SenseHAT.rotation`
+            attribute.
         """
         return self._rotation
 

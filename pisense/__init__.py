@@ -217,4 +217,4 @@ class SenseHAT(object):
     def rotation(self, value):
         self._screen.rotation = value
         self._stick.rotation = value
-        # TODO update IMU
+        self._imu.rotation = value
