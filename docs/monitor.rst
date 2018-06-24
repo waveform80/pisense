@@ -4,13 +4,13 @@ Project: Environment Monitor
 
 .. currentmodule:: pisense
 
-Here's a basic first project for the Sense HAT: make an environmental monitor
-that can display the temperature, humidity, and pressure in a variety of forms.
-We've already seen a demo thermometer in :ref:`thermometer`. First we'll
-construct variants of this for the humidity and pressure sensors. Then we'll
-combine all three into an application. Finally, we'll add interactivity using
-the joystick to select the required functionality, and recording the data to a
-database.
+Here's our first "full" project for the Sense HAT: make an environmental
+monitor that can display the temperature, humidity, and pressure in a variety
+of forms. We've already seen a demo thermometer in :ref:`thermometer`. First
+we'll construct variants of this for the humidity and pressure sensors. Then
+we'll combine all three into an application. Finally, we'll add interactivity
+using the joystick to select the required functionality, recording the data to
+a database, and a trivial web interface.
 
 
 Hygrometer
@@ -30,7 +30,7 @@ chart, but everything else should look fairly familiar:
 .. literalinclude:: examples/hygrometer.py
     :caption:
 
-The one other subtle adjustment is in the caption. We can't fit "100" on our
+The one other subtle change is in the caption. We can't fit "100" on our
 display; it's too wide (this wasn't a problem for the thermometer where we
 clamped the temperature range from 0°C to 50°C; if you guessed this was for
 simplicity, you were right!). Instead, whenever the humidity is >99% we display
@@ -80,7 +80,7 @@ Well, that was simple!
 The :func:`~itertools.cycle` and :func:`~itertools.chain` functions come from
 the standard library's fantastic :mod:`itertools` module which I urge anyone
 using iterators to check out. The :func:`reversed` function is a standard
-Python built-in function.
+built-in function in Python.
 
 How do we combine the offsets produced by ``bounce`` with the readings from the
 sensor? We simply use the built-in :func:`zip` function:
@@ -223,8 +223,6 @@ Run this alongside the monitor script, make sure your Pi is accessible on your
 local network and then visit http://your-pis-address-here:8000/ in a
 web-browser.
 
-.. attention:: TODO auto-start on boot
-
 .. note::
 
     We could have added this to the monitor script, but frankly there's no
@@ -234,5 +232,60 @@ web-browser.
     requests are far less likely to affect the operation of the Sense HAT
     interface.
 
+
+Auto-start
+==========
+
+This is the sort of application it would be nice to start automatically upon
+boot up. Thankfully, this is easy to arrange with a few `systemd`_ files.
+Create the following under :file:`/etc/systemd/system/monitor_app.service`:
+
+.. literalinclude:: examples/monitor_app.service
+
+.. warning::
+
+    You'll need to modify the path for ``ExecStart`` to point to the location
+    of your :file:`monitor_final.py` script.
+
+Then for the web-service (if you want it), create the following under
+:file:`/etc/systemd/system/monitor_web.service`:
+
+.. literalinclude:: examples/monitor_web.service
+
+Finally, inform systemd of the changes and tell it we want to start these new
+services on boot-up as follows:
+
+.. code-block:: console
+
+    $ sudo systemctl daemon-reload
+    $ sudo systemctl enable monitor_app
+    $ sudo systemctl enable monitor_web
+
+To start the services immediately:
+
+.. code-block:: console
+
+    $ sudo systemctl start monitor_app
+    $ sudo systemctl start monitor_web
+
+To stop the services immediately:
+
+.. code-block:: console
+
+    $ sudo systemctl stop monitor_app
+    $ sudo systemctl stop monitor_web
+
+If you want to disable these from starting at boot time you can simply run the
+following commands:
+
+.. code-block:: console
+
+    $ sudo systemctl disable monitor_app
+    $ sudo systemctl disable monitor_web
+
+Naturally, you could disable the web service but leave the main application
+running too.
+
 .. _round-robin database: https://en.wikipedia.org/wiki/RRDtool
 .. _rrdtool: https://oss.oetiker.ch/rrdtool/
+.. _systemd: https://www.raspberrypi.org/documentation/linux/usage/systemd.md

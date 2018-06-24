@@ -120,7 +120,7 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
     As can be seen, when rendered small most TrueType and OpenType fonts don't
     look very good (although there are some exceptions), although they do look
     "smoother" than shown above due to the anti-aliasing used. Here's the
-    default font for comparison:
+    default font for comparison::
 
         >>> img = draw_text('Hello!')
         >>> img.size

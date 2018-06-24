@@ -19,7 +19,9 @@ In this scheme, hue is essentially cyclic. This makes it quite easy to produce
 a scrolling rainbow display. We'll construct an 8x8 array in which the hue of a
 color depends on the sum of its X and Y coordinates divided by 14 (as the
 maximum sum is 7 + 7), which will give us a nice range of hues. You can try
-this easily from the command line::
+this easily from the command line:
+
+.. code-block:: pycon
 
     >>> from pisense import SenseHAT, array
     >>> from colorzero import Color
@@ -73,7 +75,8 @@ You can try this out from the command line like so::
 
     You may see several control characters like ``^[[C`` and ``^[[D`` appearing
     as you play with this. These are the raw characters that represent the
-    cursor keys; this output can be ignored.
+    cursor keys; this output can be ignored. Press the joystick in (generate
+    an "enter" event) when you want to terminate the loop.
 
 Now, we'll define another simple generator that transforms these into arrays
 for the display. Finally, we'll use that output to drive the display:
@@ -163,7 +166,7 @@ write a transform that produces a screen containing the temperature as both a
 number (in a small font), and a very basic chart which lights more elements as
 the temperature increases.
 
-We'll start with a function that takes a *reading*, limits the range of
+We'll start with a function that takes a *reading*, limits it to the range of
 temperatures we're interested in (0°C to 50°C), and distributes that over the
 range 0 <= n < 64 (representing all 64 elements of the HAT's display):
 
@@ -182,10 +185,10 @@ as we want the chart to start at the bottom and work its way up:
 
 Next, we call :func:`draw_text` which will return us a small
 :class:`~PIL.Image.Image` object containing the rendered text (we've added some
-padding at the bottom so the text is "top aligned"). We'll "add" that to the
-chart we've drawn (a simple method of rendering) and then clip the result to
-the range 0 to 1 (because where the text overlays the chart we'll probably
-exceed the bounds of the red channel):
+padding at the bottom so the text is "top aligned"). We'll convert that to an
+array, and "add" that to the chart we've drawn (a simple method of overlaying)
+and then clip the result to the range 0 to 1 (because where the text overlays
+the chart we'll probably exceed the bounds of the red channel):
 
 .. literalinclude:: examples/thermometer.py
     :lines: 15-19
@@ -200,17 +203,18 @@ humidity sensor (which is the sensor we're using to read temperature). If the
 ambient temperature is below about 24°C you should see the reading rise quite
 quickly. Take your finger off the sensor and it should fall back down again.
 
-Why, in this example, did we construct a transform that took a single reading?
-Why did we not pass the iterator to the transform? Quite simply it is because
-we could: the transformation works from a single reading. It doesn't have any
-need to know prior readings, or to keep any state between frames, so it's
-simplest to make it a straight-forward function. That said…
+Why, in this example, did we construct a function that took a single reading?
+Why did we not pass the `environ` iterator to the `thermometer` function? Quite
+simply because we didn't have to: making an array for the screen works from a
+single reading. It doesn't have any need to know prior readings, or to keep
+any state between frames, so it's simplest to make it a straight-forward
+function. That said…
 
 .. admonition:: Exercise
 
     Can you change the script to show whether the temperature is rising or
     falling? Hint: passing the iterator to the transform is one way to do this,
-    but for another way (without passing the iterator), look up ``pairwise`` in
-    :mod:`itertools`.
+    but for a neater way (without passing the iterator), look up ``pairwise``
+    in :mod:`itertools`.
 
 .. _colorzero: https://colorzero.readthedocs.io/

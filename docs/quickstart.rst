@@ -95,8 +95,8 @@ The Screen
     :align: center
 
 Let's try controlling the screen first of all. The screen's state is
-represented as a `numpy`_ :class:`~numpy.ndarray` of ``(red, green, blue)``
-values.  The structure of the values is compatible with
+represented as a two-dimensional :class:`~numpy.ndarray` of ``(red, green,
+blue)`` values.  The structure of the values is compatible with
 :class:`~colorzero.Color` class from the `colorzero`_ library which makes them
 quite easy to work with:
 
@@ -219,7 +219,14 @@ Python Imaging Library) you can obtain a representation of the screen with the
 Pillow's :mod:`~PIL.ImageDraw` module then copy the result back to the Sense
 HAT's screen with the :meth:`~SenseScreen.draw` method (the image returned
 doesn't automatically update the screen when modified, unlike the array
-representation).
+representation):
+
+.. code-block:: pycon
+
+    >>> flag_img = hat.screen.image()
+    >>> from PIL import Image, ImageFilter
+    >>> blur_img = flag_img.filter(ImageFilter.GaussianBlur(1))
+    >>> hat.screen.draw(blur_img)
 
 
 The Joystick
@@ -331,8 +338,8 @@ we'll see in later sections. For now, you can try this on the command line:
 
     You'll probably see several strange sequences appear on the terminal when
     playing with this (like ``^[[A``, ``^[[B``, etc). These are the raw control
-    codes for the cursor keys and can be ignored. Press :kbd:`Control-c` when
-    you want to terminate the loop.
+    codes for the cursor keys and can be ignored. Press :kbd:`Ctrl-c` when you
+    want to terminate the loop.
 
 
 Environmental Sensors
@@ -351,7 +358,7 @@ humidity, or temperature:
 
     >>> hat.environ.pressure
     1025.3486328125
-    >>> hat.environ.humidityy
+    >>> hat.environ.humidity
     51.75486755371094
     >>> hat.environ.temperature
     29.045833587646484
@@ -362,17 +369,17 @@ Finally, the temperature is returned in `celsius`_.
 
 Despite there being effectively two temperature sensors there's only a single
 ``temperature`` property. By default it returns the reading from the humidity
-sensor, but you configure this with the
-:attr:`~SenseEnvironment.temperature_source` attribute:
+sensor, but you change this with the :attr:`~SenseEnviron.temp_source`
+attribute:
 
 .. code-block:: pycon
 
-    >>> hat.environ.temperature_source
+    >>> hat.environ.temp_source
     <function temp_humidity at 0x7515b588>
-    >>> hat.environ.temperature_source = pisense.temp_pressure
+    >>> hat.environ.temp_source = pisense.temp_pressure
     >>> hat.environ.temperature
     29.149999618530273
-    >>> hat.environ.temperature_source = pisense.temp_humidity
+    >>> hat.environ.temp_source = pisense.temp_humidity
     >>> hat.environ.temperature
     25.24289321899414
 
@@ -406,6 +413,10 @@ iterator:
     EnvironReadings(pressure=1025.42, humidity=51.0693, temperature=27.2331)
     ^C
 
+.. note::
+
+    As above, press :kbd:`Ctrl-c` when you want to terminate the loop.
+
 A simple experiment you can run is to breathe near the humidity sensor and then
 query its value. You should see the value rise quite rapidly before it slowly
 falls back down as the vapour you exhaled evaporates from the surface of the
@@ -437,8 +448,9 @@ You can read values from the sensors independently:
 
 The accelerometer returns values in g (`standard gravities`_, equivalent to
 9.80665m/s²). Hence, with the Sense HAT lying flat on a table, the X and Y
-values of the accelerometer should be close to zero, while the Z values should
-be close to 1 (because gravity is pulling it straight down).
+values of the accelerometer should be close to zero, while the Z value should
+be close to 1 (because gravity is a constant acceleration force toward the
+center of the Earth … assuming that you're on Earth, that is).
 
 The gyroscope returns values in `radians per second`_. With the Sense HAT lying
 stationary all values should be close to zero. If you wish to test the
@@ -468,6 +480,10 @@ HAT:
     IMUVector(x=-0.00254116, y=-1.85271, z=0.115072)
     IMUVector(x=-0.0382768, y=-0.26965, z=-0.374536)
 
+.. note::
+
+    As above, press :kbd:`Ctrl-c` when you want to terminate the loop.
+
 Finally, the magnetometer returns values in µT (`micro-Teslas`_, where 1µT is
 equal to 10mG or `milli-Gauss`_). The Earth's magnetic field is incredibly
 weak, so if you wish to test the magnetometer it is easier to do so with a
@@ -484,7 +500,10 @@ yaw`_ of the HAT in `radians`_:
     >>> hat.imu.orient
     IMUOrient(roll=0.868906 (49.8°), pitch=1.2295 (70.4°), yaw=0.818843 (46.9°))
 
-Like all the other sensors on the HAT, the IMU can be treated as an iterator:
+Note that while the representation of the reading includes degree conversions
+for the sake of convenience, the reading returned by querying the properties is
+always in radians (you can convert to degrees with the built-in function
+:func:`math.degrees`).
 
 .. code-block:: pycon
 
@@ -500,6 +519,10 @@ Like all the other sensors on the HAT, the IMU can be treated as an iterator:
     IMUState(compass=IMUVector(x=-24.5605, y=-28.5779, z=1.99134), gyro=IMUVector(x=0.0379679, y=0.00247297, z=-0.0392915), accel=IMUVector(x=0.0421856, y=0.0500153, z=1.01597), orient=IMUOrient(roll=2.01459 (115.4°), pitch=-1.13169 (-64.8°), yaw=2.89324 (165.8°)))
     IMUState(compass=IMUVector(x=-24.5605, y=-28.5779, z=1.99134), gyro=IMUVector(x=0.0379679, y=0.00247297, z=-0.0392915), accel=IMUVector(x=0.0421856, y=0.0500153, z=1.01597), orient=IMUOrient(roll=2.01459 (115.4°), pitch=-1.13169 (-64.8°), yaw=2.89324 (165.8°)))
     IMUState(compass=IMUVector(x=-24.5605, y=-28.5779, z=1.99134), gyro=IMUVector(x=0.0379679, y=0.00247297, z=-0.0392915), accel=IMUVector(x=0.0421856, y=0.0500153, z=1.01597), orient=IMUOrient(roll=2.01459 (115.4°), pitch=-1.13169 (-64.8°), yaw=2.89324 (165.8°)))
+
+
+Further Reading
+===============
 
 This concludes the tour of the Raspberry Pi Sense HAT, and of the bare
 functionality of the pisense library. The next sections will introduce some

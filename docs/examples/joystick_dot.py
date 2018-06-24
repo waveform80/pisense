@@ -21,12 +21,12 @@ def arrays(moves):
     yield a  # initial position
     for dx, dy in moves:
         a[y, x] = Color('black')
-        x = min(7, max(0, x + dx))
-        y = min(7, max(0, y + dy))
+        x = max(0, min(7, x + dx))
+        y = max(0, min(7, y + dy))
         a[y, x] = Color('white')
         yield a
     a[y, x] = Color('black')
-    yield a  # exit with blank display
+    yield a  # end with a blank display
 
 with SenseHAT() as hat:
     for a in arrays(movements(hat.stick)):
