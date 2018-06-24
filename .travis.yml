@@ -1,15 +1,15 @@
 language: python
 python:
-    "3.6"
-    "3.5"
-    "3.4"
-    "3.3"
-    "2.7"
-    "pypy"
-    "pypy3"
+    - "3.6"
+    - "3.5"
+    - "3.4"
+    - "3.3"
+    - "2.7"
+    - "pypy"
+    - "pypy3"
 install: "pip install -e .[test]"
 script: make test
 before_install:
-    pip install codecov
+    - pip install codecov
 after_success:
-    codecov
+    - codecov
