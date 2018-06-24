@@ -31,17 +31,20 @@ def moves(imu):
 
 
 def display(screen, states):
-    for anim, data in states:
-        if anim == 'fade':
-            screen.fade_to(data)
-        elif anim == 'zoom':
-            screen.zoom_to(data)
-        elif anim == 'show':
-            screen.array = data
-        elif anim == 'scroll':
-            screen.scroll_text(data, background=Color('red'))
-        else:
-            assert False
+    try:
+        for anim, data in states:
+            if anim == 'fade':
+                screen.fade_to(data)
+            elif anim == 'zoom':
+                screen.zoom_to(data)
+            elif anim == 'show':
+                screen.array = data
+            elif anim == 'scroll':
+                screen.scroll_text(data, background=Color('red'))
+            else:
+                assert False
+    finally:
+        screen.fade_to(ps.array(Color('black')))
 
 
 def game(maze, colors, moves):

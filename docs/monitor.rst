@@ -241,22 +241,36 @@ boot up. Thankfully, this is easy to arrange with a few `systemd`_ files.
 Create the following under :file:`/etc/systemd/system/monitor_app.service`:
 
 .. literalinclude:: examples/monitor_app.service
+    :caption:
 
-.. warning::
+.. note::
 
     You'll need to modify the path for ``ExecStart`` to point to the location
-    of your :file:`monitor_final.py` script.
+    of your :file:`monitor_final.py` script. You may want to modify
+    ``WorkingDirectory`` too if you want the database to be stored in another
+    location.
 
 Then for the web-service (if you want it), create the following under
 :file:`/etc/systemd/system/monitor_web.service`:
 
 .. literalinclude:: examples/monitor_web.service
+    :caption:
+
+.. note::
+
+    Remember to modify ``ExecStart`` (and optionally ``WorkingDirectory``) as
+    above.
 
 Finally, inform systemd of the changes and tell it we want to start these new
-services on boot-up as follows:
+services on boot-up as follows. For example, the following commands might be
+used to achieve all of this:
 
 .. code-block:: console
 
+    $ cd /home/pi
+    $ nano monitor_app.service
+    $ nano monitor_web.service
+    $ sudo cp monitor_*.service /etc/systemd/system/
     $ sudo systemctl daemon-reload
     $ sudo systemctl enable monitor_app
     $ sudo systemctl enable monitor_web

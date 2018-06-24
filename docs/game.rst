@@ -65,9 +65,9 @@ delta values. Let's copy that in next:
 So far, this may look rather strange! What does it mean to call a generator
 function like "moves" without a for loop? Quite simply: this creates an
 instance of the generator but doesn't start evaluating it until it's used in a
-loop. In other words nothing in the generator function will run *yet*. The same
-goes for the "game" function which will also be a generator, looping over the
-movements yielded from "moves" and yielding screens for "display" to deal
+loop. In other words nothing in the generator function will run … *yet*. The
+same goes for the "game" function which will also be a generator, looping over
+the movements yielded from "moves" and yielding screens for "display" to deal
 with.
 
 Speaking of "display", that should be easy enough to deal with. It'll be a
@@ -176,33 +176,33 @@ to arrange:
   tells it to stop (which it does by sending the SIGTERM signal; we can handle
   this with some simple routines from the built-in :mod:`signal` module).
 
-* Just to keep things looking good, we'll add a ``try..finally`` block to
-  ``display`` to ensure the screen always fades to black when the loop is
-  terminated.
-
 Here's the final listing with the updated lines highlighted:
 
 .. literalinclude:: examples/maze_final.py
     :caption:
-    :emphasize-lines:
+    :emphasize-lines: 6-10,14,24
 
 Now to launch the game on boot, we'll create a systemd service to execute it
 under the unprivileged "pi" user. Copy the following into
-:file:`/etc/systemd/system/maze.service` ensuring you update the location of
-the :file:`maze_final.py` script to wherever you've created it:
+:file:`/etc/systemd/system/maze.service`:
 
-.. literalincluded:: examples/maze.service
+.. literalinclude:: examples/maze.service
     :caption:
+
+.. note::
+
+    You'll need to modify the path for ``ExecStart`` to point to the location
+    of your :file:`maze_final.py` script.
 
 Finally, run the following command line to enable the service on boot:
 
-.. console:: console
+.. code-block:: console
 
     $ sudo systemctl enable maze
 
 If you ever wish to stop the script running on boot:
 
-.. console:: console
+.. code-block:: console
 
     $ sudo systemctl disable maze
 
