@@ -36,6 +36,7 @@ from __future__ import (
 
 import io
 import os
+import sys
 import glob
 import mmap
 import fcntl
@@ -44,12 +45,16 @@ import numpy as np
 import pytest
 from colorzero import Color
 
-from pisense import *
-
+# Terrible hack to ensure we can test on non-Pi platforms (must be done before
+# importing pisense)
 try:
     from unittest import mock
 except ImportError:
     import mock
+sys.modules['RTIMU'] = mock.Mock()
+
+from pisense import *
+
 
 
 @pytest.fixture()
@@ -136,6 +141,10 @@ def RTHumidity(request, Settings):
     result.return_value.humidityRead.return_value = (True, 50.0, True, 22.0)
     return result
 
+
+# TODO screen_file and stick_device conflict in both patching io.open and
+# glob.glob. This makes testing impossible on a non-Pi platform currently;
+# perhaps combine the open/glob patches into a separate fixture?
 
 @pytest.fixture()
 def screen_file(request, tmpdir, _open=io.open, _glob=glob.glob):
