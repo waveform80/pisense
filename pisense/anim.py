@@ -43,9 +43,9 @@ import os
 import atexit
 
 import numpy as np
-from pkg_resources import resource_filename, cleanup_resources
 from PIL import Image, ImageDraw, ImageFont
 from colorzero import Color
+from pkg_resources import resource_filename, cleanup_resources
 
 from .easings import linear
 from .formats import buf_to_image
@@ -211,7 +211,7 @@ def scroll_text(text, font='default.pil', size=8, foreground=Color('white'),
         raise ValueError('invalid direction')
     for frame in (
             img.crop((x, 0, x + 8, img.size[1]))
-            for x_step in x_steps
+            for x_step in x_steps[:-1] # exclude last frame (see below)
             for x in (int(x_step * x_inc),)
         ):
         yield frame

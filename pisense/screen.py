@@ -257,13 +257,15 @@ class ScreenArray(np.ndarray):
                 for row in self
             )
 
-    def show(self, element='\u2588\u2588', colors=None, width=None,
-             overflow='\u00BB'):
+    def show(self, element=None, colors=None, width=None,
+             overflow=None):
         """
         By some curious numpy magic, anything I write here disappears from the
         __doc__ property.
         """
-        specs = ['e' + element]
+        specs = []
+        if element is not None:
+            specs.append('e' + element)
         if colors is not None:
             specs.append('c' + str(colors))
         if width is not None:
@@ -447,7 +449,7 @@ class SenseScreen(object):
         else:
             if len(value) != 32:
                 raise ValueError('gamma array must contain 32 entries')
-            if not all(0 <= v < 32 for v in value):
+            if not all(isinstance(v, int) and 0 <= v < 32 for v in value):
                 raise ValueError('gamma values must be in the range 0..31')
             buf = struct.pack(native_str('32B'), *value)
             fcntl.ioctl(self._fb_file, SenseScreen.SET_GAMMA, buf)
@@ -473,7 +475,10 @@ class SenseScreen(object):
     @array.setter
     def array(self, value):
         if isinstance(value, np.ndarray):
-            value = value.view(color).reshape((8, 8))
+            if value.dtype == color:
+                value = value.reshape((8, 8))
+            else:
+                value = value.astype(np.float32).view(color).reshape((8, 8))
         else:
             value = np.array(value, dtype=color).reshape((8, 8))
         value = self._apply_transforms(value)
@@ -575,9 +580,7 @@ class SenseScreen(object):
         :class:`~PIL.ImageDraw.ImageDraw`), then call :meth:`draw` with the
         image to update the display.
         """
-        arr = self._undo_transforms(self.raw)
-        arr = rgb565_to_image(arr)
-        return arr
+        return rgb565_to_image(self._undo_transforms(self.raw))
 
     def draw(self, image):
         """

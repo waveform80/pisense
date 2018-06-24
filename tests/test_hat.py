@@ -27,12 +27,20 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+The :mod:`pisense` module is the main namespace for the pisense package; it
+imports (and exposes) all publically accessible classes, functions, and
+constants from all the modules beneath it for convenience. It also defines
+the top-level :class:`SenseHAT` class.
+"""
+
 from __future__ import (
     unicode_literals,
     absolute_import,
     print_function,
     division,
 )
+
 
 import pytest
 
@@ -44,12 +52,8 @@ except ImportError:
     import mock
 
 
-def test_settings_bad_filename():
-    with pytest.raises(ValueError):
-        SenseSettings('/etc/RTIMULib.conf')
+# See conftest for custom fixture definitions
 
-def test_settings_good_filename():
-    with mock.patch('RTIMU.Settings') as Settings:
-        settings = SenseSettings()
-        assert Settings.call_args_list == [mock.call('/etc/RTIMULib')]
-        assert settings.settings is Settings()
+
+def test_hat_init(Settings, RTIMU, RTPressure, RTHumidity, stick_device, screen_array):
+    pass

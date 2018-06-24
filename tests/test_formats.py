@@ -38,6 +38,7 @@ import pytest
 import numpy as np
 from PIL import Image
 from colorzero import Color
+
 from pisense import *
 
 

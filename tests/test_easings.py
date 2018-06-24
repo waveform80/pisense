@@ -33,17 +33,22 @@ from __future__ import (
     print_function,
     division,
 )
+
+from itertools import tee
+from math import isclose
+
+import pytest
+
+from pisense import *
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 try:
     from itertools import izip as zip
 except ImportError:
     pass
-
-
-import mock
-import pytest
-from itertools import tee
-from math import isclose
-from pisense import *
 
 
 def pairwise(it):
@@ -53,37 +58,43 @@ def pairwise(it):
 
 
 def test_linear():
-    assert list(linear(0)) == []
     assert list(linear(1)) == [1]
     assert list(linear(2)) == [0, 1]
     assert list(linear(3)) == [0, 0.5, 1]
     deltas = [b - a for a, b in pairwise(linear(100))]
     assert all(isclose(d, 1/99) for d in deltas)
+    with pytest.raises(ValueError):
+        list(linear(0))
+    with pytest.raises(ValueError):
+        list(linear(-1))
 
 
 def test_ease_in():
-    assert list(ease_in(0)) == []
     assert list(ease_in(1)) == [1]
     assert list(ease_in(2)) == [0, 1]
     assert list(ease_in(3)) == [0, 0.25, 1]
     deltas = [b - a for a, b in pairwise(ease_in(100))]
     assert all(b > a for a, b in pairwise(deltas))
+    with pytest.raises(ValueError):
+        list(ease_in(0))
 
 
 def test_ease_out():
-    assert list(ease_out(0)) == []
     assert list(ease_out(1)) == [1]
     assert list(ease_out(2)) == [0, 1]
     assert list(ease_out(3)) == [0, 0.75, 1]
     deltas = [b - a for a, b in pairwise(ease_out(100))]
     assert all(b < a for a, b in pairwise(deltas))
+    with pytest.raises(ValueError):
+        list(ease_out(0))
 
 
 def test_ease_in_out():
-    assert list(ease_in_out(0)) == []
     assert list(ease_in_out(1)) == [1]
     assert list(ease_in_out(2)) == [0, 1]
     assert list(ease_in_out(3)) == [0, 0.5, 1]
     deltas = [b - a for a, b in pairwise(ease_in_out(100))]
     assert all(b > a for a, b in pairwise(deltas[:50]))
     assert all(b < a for a, b in pairwise(deltas[50:]))
+    with pytest.raises(ValueError):
+        list(ease_in_out(0))

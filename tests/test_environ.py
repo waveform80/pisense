@@ -34,48 +34,28 @@ from __future__ import (
     division,
 )
 
-import mock
-import pytest
 from itertools import cycle
 from time import sleep
+
+import pytest
+
 from pisense import *
 
-
-@pytest.fixture()
-def Settings(request):
-    patcher = mock.patch('RTIMU.Settings')
-    request.addfinalizer(patcher.stop)
-    return patcher.start()
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 
-@pytest.fixture()
-def RTPressure(request, Settings):
-    # ALWAYS mock out Settings as otherwise instantiation attempts to write
-    # to various files
-    patcher = mock.patch('RTIMU.RTPressure')
-    request.addfinalizer(patcher.stop)
-    result = patcher.start()
-    result.return_value.pressureRead.return_value = (True, 1000.0, True, 20.0)
-    return result
-
-
-@pytest.fixture()
-def RTHumidity(request, Settings):
-    # ALWAYS mock out Settings as otherwise instantiation attempts to write
-    # to various files
-    patcher = mock.patch('RTIMU.RTHumidity')
-    request.addfinalizer(patcher.stop)
-    result = patcher.start()
-    result.return_value.humidityRead.return_value = (True, 50.0, True, 22.0)
-    return result
+# See conftest for custom fixture definitions
 
 
 def test_environ_init(Settings, RTPressure, RTHumidity):
     env = SenseEnviron('/etc/foo.ini')
     try:
-        Settings.assert_called_once_with('/etc/foo')
-        RTPressure.assert_called()
-        RTHumidity.assert_called()
+        assert Settings.call_args_list == [mock.call('/etc/foo')]
+        assert RTPressure.call_count
+        assert RTHumidity.call_count
     finally:
         env.close()
 
@@ -84,8 +64,8 @@ def test_environ_init_with_settings(Settings, RTPressure, RTHumidity):
     settings = SenseSettings('/etc/foo.ini')
     env = SenseEnviron(settings)
     try:
-        RTPressure.assert_called_once_with(settings.settings)
-        RTHumidity.assert_called_once_with(settings.settings)
+        assert RTPressure.call_args_list == [mock.call(settings.settings)]
+        assert RTHumidity.call_args_list == [mock.call(settings.settings)]
     finally:
         env.close()
 

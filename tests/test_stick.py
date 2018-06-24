@@ -35,43 +35,25 @@ from __future__ import (
 )
 
 import io
-import os
-import mock
 import glob
 import errno
 import struct
-import pytest
 import warnings
-from time import time, sleep
+from time import sleep
 from datetime import datetime
 from threading import Event
+
+import pytest
+
 from pisense import *
 
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
-@pytest.fixture()
-def stick_device(request, _open=io.open, _glob=glob.glob):
-    rpipe, wpipe = os.pipe()
-    def glob_patch(pattern):
-        if pattern == '/sys/class/input/event*':
-            return ['/sys/class/input/event%d' % i for i in range(5)]
-        else:
-            return _glob(pattern)
-    def open_patch(filename, mode, *args, **kwargs):
-        if filename == '/sys/class/input/event0/device/name':
-            return io.StringIO(SenseStick.SENSE_HAT_EVDEV_NAME)
-        elif filename == '/dev/input/event0':
-            return os.fdopen(rpipe, mode, *args, **kwargs)
-        else:
-            return _open(filename, mode, *args, **kwargs)
-    glob_mock = mock.patch('glob.glob', side_effect=glob_patch)
-    open_mock = mock.patch('io.open', side_effect=open_patch)
-    def fin():
-        glob_mock.stop()
-        open_mock.stop()
-    request.addfinalizer(fin)
-    glob_mock.start()
-    open_mock.start()
-    return os.fdopen(wpipe, 'wb', buffering=0)
+
+# See conftest for custom fixture definitions
 
 
 def make_event(e, event_type=SenseStick.EV_KEY):

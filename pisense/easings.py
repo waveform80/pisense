@@ -49,10 +49,10 @@ def linear(steps):
     This is the default easing function which simply progresses the animation
     at a constant rate from start to finish.
     """
-    if steps == 0:
-        pass
+    if steps <= 0:
+        raise ValueError('steps must be a positive integer >0')
     elif steps == 1:
-        yield 1
+        yield 1.0
     else:
         for t in range(steps):
             yield t / (steps - 1)

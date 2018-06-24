@@ -38,16 +38,24 @@ str = type('')
 
 
 import io
-import os
-import mock
-import mmap
 import glob
 import errno
 import struct
+
 import pytest
 import numpy as np
 from colorzero import Color
+from PIL import Image
+
 from pisense import *
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
+
+# See conftest for custom fixture definitions
 
 
 @pytest.fixture()
@@ -66,38 +74,6 @@ def checker_array(request):
         _, _, _, _, g, g, g, g,
     ])
     return arr
-
-
-@pytest.fixture()
-def screen_device(request, tmpdir, _open=io.open, _glob=glob.glob):
-    fbfile = io.open(str(tmpdir.join('fb')), 'wb+', buffering=0)
-    fbfile.write(b'\x00' * 128)
-    fbfile.flush()
-    fbfile.seek(0)
-    fbmem = mmap.mmap(fbfile.fileno(), 128)
-    def glob_patch(pattern):
-        if pattern == '/sys/class/graphics/fb*':
-            return ['/sys/class/graphics/fb%d' % i for i in range(2)]
-        else:
-            return _glob(pattern)
-    def open_patch(filename, mode, *args, **kwargs):
-        if filename == '/sys/class/graphics/fb0/name':
-            return io.StringIO(SenseScreen.SENSE_HAT_FB_NAME)
-        elif filename == '/dev/fb0':
-            return _open(str(tmpdir.join('fb')), mode, *args, **kwargs)
-        else:
-            return _open(filename, mode, *args, **kwargs)
-    glob_mock = mock.patch('glob.glob', side_effect=glob_patch)
-    open_mock = mock.patch('io.open', side_effect=open_patch)
-    def fin():
-        fbmem.close()
-        fbfile.close()
-        glob_mock.stop()
-        open_mock.stop()
-    request.addfinalizer(fin)
-    glob_mock.start()
-    open_mock.start()
-    return np.frombuffer(fbmem, dtype=np.uint16).reshape((8, 8))
 
 
 def test_array_constructor():
@@ -151,7 +127,7 @@ def test_array_update_screen():
     ])).all()
 
 
-def test_format_spec(checker_array):
+def test_array_format_spec(checker_array):
     assert '{0:e#:c0:w80:o>}'.format(checker_array) == (
         '####    \n'
         '####    \n'
@@ -196,7 +172,7 @@ def test_format_spec(checker_array):
         '{0:f0}'.format(checker_array)
 
 
-def test_format_detect(checker_array):
+def test_array_format_detect(checker_array):
     result = (
         '########  >\n'
         '########  >\n'
@@ -232,30 +208,27 @@ def test_format_detect(checker_array):
 
 
 def test_array_show(checker_array):
-    with mock.patch('sys.stdout', io.StringIO()) as stdout:
+    with mock.patch('pisense.screen.ScreenArray.__format__') as fmt:
+        fmt.return_value = ''
         checker_array.show('#', '0', 80, '>')
-        assert stdout.getvalue() == (
-                '####    \n'
-                '####    \n'
-                '####    \n'
-                '####    \n'
-                '        \n'
-                '        \n'
-                '        \n'
-                '        \n')
+        assert fmt.call_args == mock.call('e#:c0:w80:o>')
+        checker_array.show('##')
+        assert fmt.call_args == mock.call('e##')
+        checker_array.show()
+        assert fmt.call_args == mock.call('')
 
 
-def test_screen_init(screen_device):
+def test_screen_init(screen_array):
     # Ensure initialization opens the correct device (our mocked screen device)
     # and that it doesn't alter the content of the device
-    screen_device[...] = 0xFFFF
+    screen_array[...] = 0xFFFF
     screen = SenseScreen()
     try:
         expected = np.array([Color('white')] * 64, dtype=color).reshape((8, 8))
         assert (screen.array == expected).all()
     finally:
         screen.close()
-    screen_device[...] = 0x0000
+    screen_array[...] = 0x0000
     screen = SenseScreen()
     try:
         expected = np.array([Color('black')] * 64, dtype=color).reshape((8, 8))
@@ -307,7 +280,7 @@ def test_screen_init_fail():
                 SenseScreen()
 
 
-def test_screen_close_idempotent(screen_device):
+def test_screen_close_idempotent(screen_array):
     screen = SenseScreen()
     screen.close()
     with pytest.raises(AttributeError):
@@ -315,18 +288,211 @@ def test_screen_close_idempotent(screen_device):
     screen.close()
 
 
-def test_screen_context_handler(screen_device):
+def test_screen_context_handler(screen_array):
     with SenseScreen() as screen:
         pass
     with pytest.raises(AttributeError):
         screen.array
 
 
-def test_screen_raw(screen_device):
-    screen_device[...] = 0xFFFF
+def test_screen_raw(screen_array):
+    screen_array[...] = 0xFFFF
     with SenseScreen() as screen:
         expected = np.array([0xFFFF] * 64, np.uint16).reshape((8, 8))
         assert (screen.raw == expected).all()
         expected = np.array([0x0000] * 64, np.uint16).reshape((8, 8))
         screen.raw = expected
-        assert (screen_device == expected).all()
+        assert (screen_array == expected).all()
+
+
+def test_screen_gamma(screen_gamma):
+    with SenseScreen() as screen:
+        assert len(screen.gamma) == 32
+        assert all(isinstance(i, int) for i in screen.gamma)
+        screen.gamma = LOW_GAMMA
+        assert screen.gamma == LOW_GAMMA
+        screen.gamma = None # reset gamma
+        assert screen.gamma == DEFAULT_GAMMA
+        with pytest.raises(ValueError):
+            screen.gamma = [1]
+        with pytest.raises(ValueError):
+            screen.gamma = [64] * 32
+        with pytest.raises(ValueError):
+            screen.gamma = [0.2] * 32
+        with pytest.raises(ValueError):
+            screen.gamma = ['foo'] * 32
+
+
+def test_screen_array(screen_array):
+    with SenseScreen() as screen:
+        data = [Color('yellow')] * 32 + [Color('magenta')] * 32
+        expected = np.array(data, color)
+        screen.array = expected
+        assert (screen_array == np.array(
+            [c.rgb565 for c in data], np.uint16
+        ).reshape((8, 8))).all()
+        data = [(1.0, 0.0, 0.0)] * 32 + [(0.0, 0.0, 1.0)] * 32
+        expected = np.array(data).reshape((8, 8, 3))
+        screen.array = expected
+        assert (screen_array == np.array(
+            [Color(*c).rgb565 for c in data], np.uint16
+        ).reshape((8, 8))).all()
+        data = [Color('green')] * 32 + [Color('black')] * 32
+        screen.array = data
+        assert (screen_array == np.array(
+            [c.rgb565 for c in data], np.uint16
+        ).reshape((8, 8))).all()
+
+
+def test_screen_vflip(screen_array):
+    screen_array[:] = np.arange(64).reshape((8, 8))
+    expected = screen_array.copy()
+    with SenseScreen() as screen:
+        assert not screen.vflip
+        screen.vflip = True
+        assert screen.vflip
+        assert (screen_array == np.flipud(expected)).all()
+        screen.vflip = False
+        assert (screen_array == expected).all()
+
+
+def test_screen_hflip(screen_array):
+    screen_array[:] = np.arange(64).reshape((8, 8))
+    expected = screen_array.copy()
+    with SenseScreen() as screen:
+        assert not screen.hflip
+        screen.hflip = True
+        assert screen.hflip
+        assert (screen_array == np.fliplr(expected)).all()
+        screen.hflip = False
+        assert (screen_array == expected).all()
+
+
+def test_screen_rotate(screen_array):
+    screen_array[:] = np.arange(64).reshape((8, 8))
+    expected = screen_array.copy()
+    with SenseScreen() as screen:
+        assert screen.rotation == 0
+        screen.rotation = 90
+        assert screen.rotation == 90
+        assert (screen_array == np.rot90(expected)).all()
+        screen.rotation = 540
+        assert screen.rotation == 180
+        assert (screen_array == np.rot90(expected, 2)).all()
+        with pytest.raises(ValueError):
+            screen.rotation = 45
+
+
+def test_screen_clear(screen_array):
+    screen_array[:] = np.arange(64).reshape((8, 8))
+    with SenseScreen() as screen:
+        expected = np.array([0] * 64, np.uint16).reshape((8, 8))
+        screen.clear()
+        assert (screen_array == expected).all()
+        expected = np.array([Color('red').rgb565] * 64, np.uint16).reshape((8, 8))
+        screen.clear((1, 0, 0))
+        assert (screen_array == expected).all()
+
+
+def test_screen_image(screen_array):
+    expected = [Color('yellow')] * 32 + [Color('magenta')] * 32
+    expected = np.array([c.rgb565 for c in expected], np.uint16).reshape((8, 8))
+    screen_array[:] = expected
+    with SenseScreen() as screen:
+        assert (image_to_rgb565(screen.image()) == expected).all()
+
+
+def test_screen_draw(screen_array):
+    expected = [Color('yellow')] * 32 + [Color('magenta')] * 32
+    expected = np.array([c.rgb565 for c in expected], np.uint16).reshape((8, 8))
+    with SenseScreen() as screen:
+        screen.draw(rgb565_to_image(expected))
+        assert (screen_array == expected).all()
+        with pytest.raises(ValueError):
+            screen.draw(rgb565_to_image(expected).crop((0, 0, 4, 4)))
+
+
+def test_screen_play(screen_array):
+    with mock.patch('time.sleep') as sleep:
+        played = []
+        def sleep_patch(delay):
+            played.append((delay, screen_array.copy()))
+        sleep.side_effect = sleep_patch
+        with SenseScreen(fps=1) as screen:
+            animation = [
+                np.array([Color(c).rgb565] * 64, np.uint16).reshape((8, 8))
+                for c in ('red', 'green', 'blue')
+            ]
+            screen.play(animation)
+            assert len(animation) == len(played)
+            for aframe, (pdelay, pframe) in zip(animation, played):
+                assert pdelay == 1
+                assert (aframe == pframe).all()
+            played.clear()
+            animation = [
+                np.array([Color(c).rgb565] * 64, np.uint16).reshape((8, 8))
+                for c in ('yellow', 'magenta', 'cyan')
+            ]
+            screen.fps = 20
+            screen.play([rgb565_to_image(frame) for frame in animation])
+            assert len(animation) == len(played)
+            for aframe, (pdelay, pframe) in zip(animation, played):
+                assert pdelay == 1 / 20
+                assert (aframe == pframe).all()
+
+
+def test_screen_scroll_text(screen_array):
+    # We already test scroll_text produces correct output in test_anim, and
+    # that play faithfully reproduces the frames its given so here we just
+    # check it produces the desired number of frames for play()
+    with mock.patch('pisense.screen.SenseScreen.play') as play:
+        with SenseScreen() as screen:
+            screen.scroll_text('Hello', duration=1, fps=10)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 10
+            play.reset_mock()
+            screen.scroll_text('Hello', duration=2, fps=30)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 60
+
+
+def test_screen_fade_to(screen_array):
+    # Same story here; see notes in test_screen_scroll_text
+    with mock.patch('pisense.screen.SenseScreen.play') as play:
+        with SenseScreen() as screen:
+            white = Image.new('RGB', (8, 8), (1, 1, 1))
+            screen.fade_to(white, duration=1, fps=10)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 10
+            play.reset_mock()
+            screen.fade_to(white, duration=2, fps=30)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 60
+
+
+def test_screen_slide_to(screen_array):
+    # Same story here; see notes in test_screen_scroll_text
+    with mock.patch('pisense.screen.SenseScreen.play') as play:
+        with SenseScreen() as screen:
+            red = Image.new('RGB', (8, 8), (1, 0, 0))
+            screen.slide_to(red, duration=1, fps=10)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 10
+            play.reset_mock()
+            screen.slide_to(red, duration=2, fps=30)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 60
+
+
+def test_screen_zoom_to(screen_array):
+    # Same story here; see notes in test_screen_scroll_text
+    with mock.patch('pisense.screen.SenseScreen.play') as play:
+        with SenseScreen() as screen:
+            red = Image.new('RGB', (8, 8), (1, 0, 0))
+            screen.zoom_to(red, duration=1, fps=10)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 10
+            play.reset_mock()
+            screen.zoom_to(red, duration=2, fps=30)
+            assert play.call_count == 1
+            assert len(play.call_args[0][0]) == 60
