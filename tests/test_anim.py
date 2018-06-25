@@ -96,7 +96,7 @@ def test_load_truetype_font():
         _load_font('Arial.ttf', 8)
         assert truetype.call_args == mock.call('Arial.ttf', 8)
         # XXX set() around .keys is 2.7 compat
-        assert {('Arial.ttf', 8)} == (_FONT_CACHE.keys())
+        assert {('Arial.ttf', 8)} == set(_FONT_CACHE.keys())
 
 
 _ = 0
