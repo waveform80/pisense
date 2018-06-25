@@ -39,7 +39,7 @@ import glob
 import errno
 import struct
 import warnings
-from time import sleep
+from time import sleep, mktime
 from datetime import datetime
 from threading import Event
 
@@ -57,7 +57,12 @@ except ImportError:
 
 
 def make_event(e, event_type=SenseStick.EV_KEY):
-    sec, usec = divmod(e.timestamp.timestamp(), 1)
+    # XXX 2.7 compat method of deriving POSIX timestamp from local naive datetime
+    posix_timestamp = mktime(
+        (e.timestamp.year, e.timestamp.month, e.timestamp.day,
+         e.timestamp.hour, e.timestamp.minute, e.timestamp.second,
+         -1, -1, -1)) + e.timestamp.microsecond / 1e6
+    sec, usec = divmod(posix_timestamp, 1)
     direction = {
         'up': SenseStick.KEY_UP,
         'down': SenseStick.KEY_DOWN,

@@ -428,7 +428,7 @@ def test_screen_play(screen_array):
             for aframe, (pdelay, pframe) in zip(animation, played):
                 assert pdelay == 1
                 assert (aframe == pframe).all()
-            played.clear()
+            del played[:]  # XXX 2.7 compat for .clear()
             animation = [
                 np.array([Color(c).rgb565] * 64, np.uint16).reshape((8, 8))
                 for c in ('yellow', 'magenta', 'cyan')

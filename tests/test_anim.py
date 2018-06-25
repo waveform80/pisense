@@ -67,7 +67,8 @@ def test_load_default_font():
         _load_font('default.pil', 8)
         assert load.call_args == mock.call('default.pil')
         assert truetype.call_args is None
-        assert {('default.pil', None)} == _FONT_CACHE.keys()
+        # XXX set() around .keys is 2.7 compat
+        assert {('default.pil', None)} == set(_FONT_CACHE.keys())
 
 
 def test_load_small_font():
@@ -83,7 +84,8 @@ def test_load_small_font():
         ], any_order=True)
         assert load.call_args == mock.call(resource_filename('pisense.anim', 'small.pil'))
         assert truetype.call_args is None
-        assert {('small.pil', None)} == _FONT_CACHE.keys()
+        # XXX set() around .keys is 2.7 compat
+        assert {('small.pil', None)} == set(_FONT_CACHE.keys())
 
 
 def test_load_truetype_font():
@@ -93,7 +95,8 @@ def test_load_truetype_font():
         load.side_effect = OSError(2, 'File not found')
         _load_font('Arial.ttf', 8)
         assert truetype.call_args == mock.call('Arial.ttf', 8)
-        assert {('Arial.ttf', 8)} == _FONT_CACHE.keys()
+        # XXX set() around .keys is 2.7 compat
+        assert {('Arial.ttf', 8)} == (_FONT_CACHE.keys())
 
 
 _ = 0

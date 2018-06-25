@@ -71,7 +71,8 @@ class StickEvent(namedtuple('StickEvent',
 
         A :class:`~datetime.datetime` object specifying when the event took
         place. This timestamp is derived from the kernel event so it should be
-        accurate even when callbacks have taken time reacting to events.
+        accurate even when callbacks have taken time reacting to events. The
+        timestamp is a naive :class:`~datetime.datetime` object in local time.
 
     .. attribute:: direction
 

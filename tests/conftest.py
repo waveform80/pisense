@@ -36,7 +36,6 @@ from __future__ import (
 
 import io
 import os
-import sys
 import glob
 import mmap
 import fcntl
@@ -45,13 +44,17 @@ import numpy as np
 import pytest
 from colorzero import Color
 
-# Terrible hack to ensure we can test on non-Pi platforms (must be done before
+# Horrid hack to ensure we can test on non-Pi platforms (must be done before
 # importing pisense)
 try:
     from unittest import mock
 except ImportError:
     import mock
-sys.modules['RTIMU'] = mock.Mock()
+try:
+    import RTIMU
+except ImportError:
+    import sys
+    sys.modules['RTIMU'] = mock.Mock()
 
 from pisense import *
 
@@ -142,26 +145,33 @@ def RTHumidity(request, Settings):
     return result
 
 
-# TODO screen_file and stick_device conflict in both patching io.open and
-# glob.glob. This makes testing impossible on a non-Pi platform currently;
-# perhaps combine the open/glob patches into a separate fixture?
-
 @pytest.fixture()
-def screen_file(request, tmpdir, _open=io.open, _glob=glob.glob):
+def hat_devices(request, tmpdir, _open=io.open, _glob=glob.glob):
+    # Set up a pipe to represent the input device, and a 128-byte, mmap'd
+    # file to represent the frame-buffer
+    rstick, wstick = os.pipe()
     fbfile = io.open(str(tmpdir.join('fb')), 'wb+', buffering=0)
     fbfile.write(b'\x00' * 128)
     fbfile.flush()
     fbfile.seek(0)
     def glob_patch(pattern):
+        # Emulate a couple of framebuffers, and 5 input devices
         if pattern == '/sys/class/graphics/fb*':
             return ['/sys/class/graphics/fb%d' % i for i in range(2)]
+        elif pattern == '/sys/class/input/event*':
+            return ['/sys/class/input/event%d' % i for i in range(5)]
         else:
             return _glob(pattern)
     def open_patch(filename, mode, *args, **kwargs):
-        if filename == '/sys/class/graphics/fb0/name':
+        # The second framebuffer and third input device belong to the Sense HAT
+        if filename == '/sys/class/graphics/fb1/name':
             return io.StringIO(SenseScreen.SENSE_HAT_FB_NAME)
-        elif filename == '/dev/fb0':
+        elif filename == '/sys/class/input/event2/device/name':
+            return io.StringIO(SenseStick.SENSE_HAT_EVDEV_NAME)
+        elif filename == '/dev/fb1':
             return _open(str(tmpdir.join('fb')), mode, *args, **kwargs)
+        elif filename == '/dev/input/event2':
+            return os.fdopen(rstick, mode, *args, **kwargs)
         else:
             return _open(filename, mode, *args, **kwargs)
     glob_mock = mock.patch('glob.glob', side_effect=glob_patch)
@@ -173,6 +183,13 @@ def screen_file(request, tmpdir, _open=io.open, _glob=glob.glob):
     request.addfinalizer(fin)
     glob_mock.start()
     open_mock.start()
+    # Last argument to fdopen is bufsize (in 2.7) and buffering (in 3+)
+    return fbfile, os.fdopen(wstick, 'wb', 0)
+
+
+@pytest.fixture()
+def screen_file(request, hat_devices):
+    fbfile, wstick = hat_devices
     return fbfile
 
 
@@ -208,33 +225,13 @@ def screen_gamma(request, screen_file, _ioctl=fcntl.ioctl):
 
 
 @pytest.fixture()
-def stick_device(request, _open=io.open, _glob=glob.glob):
-    rpipe, wpipe = os.pipe()
-    def glob_patch(pattern):
-        if pattern == '/sys/class/input/event*':
-            return ['/sys/class/input/event%d' % i for i in range(5)]
-        else:
-            return _glob(pattern)
-    def open_patch(filename, mode, *args, **kwargs):
-        if filename == '/sys/class/input/event0/device/name':
-            return io.StringIO(SenseStick.SENSE_HAT_EVDEV_NAME)
-        elif filename == '/dev/input/event0':
-            return os.fdopen(rpipe, mode, *args, **kwargs)
-        else:
-            return _open(filename, mode, *args, **kwargs)
-    glob_mock = mock.patch('glob.glob', side_effect=glob_patch)
-    open_mock = mock.patch('io.open', side_effect=open_patch)
-    def fin():
-        glob_mock.stop()
-        open_mock.stop()
-    request.addfinalizer(fin)
-    glob_mock.start()
-    open_mock.start()
-    return os.fdopen(wpipe, 'wb', buffering=0)
+def stick_device(request, hat_devices):
+    fbfile, wstick = hat_devices
+    return wstick
 
 
 @pytest.fixture()
-def HAT(Settings, RTIMU, RTPressure, RTHumidity, stick_device, screen_array):
+def HAT(hat_devices, Settings, RTIMU, RTPressure, RTHumidity):
     # This fixture is a convenience for the "full HAT" tests that just ensures
     # all hardware is being emulated for the duration of the test
     return
