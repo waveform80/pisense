@@ -171,7 +171,10 @@ def hat_devices(request, tmpdir, _open=io.open, _glob=glob.glob):
         elif filename == '/dev/fb1':
             return _open(str(tmpdir.join('fb')), mode, *args, **kwargs)
         elif filename == '/dev/input/event2':
-            return os.fdopen(rstick, mode, *args, **kwargs)
+            # XXX 2.7 compat; os.fdopen doesn't accept kwargs
+            buffering = kwargs.pop('buffering', -1)
+            assert not kwargs
+            return os.fdopen(rstick, mode, buffering, *args)
         else:
             return _open(filename, mode, *args, **kwargs)
     glob_mock = mock.patch('glob.glob', side_effect=glob_patch)
