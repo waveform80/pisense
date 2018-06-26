@@ -60,7 +60,8 @@ from .formats import (
     rgb_to_rgb888, rgb888_to_rgb,
     rgb_to_rgb565, rgb565_to_rgb,
 )
-from .screen import SenseScreen, ScreenArray, array, DEFAULT_GAMMA, LOW_GAMMA
+from .array import ScreenArray, array
+from .screen import SenseScreen, DEFAULT_GAMMA, LOW_GAMMA
 from .easings import linear, ease_in, ease_out, ease_in_out
 from .anim import draw_text, scroll_text, fade_to, slide_to, zoom_to
 from .stick import SenseStick, StickEvent

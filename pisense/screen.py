@@ -28,8 +28,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 """
-Defines the :class:`ScreenArray` and :class:`SenseScreen` classes for
-controlling and manipulating the RGB pixel array on the Sense HAT.
+Defines the :class:`SenseScreen` classes for controlling and manipulating the
+RGB pixel array on the Sense HAT.
 """
 
 from __future__ import (
@@ -39,7 +39,6 @@ from __future__ import (
     division,
 )
 
-import sys
 import io
 import os
 import glob
@@ -48,18 +47,16 @@ import errno
 import time
 import struct
 import fcntl
-import termios
 
 import numpy as np
 from colorzero import Color
 
+from .array import ScreenArray
 from .easings import linear
 from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .formats import (
     color,
     buf_to_image,
-    buf_to_rgb,
-    iter_to_rgb,
     image_to_rgb565,
     rgb565_to_image,
     rgb_to_rgb565,
@@ -79,206 +76,6 @@ LOW_GAMMA = [0, 1, 1, 1, 1, 1, 1, 1,
              1, 1, 1, 1, 1, 2, 2, 2,
              3, 3, 3, 4, 4, 5, 5, 6,
              6, 7, 7, 8, 8, 9, 10, 10]
-
-
-def array(data=None, shape=(8, 8)):
-    """
-    Use this function to construct a new :class:`ScreenArray` and fill it with
-    an initial source of *data*, which can be:
-
-    * A single :class:`~colorzero.Color`. The resulting array will have the
-      specified *shape*.
-
-    * A list of :class:`~colorzero.Color` values. The resulting array will have
-      the specified *shape*.
-
-    * An :class:`~PIL.Image.Image`. The resulting array will have the shape
-      of the image (the *shape* parameter is ignored).
-
-    * Any compatible :class:`~numpy.ndarray`. In this case the shape of the
-      array is preserved (the *shape* parameter is ignored).
-    """
-    if data is None:
-        result = ScreenArray(shape)
-        result[...] = 0
-    elif isinstance(data, Color):
-        result = ScreenArray(shape)
-        result[...] = data
-    else:
-        try:
-            result = buf_to_rgb(data)
-        except TypeError:
-            result = iter_to_rgb(data, shape)
-        result = result.view(color, ScreenArray)
-    return result
-
-
-class ScreenArray(np.ndarray):
-    """
-    By some curious numpy magic, anything I write here disappears from the
-    __doc__ property.
-    """
-    # pylint: disable=too-few-public-methods
-
-    def __new__(cls, shape=(8, 8)):
-        # pylint: disable=protected-access
-        result = np.ndarray.__new__(cls, shape=shape, dtype=color)
-        result._screen = None
-        return result
-
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        inputs = [
-            np.ascontiguousarray(v).view(np.float32, np.ndarray).reshape(v.shape + (3,))
-            if isinstance(v, np.ndarray) and v.dtype == color else
-            np.ascontiguousarray(v).view(v.dtype, np.ndarray).reshape(v.shape)
-            if isinstance(v, np.ndarray) else
-            v
-            for v in inputs
-        ]
-        try:
-            v, = kwargs['out']
-        except (KeyError, ValueError):
-            pass
-        else:
-            kwargs['out'] = (
-                np.ascontiguousarray(v).view(np.float32, np.ndarray).reshape(v.shape + (3,)),
-            )
-        result = super(ScreenArray, self).__array_ufunc__(
-            ufunc, method, *inputs, **kwargs)
-        if (
-                isinstance(result, np.ndarray) and
-                result.dtype == np.float32 and
-                len(result.shape) == 3 and
-                result.shape[-1] == 3):
-            result = result.view(color, self.__class__).squeeze()
-        return result
-
-    def __array_finalize__(self, obj):
-        # pylint: disable=protected-access,attribute-defined-outside-init
-        if obj is None:
-            return
-        self._screen = getattr(obj, '_screen', None)
-
-    def __setitem__(self, index, value):
-        # pylint: disable=protected-access
-        super(ScreenArray, self).__setitem__(index, value)
-        if self._screen:
-            # If we're a slice of the original pixels value, find the parent
-            # that contains the complete array and send that to the setter
-            orig = self
-            while orig.shape != (8, 8) and orig.base is not None:
-                orig = orig.base
-            self._screen.array = orig
-
-    def __setslice__(self, i, j, sequence): # pragma: no cover
-        # pylint: disable=protected-access
-        super(ScreenArray, self).__setslice__(i, j, sequence)
-        if self._screen:
-            orig = self
-            while orig.shape != (8, 8) and orig.base is not None:
-                orig = orig.base
-            self._screen.array = orig
-
-    @staticmethod
-    def _term_supports_color():
-        try:
-            stdout_fd = sys.stdout.fileno()
-        except (AttributeError, IOError) as exc:
-            return False
-        else:
-            is_a_tty = os.isatty(stdout_fd)
-            is_windows = sys.platform.startswith('win')
-            return is_a_tty and not is_windows
-
-    @staticmethod
-    def _term_size():
-        "Returns the size (cols, rows) of the console"
-        try:
-            buf = fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, '12345678')
-            row, col = struct.unpack(native_str('hhhh'), buf)[0:2]
-            return (col, row)
-        except IOError:
-            # Don't try and get clever with ctermid; this can work but gives
-            # false readings under things like IDLE. Just try the environment
-            # and fall back to a sensible default if that fails
-            try:
-                return (int(os.environ['COLUMNS']),
-                        int(os.environ['LINES']))
-            except KeyError:
-                return (80, 24)
-
-    def __format__(self, format_spec):
-        # Parse the format_spec; we don't calculate defaults for colors and
-        # width unless they're not explicitly specified
-        elements = '\u2588\u2588'  # ██
-        colors = None
-        width = None
-        overflow = '\u00BB'  # »
-        for section in format_spec.split(':'):
-            section = section.lstrip()
-            if not section.rstrip():
-                pass
-            elif section.startswith('e'):
-                elements = section[1:]
-            elif section.startswith('c'):
-                colors = section[1:].strip().lower()
-            elif section.startswith('w'):
-                width = int(section[1:].strip())
-            elif section.startswith('o'):
-                overflow = section[1:]
-            else:
-                raise ValueError('invalid section in array format spec: %s' %
-                                 section)
-        if colors is None:
-            colors = '16m' if self._term_supports_color() else '0'
-        if width is None:
-            width = self._term_size()[0]
-        if len(elements) * self.shape[1] > width:
-            x_limit = (width - len(overflow)) // len(elements)
-        else:
-            x_limit = None
-            overflow = ''
-        if colors == '0':
-            space = ' ' * len(elements)
-            return '\n'.join(
-                ''.join(
-                    elements if Color(*c).lightness >= 1/4 else space
-                    for c in row[:x_limit]
-                ) + overflow
-                for row in self
-            )
-        else:
-            return '\n'.join(
-                ''.join(
-                    '{color:{colors}}{elements}{color:0}'.format(
-                        color=Color(*c), colors=colors, elements=elements)
-                    for c in row[:x_limit]
-                ) + overflow
-                for row in self
-            )
-
-    def show(self, element=None, colors=None, width=None,
-             overflow=None):
-        """
-        By some curious numpy magic, anything I write here disappears from the
-        __doc__ property.
-        """
-        specs = []
-        if element is not None:
-            specs.append('e' + element)
-        if colors is not None:
-            specs.append('c' + str(colors))
-        if width is not None:
-            specs.append('w' + str(width))
-        if overflow is not None:
-            specs.append('o' + overflow)
-        print('{self:{spec}}'.format(self=self, spec=':'.join(specs)))
-
-    def copy(self, order='C'):
-        # pylint: disable=missing-docstring,protected-access
-        result = super(ScreenArray, self).copy(order)
-        result._screen = None
-        return result
 
 
 class SenseScreen(object):
