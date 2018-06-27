@@ -1,4 +1,9 @@
 language: python
+env:
+    - NUMPY_VERSION=11
+    - NUMPY_VERSION=12
+    - NUMPY_VERSION=13
+    - NUMPY_VERSION=14
 python:
     - "3.6"
     - "3.5"
@@ -7,7 +12,25 @@ python:
     - "2.7"
     - "pypy"
     - "pypy3"
-install: "pip install -e .[test]"
+matrix:
+    exclude:
+        - python: "3.3"
+          env: NUMPY_VERSION=12
+        - python: "3.3"
+          env: NUMPY_VERSION=13
+        - python: "3.3"
+          env: NUMPY_VERSION=14
+        - python: "pypy"
+          env: NUMPY_VERSION=11
+        - python: "pypy"
+          env: NUMPY_VERSION=12
+        - python: "pypy3"
+          env: NUMPY_VERSION=11
+        - python: "pypy3"
+          env: NUMPY_VERSION=12
+install:
+    - "pip install numpy==1.${NUMPY_VERSION}.*"
+    - "pip install -e .[test]"
 script: make test
 before_install:
     - pip install codecov
