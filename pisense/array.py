@@ -145,7 +145,7 @@ class ScreenArray(np.ndarray):
         return v
 
     if _has_array_ufunc:
-        # For numpy >=1.13; this ensures all ufuncs called against a
+        # XXX For numpy >=1.13; this ensures all ufuncs called against a
         # ScreenArray will treat the array as a 3-dimensional array of single
         # precision floats (compatible with just about everything) instead of
         # a 2-dimensional array of structures (which no ufunc can deal with)
@@ -163,12 +163,12 @@ class ScreenArray(np.ndarray):
             return self._from_ndarray(result)
 
     else:
-        # For numpy <1.13; unfortunately there doesn't seem to be a universal
-        # way of handling ufunc overrides prior to 1.13 (and Raspbian Jessie
-        # and Stretch are both below this version). However, we can override
-        # the standard operators and some common methods to provide similar
-        # functionality which is probably good enough for the majority of
-        # use-cases
+        # XXX For numpy <1.13; unfortunately there doesn't seem to be a
+        # universal way of handling ufunc overrides prior to 1.13 (and Raspbian
+        # Jessie and Stretch are both below this version). However, we can
+        # override the standard operators and some common methods to provide
+        # similar functionality which is probably good enough for the majority
+        # of use-cases
 
         @classmethod
         def _call_ufunc(cls, ufunc, *inputs, **kwargs):
@@ -184,53 +184,30 @@ class ScreenArray(np.ndarray):
         __add__       = lambda self, other: self._call_ufunc(np.add, self, other)
         __sub__       = lambda self, other: self._call_ufunc(np.subtract, self, other)
         __mul__       = lambda self, other: self._call_ufunc(np.multiply, self, other)
-        # np.matmul isn't actually a ufunc, but it shouldn't matter for this
-        __matmul__    = lambda self, other: self._call_ufunc(np.matmul, self, other)
         __truediv__   = lambda self, other: self._call_ufunc(np.true_divide, self, other)
         __floordiv__  = lambda self, other: self._call_ufunc(np.floor_divide, self, other)
         __mod__       = lambda self, other: self._call_ufunc(np.mod, self, other)
         __pow__       = lambda self, other: self._call_ufunc(np.power, self, other)
-        __lshift__    = lambda self, other: self._call_ufunc(np.left_shift, self, other)
-        __rshift__    = lambda self, other: self._call_ufunc(np.right_shift, self, other)
-        __and__       = lambda self, other: self._call_ufunc(np.bitwise_and, self, other)
-        __xor__       = lambda self, other: self._call_ufunc(np.bitwise_xor, self, other)
-        __or__        = lambda self, other: self._call_ufunc(np.bitwise_or, self, other)
 
         __radd__      = lambda self, other: self._call_ufunc(np.add, other, self)
         __rsub__      = lambda self, other: self._call_ufunc(np.subtract, other, self)
         __rmul__      = lambda self, other: self._call_ufunc(np.multiply, other, self)
-        __rmatmul__   = lambda self, other: self._call_ufunc(np.matmul, other, self)
         __rtruediv__  = lambda self, other: self._call_ufunc(np.true_divide, other, self)
         __rfloordiv__ = lambda self, other: self._call_ufunc(np.floor_divide, other, self)
         __rmod__      = lambda self, other: self._call_ufunc(np.mod, other, self)
         __rpow__      = lambda self, other: self._call_ufunc(np.power, other, self)
-        __rlshift__   = lambda self, other: self._call_ufunc(np.left_shift, other, self)
-        __rrshift__   = lambda self, other: self._call_ufunc(np.right_shift, other, self)
-        __rand__      = lambda self, other: self._call_ufunc(np.bitwise_and, other, self)
-        __rxor__      = lambda self, other: self._call_ufunc(np.bitwise_xor, other, self)
-        __ror__       = lambda self, other: self._call_ufunc(np.bitwise_or, other, self)
 
-        __iadd__      = lambda self, other: self._call_ufunc(np.add, other, self, out=(self,))
-        __isub__      = lambda self, other: self._call_ufunc(np.subtract, other, self, out=(self,))
-        __imul__      = lambda self, other: self._call_ufunc(np.multiply, other, self, out=(self,))
-        __imatmul__   = lambda self, other: self._call_ufunc(np.matmul, other, self, out=(self,))
-        __itruediv__  = lambda self, other: self._call_ufunc(np.true_divide, other, self, out=(self,))
-        __ifloordiv__ = lambda self, other: self._call_ufunc(np.floor_divide, other, self, out=(self,))
-        __imod__      = lambda self, other: self._call_ufunc(np.mod, other, self, out=(self,))
-        __ipow__      = lambda self, other: self._call_ufunc(np.power, other, self, out=(self,))
-        __ilshift__   = lambda self, other: self._call_ufunc(np.left_shift, other, self, out=(self,))
-        __irshift__   = lambda self, other: self._call_ufunc(np.right_shift, other, self, out=(self,))
-        __iand__      = lambda self, other: self._call_ufunc(np.bitwise_and, other, self, out=(self,))
-        __ixor__      = lambda self, other: self._call_ufunc(np.bitwise_xor, other, self, out=(self,))
-        __ior__       = lambda self, other: self._call_ufunc(np.bitwise_or, other, self, out=(self,))
+        __iadd__      = lambda self, other: self._call_ufunc(np.add, self, other, out=(self,))
+        __isub__      = lambda self, other: self._call_ufunc(np.subtract, self, other, out=(self,))
+        __imul__      = lambda self, other: self._call_ufunc(np.multiply, self, other, out=(self,))
+        __itruediv__  = lambda self, other: self._call_ufunc(np.true_divide, self, other, out=(self,))
+        __ifloordiv__ = lambda self, other: self._call_ufunc(np.floor_divide, self, other, out=(self,))
+        __imod__      = lambda self, other: self._call_ufunc(np.mod, self, other, out=(self,))
+        __ipow__      = lambda self, other: self._call_ufunc(np.power, self, other, out=(self,))
 
         __neg__       = lambda self: self._call_ufunc(np.negative, self)
         __pos__       = lambda self: self
         __abs__       = lambda self: self._call_ufunc(np.abs, self)
-        __invert__    = lambda self: self._call_ufunc(np.invert, self)
-        __floor__     = lambda self: self._call_ufunc(np.floor, self)
-        __ceil__      = lambda self: self._call_ufunc(np.ceil, self)
-        __trunc__     = lambda self: self._call_ufunc(np.trunc, self)
 
         __lt__ = lambda self, other: self._call_ufunc(np.less, self, other)
         __le__ = lambda self, other: self._call_ufunc(np.less_equal, self, other)
@@ -249,6 +226,8 @@ class ScreenArray(np.ndarray):
                 out = self._to_ndarray(out)
             result = self._to_ndarray(self).clip(a_min, a_max, out)
             return self._from_ndarray(result)
+
+    # TODO implement matmul for image transforms?
 
     def __array_finalize__(self, obj):
         # pylint: disable=protected-access,attribute-defined-outside-init

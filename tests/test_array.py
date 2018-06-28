@@ -37,6 +37,7 @@ native_str = str
 str = type('')
 
 
+import math
 import struct
 
 import pytest
@@ -95,13 +96,86 @@ def test_array_constructor():
 
 
 def test_array_ufunc():
+    black = array(Color('black'))
+    white = array(Color('white'))
     red = array(Color('red'))
+    cyan = array(Color('cyan'))
+    gray = array(Color(0.5, 0.5, 0.5))
+    dark_gray = array(Color(0.25, 0.25, 0.25))
+    identity = np.identity(8, np.float32)
+    identity = np.dstack((identity,) * 3).view(color)
+
+    # Test standard ops
+    assert (black + black == black).all()
+    assert (white + black == white).all()
+    assert (white - red == cyan).all()
+    assert (red * white == red).all()
+    assert (white / 2 == gray).all()
+    assert (white // 2 == black).all()
+    assert (white % 2 == white).all()
+    assert (gray ** 2 == dark_gray).all()
+
+    # Test reverse ops
+    assert (0.5 + gray == white).all()
+    assert (2 * gray == white).all()
+    assert (white.view(color, np.ndarray) - white == black).all()
+    assert (white.view(color, np.ndarray) / white == white).all()
+    assert (gray.view(color, np.ndarray) // white == black).all()
+    assert (1 % white == black).all()
+    assert (1 ** gray == white).all()
+
+    # Make sure it's not just simple fields that work
     top = red.copy()
     bottom = red.copy()
     top[4:, :] = Color('black')
     bottom[:4, :] = Color('black')
     assert (top + bottom == red).all()
-    assert (np.clip(red * 2, 0, 1, red) == red).all()
+
+    # Test in-place ops
+    a = black.copy()
+    a += white
+    assert (a == white).all()
+    a *= 0.5
+    assert (a == gray).all()
+    a *= (red * 2)
+    assert (a == red).all()
+    a /= 1
+    assert (a == red).all()
+    a //= 2
+    assert (a == black).all()
+    a = white.copy()
+    a -= red
+    assert (a == cyan).all()
+    a %= 2
+    assert (a == cyan).all()
+    a **= 2
+    assert (a == cyan).all()
+
+    # Test unary ops
+    a = black.copy()
+    a += +white
+    assert (a == white).all()
+    a += -red
+    assert (a == cyan).all()
+    a -= red
+    a = abs(a)
+    assert (a == white).all()
+
+    # Test logical ops
+    assert (gray < white).all()
+    assert (red <= white).all()
+    assert (white <= white).all()
+    assert (white == white).all()
+    assert (black != white).all()
+    assert (white > gray).all()
+    assert (white >= red).all()
+    assert (white >= white).all()
+
+    # Test clip
+    assert (np.clip(red * 2, 0, 1) == red).all()
+    a = red.copy()
+    np.clip(a * 2, 0, 1, a)
+    assert (a == red).all()
 
 
 def test_array_update_screen():
