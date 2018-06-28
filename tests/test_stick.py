@@ -39,6 +39,7 @@ import glob
 import errno
 import struct
 import warnings
+from math import modf
 from time import sleep, mktime
 from datetime import datetime
 from threading import Event
@@ -51,6 +52,42 @@ try:
     from unittest import mock
 except ImportError:
     import mock
+import sys
+if (3, 0) <= sys.version_info < (3, 4):
+    # XXX Python 3.3 compat fix.  Python 3.3 has a bug in
+    # datetime.fromtimestamp that sometimes causes it to lose a microsecond
+    # when converting a timestamp; it uses int(f * 1e6) instead of int(round(f
+    # * 1e6)) later versions (and 2.7) do. This in turn causes various tests
+    # below (which compare timestamps in generated events) to fail. As datetime
+    # is typically a built-in class we can't simply patch one of its
+    # attributes, so here we patch out the whole class for the duration of this
+    # module.
+
+    import time as _time
+    _datetime = datetime
+    class datetime(_datetime):
+        @classmethod
+        def fromtimestamp(cls, t, tz=None):
+            converter = _time.localtime if tz is None else _time.gmtime
+            t, frac = divmod(t, 1.0)
+            us = int(round(frac * 1e6))
+            if us == 1000000:
+                t += 1
+                us = 0
+            y, m, d, hh, mm, ss, weekday, jday, dst = converter(t)
+            ss = min(ss, 59)
+            result = cls(y, m, d, hh, mm, ss, us, tz)
+            if tz is not None:
+                result = tz.fromutc(result)
+            return result
+
+    def setup_module(module):
+        module.ft_patch = mock.patch('pisense.stick.datetime', datetime)
+        module.ft_patch.start()
+
+    def teardown_module(module):
+        module.ft_patch.stop()
+        module.ft_patch = None
 
 
 # See conftest for custom fixture definitions
@@ -62,7 +99,7 @@ def make_event(e, event_type=SenseStick.EV_KEY):
         (e.timestamp.year, e.timestamp.month, e.timestamp.day,
          e.timestamp.hour, e.timestamp.minute, e.timestamp.second,
          -1, -1, -1)) + e.timestamp.microsecond / 1e6
-    sec, usec = divmod(posix_timestamp, 1)
+    usec, sec = modf(posix_timestamp)
     direction = {
         'up': SenseStick.KEY_UP,
         'down': SenseStick.KEY_DOWN,
