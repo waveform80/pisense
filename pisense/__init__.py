@@ -41,7 +41,10 @@ from __future__ import (
     division,
 )
 
+import io
+import os
 import warnings
+import subprocess
 
 from .exc import (
     SenseWarning,
@@ -92,12 +95,26 @@ class SenseHAT(object):
     initialization of the subordinate objects; see the documentation for their
     classes for further information.
 
+    One particular keyword argument, *emulate*, takes its default from an
+    environment variable: ``PISENSE_EMULATE``. If set, this must be an integer
+    number, typically 0 or 1 (0 is assumed if the variable is not set). This
+    argument indicates whether the instance should attach to the "real" Sense
+    HAT or the `desktop Sense HAT emulator`_. The environment variable is
+    particularly useful as it means scripts can be tested against the emulator
+    without alteration. For example:
+
+    .. code-block:: console
+
+        $ PISENSE_EMULATE=1 python examples/rainbow.py
+
     .. warning::
 
         Your script should not attempt to create more than one instance of this
         class (given it represents a single piece of hardware). If you attempt
         to do so a :exc:`SenseHATReinit` warning will be raised and the
         existing instance will be returned.
+
+    .. _desktop Sense HAT emulator: https://sense-emu.readthedocs.io/
     """
     __slots__ = ('_settings', '_screen', '_stick', '_imu', '_environ')
     hat = None
@@ -122,15 +139,38 @@ class SenseHAT(object):
                 easing = kwargs.pop('easing', linear)
                 max_events = kwargs.pop('max_events', 100)
                 flush_input = kwargs.pop('flush_input', True)
+                emulate_default = bool(int(os.environ.get(
+                    'PISENSE_EMULATE', '0')))
+                emulate = kwargs.pop('emulate', emulate_default)
                 if kwargs:
                     raise TypeError("unexpected keyword argument %r" %
                                     kwargs.popitem()[0])
+                if emulate:
+                    from sense_emu.lock import EmulatorLock
+                    lock = EmulatorLock('sense_emu')
+                    if not lock.wait(1):
+                        # XXX All this stuff should be a method on EmulatorLock
+                        warnings.warn(Warning('No emulator detected; '
+                                              'spawning sense_emu_gui'))
+                        with io.open(os.devnull, 'r+b') as devnull:
+                            try:
+                                setpgrp = os.setpgrp
+                            except AttributeError:
+                                setpgrp = None
+                            # setpgrp is called to spawn a new process group,
+                            # ensuring that signals from the interpreter (e.g.
+                            # the user pressing Ctrl+C) don't get sent to the
+                            # emulator too
+                            subprocess.Popen(['sense_emu_gui'],
+                                             preexec_fn=setpgrp,
+                                             stdin=devnull, stdout=devnull,
+                                             stderr=devnull, close_fds=True)
                 # pylint: disable=protected-access
-                self._settings = SenseSettings(settings)
-                self._screen = SenseScreen(fps, easing)
-                self._stick = SenseStick(max_events, flush_input)
-                self._imu = SenseIMU(self._settings)
-                self._environ = SenseEnviron(self._settings)
+                self._settings = SenseSettings(settings, emulate=emulate)
+                self._screen = SenseScreen(fps, easing, emulate=emulate)
+                self._stick = SenseStick(max_events, flush_input, emulate=emulate)
+                self._imu = SenseIMU(self._settings, emulate=emulate)
+                self._environ = SenseEnviron(self._settings, emulate=emulate)
             except:
                 self.close()
                 raise

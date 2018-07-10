@@ -39,7 +39,10 @@ from __future__ import (
     division,
 )
 
-import RTIMU
+try:
+    import RTIMU
+except ImportError:
+    RTIMU = None
 
 class SenseSettings(object):
     """
@@ -67,7 +70,11 @@ class SenseSettings(object):
 
     __slots__ = ('_settings',)
 
-    def __init__(self, settings_file=None):
+    def __init__(self, settings_file=None, emulate=False):
+        if emulate:
+            from sense_emu import RTIMU
+        else:
+            import RTIMU
         if settings_file is None:
             settings_file = '/etc/RTIMULib.ini'
         if not settings_file.endswith('.ini'):

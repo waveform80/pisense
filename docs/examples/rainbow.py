@@ -1,3 +1,4 @@
+from __future__ import division  # for py2.x compatibility
 from pisense import SenseHAT, array
 from colorzero import Color
 from time import sleep
