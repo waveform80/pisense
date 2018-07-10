@@ -44,8 +44,6 @@ import time
 from math import degrees
 from collections import namedtuple
 
-import RTIMU
-
 from .settings import SenseSettings
 
 # Make Py2's str and range equivalent to Py3's
@@ -120,6 +118,16 @@ class SenseIMU(object):
     The :class:`SenseIMU` class represents the Inertial Measurement Unit (IMU)
     on the Sense HAT. Users can either instantiate the class themselves, or can
     access an instance from :attr:`SenseHAT.imu`.
+
+    The *settings* parameter can be used to point to alternate settings files
+    but it is strongly recommended you leave this at the default as this can
+    affect the calibration of the IMU.
+
+    If the *emulate* parameter is ``True``, the instance will connect to the
+    IMU in the `desktop Sense HAT emulator`_ instead of the "real" Sense HAT
+    IMU.
+
+    .. _desktop Sense HAT emulator: https://sense-emu.readthedocs.io/
     """
 
     __slots__ = (
@@ -132,7 +140,11 @@ class SenseIMU(object):
         '_last_read',
     )
 
-    def __init__(self, settings=None):
+    def __init__(self, settings=None, emulate=False):
+        if emulate:
+            from sense_emu import RTIMU
+        else:
+            import RTIMU
         if not isinstance(settings, SenseSettings):
             settings = SenseSettings(settings)
         self._settings = settings

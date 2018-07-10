@@ -61,6 +61,7 @@ from .exc import SenseStickBufferFull, SenseStickCallbackRead
 native_str = str  # pylint: disable=invalid-name
 str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
+
 class StickEvent(namedtuple('StickEvent',
                             ('timestamp', 'direction', 'pressed', 'held'))):
     """
@@ -123,6 +124,22 @@ class SenseStick(object):
 
     The :attr:`rotation` attribute can be modified to alter the orientation of
     events, and the aforementioned attributes.
+
+    The *max_events* parameter controls the size of the internal queue used to
+    buffer joystick events. This defaults to 100 which should be more than
+    sufficient to ensure events are not lost. The *flush_input* parameter,
+    which defaults to ``True`` controls whether, when the instance is closed,
+    it attempts to flush the stdin of the owning terminal. This is useful as
+    the joystick also acts as a keyboard. On the command line, this can mean
+    that joystick movements (buffered during a script's execution) can
+    inadvertently execute historical commands (e.g. Up a few times followed by
+    Enter).
+
+    Finally, if the *emulate* parameter is ``True``, the instance will connect
+    to the joystick in the `desktop Sense HAT emulator`_ instead of the "real"
+    Sense HAT joystick.
+
+    .. _desktop Sense HAT emulator: https://sense-emu.readthedocs.io/
     """
     # pylint: disable=too-many-instance-attributes
 
@@ -158,7 +175,7 @@ class SenseStick(object):
     KEY_DOWN = 108
     KEY_ENTER = 28
 
-    def __init__(self, max_events=100, flush_input=True):
+    def __init__(self, max_events=100, flush_input=True, emulate=False):
         self._flush = flush_input
         self._callbacks_lock = Lock()
         self._callbacks_close = Event()
@@ -167,9 +184,12 @@ class SenseStick(object):
         self._closing = Event()
         self._stream = False
         self._buffer = Queue(maxsize=max_events)
-        self._read_thread = Thread(
-            target=self._read_stick,
-            args=(io.open(self._stick_device(), 'rb', buffering=0),))
+        if emulate:
+            from sense_emu.stick import init_stick_client
+            stick_file = init_stick_client()
+        else:
+            stick_file = io.open(self._stick_device(), 'rb', buffering=0)
+        self._read_thread = Thread(target=self._read_stick, args=(stick_file,))
         self._read_thread.daemon = True
         self._read_thread.start()
         # This is just a guess; we can't know the actual joystick state at

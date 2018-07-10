@@ -104,7 +104,11 @@ class SenseScreen(object):
     The *fps* parameter specifies the default frames per second for generation
     and playback of animations (the default if unspecified is 15fps). The
     *easing* parameter likewise specifies the default :ref:`easing function
-    <easing>` for generation of animations.
+    <easing>` for generation of animations. If the *emulate* parameter is
+    ``True``, the instance will connect to the screen on the `desktop Sense
+    HAT emulator`_ instead of the "real" Sense HAT screen.
+
+    .. _desktop Sense HAT emulator: https://sense-emu.readthedocs.io/
     """
     # pylint: disable=too-many-instance-attributes
 
@@ -116,6 +120,7 @@ class SenseScreen(object):
         '_hflip',
         '_vflip',
         '_rotation',
+        '_emulate',
         'fps',
         'easing',
     )
@@ -129,8 +134,13 @@ class SenseScreen(object):
     GAMMA_LOW = 1
     GAMMA_USER = 2
 
-    def __init__(self, fps=15, easing=linear):
-        self._fb_file = io.open(self._fb_device(), 'rb+', buffering=0)
+    def __init__(self, fps=15, easing=linear, emulate=False):
+        self._emulate = emulate
+        if emulate:
+            from sense_emu.screen import init_screen
+            self._fb_file = init_screen()
+        else:
+            self._fb_file = io.open(self._fb_device(), 'rb+', buffering=0)
         self._fb_mmap = mmap.mmap(self._fb_file.fileno(), 128)
         self._fb_array = np.frombuffer(self._fb_mmap, dtype=np.uint16).reshape((8, 8))
         self._array = ScreenArray()
@@ -199,9 +209,26 @@ class SenseScreen(object):
         """
         return self._fb_array
 
+    def _poke(self):
+        # "Touch" the frame-buffer file; this is necessary to let the Sense HAT
+        # emulator know that we've changed the contents of the framebuffer and
+        # it should update from it. Unfortunately, futimes(3) is not
+        # universally supported, and only available in Python 3.3+ so this gets
+        # a bit convoluted...
+        try:
+            if os.utime in os.supports_fd:
+                os.utime(self._fb_file.fileno())
+            else:
+                raise NotImplementedError
+        except (AttributeError, NotImplementedError) as e:
+            # Fall back to using the filename
+            os.utime(self._fb_file.name, None)
+
     @raw.setter
     def raw(self, value):
         self._fb_array[:] = value
+        if self._emulate:
+            self._poke()
 
     @property
     def gamma(self):
@@ -280,6 +307,8 @@ class SenseScreen(object):
             value = np.array(value, dtype=color).reshape((8, 8))
         value = self._apply_transforms(value)
         rgb_to_rgb565(value, self.raw)
+        if self._emulate:
+            self._poke()
 
     @property
     def vflip(self):

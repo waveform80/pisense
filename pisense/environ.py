@@ -42,8 +42,6 @@ from __future__ import (
 import time
 from collections import namedtuple
 
-import RTIMU
-
 from .settings import SenseSettings
 
 
@@ -120,6 +118,15 @@ class SenseEnviron(object):
     this is from the pressure sensor only, but you can specify a function for
     :attr:`temperature_source` which, given the two temperature readings
     returns the reading you are interested in, or some combination there-of.
+
+    The *settings* parameter can be used to point to alternate settings files.
+    The *temp_source* parameter provides an initial value for the
+    :attr:`temp_source` attribute (this defaults to :func:`temp_humidity`). If
+    the *emulate* parameter is ``True``, the instance will connect to the
+    environment sensors in the `desktop Sense HAT emulator`_ instead of the
+    "real" Sense HAT's sensors.
+
+    .. _desktop Sense HAT emulator: https://sense-emu.readthedocs.io/
     """
 
     __slots__ = (
@@ -132,7 +139,12 @@ class SenseEnviron(object):
         '_last_read',
     )
 
-    def __init__(self, settings=None, temperature_source=temp_humidity):
+    def __init__(self, settings=None, temp_source=temp_humidity,
+                 emulate=False):
+        if emulate:
+            from sense_emu import RTIMU
+        else:
+            import RTIMU
         if not isinstance(settings, SenseSettings):
             settings = SenseSettings(settings)
         self._settings = settings
@@ -143,7 +155,7 @@ class SenseEnviron(object):
         if not self._h_sensor.humidityInit():
             raise RuntimeError('Humidity sensor initialization failed')
         self._readings = EnvironReadings(None, None, None)
-        self._temp_source = temperature_source
+        self._temp_source = temp_source
         self._interval = 0.04
         self._last_read = None
 

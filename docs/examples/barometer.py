@@ -1,3 +1,4 @@
+# NB: this script is not compatible with py2.x
 from pisense import SenseHAT, array, draw_text, image_to_rgb
 from colorzero import Color, Green
 from time import sleep
@@ -17,7 +18,7 @@ def barometer(offset, reading):
         for i in range(64)
     ])
     screen = np.flipud(screen)
-    text = image_to_rgb(draw_text(str(round(reading.pressure)),
+    text = image_to_rgb(draw_text(str(int(round(reading.pressure))),
                                   'small.pil', foreground=Color('gray'),
                                   padding=(0, 0, 8, 3)))
     screen[:text.shape[0], :] += text[:, offset:offset + 8]

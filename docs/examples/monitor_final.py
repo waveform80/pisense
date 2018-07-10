@@ -1,3 +1,4 @@
+# NB: this script is not compatible with py2.x
 from pisense import SenseHAT, array, draw_text, image_to_rgb
 from colorzero import Color, Red, Green, Blue
 from time import time, sleep
@@ -16,7 +17,7 @@ def thermometer(offset, reading):
         for i in range(64)
     ])
     screen = np.flipud(screen)
-    text = image_to_rgb(draw_text(str(round(reading.temperature)),
+    text = image_to_rgb(draw_text(str(int(round(reading.temperature))),
                                   'small.pil', foreground=Color('gray'),
                                   padding=(0, 0, 0, 3)))
     screen[:text.shape[0], :text.shape[1]] += text
@@ -33,7 +34,7 @@ def hygrometer(offset, reading):
     ])
     screen = np.flipud(screen)
     text = image_to_rgb(draw_text('^^' if reading.humidity > 99 else
-                                  str(round(reading.humidity)),
+                                  str(int(round(reading.humidity))),
                                   'small.pil', foreground=Color('gray'),
                                   padding=(0, 0, 0, 3)))
     screen[:text.shape[0], :text.shape[1]] += text
@@ -49,7 +50,7 @@ def barometer(offset, reading):
         for i in range(64)
     ])
     screen = np.flipud(screen)
-    text = image_to_rgb(draw_text(str(round(reading.pressure)),
+    text = image_to_rgb(draw_text(str(int(round(reading.pressure))),
                                   'small.pil', foreground=Color('gray'),
                                   padding=(0, 0, 8, 3)))
     screen[:text.shape[0], :] += text[:, offset:offset + 8]

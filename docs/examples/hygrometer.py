@@ -1,3 +1,4 @@
+from __future__ import division  # for py2.x compatibility
 from pisense import SenseHAT, array, draw_text, image_to_rgb
 from colorzero import Color, Blue
 from time import sleep
@@ -13,7 +14,7 @@ def hygrometer(reading):
     ])
     screen = np.flipud(screen)
     text = image_to_rgb(draw_text('^^' if reading.humidity > 99 else
-                                  str(round(reading.humidity)),
+                                  str(int(round(reading.humidity))),
                                   'small.pil', foreground=Color('gray'),
                                   padding=(0, 0, 0, 3)))
     screen[:text.shape[0], :text.shape[1]] += text
