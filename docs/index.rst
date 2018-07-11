@@ -16,7 +16,7 @@ Table of Contents
     development
     api
     api_screen
-    api_screenarray
+    api_array
     api_stick
     api_environ
     api_imu
