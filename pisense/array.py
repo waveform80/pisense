@@ -55,6 +55,10 @@ try:
     _has_array_ufunc = True
 except VersionConflict:
     _has_array_ufunc = False
+except DistributionNotFound:
+    # This will occur on RTD where we've mocked numpy; pretend we've got a
+    # recent version of numpy installed
+    _has_array_ufunc = True
 import numpy as np
 from colorzero import Color
 
