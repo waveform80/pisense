@@ -77,7 +77,7 @@ def arr_rgb565(request):
 
 @pytest.fixture()
 def arr_rgb(request):
-    arr = np.empty((8, 8), dtype=color)
+    arr = np.empty((8, 8), dtype=color_dtype)
     arr[...] = Color('red')
     return arr
 
@@ -117,11 +117,11 @@ def test_rgb888_to_rgb565(arr_rgb888, arr_rgb565):
 
 def test_rgb888_to_rgb(arr_rgb888, arr_rgb):
     assert (rgb888_to_rgb(arr_rgb888) == arr_rgb).all()
-    out = np.empty((8, 8), dtype=color)
+    out = np.empty((8, 8), dtype=color_dtype)
     rgb888_to_rgb(arr_rgb888, out)
     assert (out == arr_rgb).all()
     with pytest.raises(ValueError):
-        out = np.empty((5, 5), dtype=color)
+        out = np.empty((5, 5), dtype=color_dtype)
         rgb888_to_rgb(arr_rgb888, out)
 
 
@@ -137,11 +137,11 @@ def test_rgb565_to_rgb888(arr_rgb888, arr_rgb565):
 
 def test_rgb565_to_rgb(arr_rgb, arr_rgb565):
     assert (rgb565_to_rgb(arr_rgb565) == arr_rgb).all()
-    out = np.empty((8, 8), dtype=color)
+    out = np.empty((8, 8), dtype=color_dtype)
     rgb565_to_rgb(arr_rgb565, out)
     assert (out == arr_rgb).all()
     with pytest.raises(ValueError):
-        out = np.empty((5, 5), dtype=color)
+        out = np.empty((5, 5), dtype=color_dtype)
         rgb565_to_rgb(arr_rgb565, out)
 
 

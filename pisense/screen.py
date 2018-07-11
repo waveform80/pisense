@@ -55,7 +55,7 @@ from .array import ScreenArray
 from .easings import linear
 from .anim import scroll_text, fade_to, slide_to, zoom_to
 from .formats import (
-    color,
+    color_dtype,
     buf_to_image,
     image_to_rgb565,
     rgb565_to_image,
@@ -299,12 +299,12 @@ class SenseScreen(object):
     @array.setter
     def array(self, value):
         if isinstance(value, np.ndarray):
-            if value.dtype == color:
+            if value.dtype == color_dtype:
                 value = value.reshape((8, 8))
             else:
-                value = value.astype(np.float32).view(color).reshape((8, 8))
+                value = value.astype(np.float32).view(color_dtype).reshape((8, 8))
         else:
-            value = np.array(value, dtype=color).reshape((8, 8))
+            value = np.array(value, dtype=color_dtype).reshape((8, 8))
         value = self._apply_transforms(value)
         rgb_to_rgb565(value, self.raw)
         if self._emulate:

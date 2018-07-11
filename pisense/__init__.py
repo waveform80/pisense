@@ -54,7 +54,7 @@ from .exc import (
     SenseStickCallbackRead,
 )
 from .formats import (
-    color,
+    color_dtype,
     buf_to_image, buf_to_rgb888, buf_to_rgb, iter_to_rgb,
     image_to_rgb565, rgb565_to_image,
     image_to_rgb888, rgb888_to_image,

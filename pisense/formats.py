@@ -46,7 +46,7 @@ from PIL import Image
 native_str = str  # pylint: disable=invalid-name
 str = type('')  # pylint: disable=redefined-builtin,invalid-name
 
-color = np.dtype([  # pylint: disable=invalid-name
+color_dtype = np.dtype([  # pylint: disable=invalid-name
     (native_str('r'), np.float32),
     (native_str('g'), np.float32),
     (native_str('b'), np.float32),
@@ -74,7 +74,7 @@ def check_rgb565(arr):
 def check_rgb(arr):
     if not (
             isinstance(arr, np.ndarray) and
-            arr.dtype == color and
+            arr.dtype == color_dtype and
             len(arr.shape) == 2):
         raise ValueError("arr must be a 2-dimensional numpy array of "
                          "16-bit ints")
@@ -212,7 +212,7 @@ def rgb888_to_rgb(arr, out=None):
     """
     check_rgb888(arr)
     if out is None:
-        out = np.empty(arr.shape[:2], color)
+        out = np.empty(arr.shape[:2], color_dtype)
     else:
         check_rgb(out)
         if out.shape != arr.shape[:2]:
@@ -254,7 +254,7 @@ def rgb565_to_rgb(arr, out=None):
     """
     check_rgb565(arr)
     if out is None:
-        out = np.empty(arr.shape, color)
+        out = np.empty(arr.shape, color_dtype)
     else:
         check_rgb(out)
         if out.shape != arr.shape:
@@ -287,7 +287,7 @@ def buf_to_rgb888(buf):
         arr = image_to_rgb888(buf)
     elif isinstance(buf, np.ndarray) and 2 <= len(buf.shape) <= 3:
         if len(buf.shape) == 2:
-            if buf.dtype == color:
+            if buf.dtype == color_dtype:
                 arr = rgb_to_rgb888(buf)
             elif buf.dtype == np.uint8:
                 arr = np.dstack((buf, buf, buf))
@@ -332,7 +332,7 @@ def buf_to_rgb(buf):
     :class:`ScreenArray`). The *buf* parameter can be any of the types accepted
     by :func:`buf_to_rgb888`.
     """
-    if isinstance(buf, np.ndarray) and len(buf.shape) == 2 and buf.dtype == color:
+    if isinstance(buf, np.ndarray) and len(buf.shape) == 2 and buf.dtype == color_dtype:
         return buf
     else:
         return rgb888_to_rgb(buf_to_rgb888(buf))
@@ -346,4 +346,4 @@ def iter_to_rgb(it, shape=(8, 8)):
     """
     # pylint: disable=invalid-name
     assert len(shape) == 2
-    return np.fromiter(it, color, shape[0] * shape[1]).reshape(shape)
+    return np.fromiter(it, color_dtype, shape[0] * shape[1]).reshape(shape)

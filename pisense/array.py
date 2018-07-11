@@ -63,7 +63,7 @@ import numpy as np
 from colorzero import Color
 
 from .formats import (
-    color,
+    color_dtype,
     buf_to_rgb,
     iter_to_rgb,
 )
@@ -111,7 +111,7 @@ def array(data=None, shape=(8, 8)):
             result = buf_to_rgb(data)
         except TypeError:
             result = iter_to_rgb(data, shape)
-        result = result.view(color, ScreenArray)
+        result = result.view(color_dtype, ScreenArray)
     return result
 
 
@@ -124,7 +124,7 @@ class ScreenArray(np.ndarray):
 
     def __new__(cls, shape=(8, 8)):
         # pylint: disable=protected-access
-        result = np.ndarray.__new__(cls, shape=shape, dtype=color)
+        result = np.ndarray.__new__(cls, shape=shape, dtype=color_dtype)
         result._screen = None
         return result
 
@@ -132,7 +132,7 @@ class ScreenArray(np.ndarray):
     def _to_ndarray(v):
         return (
             np.ascontiguousarray(v).view(np.float32, np.ndarray).reshape(v.shape + (3,))
-            if isinstance(v, np.ndarray) and v.dtype == color else
+            if isinstance(v, np.ndarray) and v.dtype == color_dtype else
             np.ascontiguousarray(v).view(v.dtype, np.ndarray).reshape(v.shape)
             if isinstance(v, np.ndarray) else
             v
@@ -145,7 +145,7 @@ class ScreenArray(np.ndarray):
                 v.dtype == np.float32 and
                 len(v.shape) == 3 and
                 v.shape[-1] == 3):
-            return v.view(color, cls).squeeze()
+            return v.view(color_dtype, cls).squeeze()
         return v
 
     if _has_array_ufunc:
@@ -330,8 +330,8 @@ class ScreenArray(np.ndarray):
         else:
             return '\n'.join(
                 ''.join(
-                    '{color:{colors}}{elements}{color:0}'.format(
-                        color=Color(*c), colors=colors, elements=elements)
+                    '{color_dtype:{colors}}{elements}{color_dtype:0}'.format(
+                        color_dtype=Color(*c), colors=colors, elements=elements)
                     for c in row[:x_limit]
                 ) + overflow
                 for row in self

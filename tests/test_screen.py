@@ -63,14 +63,14 @@ def test_screen_init(screen_array):
     screen_array[...] = 0xFFFF
     screen = SenseScreen()
     try:
-        expected = np.array([Color('white')] * 64, dtype=color).reshape((8, 8))
+        expected = np.array([Color('white')] * 64, dtype=color_dtype).reshape((8, 8))
         assert (screen.array == expected).all()
     finally:
         screen.close()
     screen_array[...] = 0x0000
     screen = SenseScreen()
     try:
-        expected = np.array([Color('black')] * 64, dtype=color).reshape((8, 8))
+        expected = np.array([Color('black')] * 64, dtype=color_dtype).reshape((8, 8))
         assert (screen.array == expected).all()
     finally:
         screen.close()
@@ -165,7 +165,7 @@ def test_screen_gamma(screen_gamma):
 def test_screen_array(screen_array):
     with SenseScreen() as screen:
         data = [Color('yellow')] * 32 + [Color('magenta')] * 32
-        expected = np.array(data, color)
+        expected = np.array(data, color_dtype)
         screen.array = expected
         assert (screen_array == np.array(
             [c.rgb565 for c in data], np.uint16

@@ -74,7 +74,7 @@ def checker_array(request):
 
 
 def test_array_constructor():
-    arr_rgb = np.empty((8, 8), dtype=color)
+    arr_rgb = np.empty((8, 8), dtype=color_dtype)
     arr_rgb[...] = Color('black')
     assert (array() == arr_rgb).all()
     assert isinstance(array(), ScreenArray)
@@ -103,7 +103,7 @@ def test_array_ufunc():
     gray = array(Color(0.5, 0.5, 0.5))
     dark_gray = array(Color(0.25, 0.25, 0.25))
     identity = np.identity(8, np.float32)
-    identity = np.dstack((identity,) * 3).view(color)
+    identity = np.dstack((identity,) * 3).view(color_dtype)
 
     # Test standard ops
     assert (black + black == black).all()
@@ -118,9 +118,9 @@ def test_array_ufunc():
     # Test reverse ops
     assert (0.5 + gray == white).all()
     assert (2 * gray == white).all()
-    assert (white.view(color, np.ndarray) - white == black).all()
-    assert (white.view(color, np.ndarray) / white == white).all()
-    assert (gray.view(color, np.ndarray) // white == black).all()
+    assert (white.view(color_dtype, np.ndarray) - white == black).all()
+    assert (white.view(color_dtype, np.ndarray) / white == white).all()
+    assert (gray.view(color_dtype, np.ndarray) // white == black).all()
     assert (1 % white == black).all()
     assert (1 ** gray == white).all()
 
