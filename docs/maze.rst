@@ -121,28 +121,34 @@ Nearly there … now we've just got to generate the maze. There's lots of ways o
 doing this but about the simplest is `Kruskal's Algorithm`_. Roughly speaking,
 it works like this:
 
-1. Start off assuming the maze has walls between every cell on every side
-   (actually we'll only model the "north" and "west" walls between cells as
-   that's sufficient to represent all interior walls in the maze).
+1. Start off assuming the maze has walls between every cell on every side:
 
    .. image:: images/maze_init.*
 
-2. Construct a set of sets each of which represents an individual cell:
+2. Construct a set of sets (S) each of which represents an individual cell, and
+   the set of walls between them (W). Below we represent a wall as a set
+   giving the cells it divides (there are more efficient representations, but
+   this is easier to visualize). Note that we are only interested in walls
+   dividing cells, not the exterior walls or walls that divide diagonally:
 
-   S := {{1}, {2}, {3}, {4}}
+   :math:`\begin{aligned}S &= \{\{1\}, \{2\}, \{3\}, \{4\}\} \\
+   W &= \{\{1, 2\}, \{1, 3\}, \{2, 4\}, \{3, 4\}\}\end{aligned}`
 
-3. Knock down a random wall and union together the sets containing the cells
-   that have just been joined.
+3. Knock down a random wall where the cells either side of the wall don't
+   belong to the same set in S, and union together the sets in S containing the
+   cells that have just been joined.
 
-   S := {{1, 3}, {2}, {4}}
+   :math:`\begin{aligned}S &= \{\{1, 3\}, \{2\}, \{4\}\} \\
+   W &= \{\{1, 2\}, \{2, 4\}, \{3, 4\}\}\end{aligned}`
 
    .. image:: images/maze_during.*
 
-4. Continue doing this until a single set remains containing all cells. At this
-   point any cell must be reachable from any other cell and the maze is
-   complete.
+4. Continue doing this until a single set remains in S, containing all cells.
+   At this point any cell must be reachable from any other cell and the maze is
+   complete; W will contain the set of walls that need to be rendered:
 
-   S := {{1, 2, 3, 4}}
+   :math:`\begin{aligned}S &= \{\{1, 2, 3, 4\}\} \\
+   W &= \{\{3, 4\}\}\end{aligned}`
 
    .. image:: images/maze_final.*
 

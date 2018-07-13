@@ -91,9 +91,13 @@ def generate_maze(width, height, colors):
 
 
 def generate_walls(width, height):
-    # Generate the maze with Kruskal's algorithm (there's better choices,
-    # but this is a simple demo!)
-    sets = {frozenset({(y, x)}) for y in range(height) for x in range(width)}
+    # Generate the maze with Kruskal's algorithm (there's better
+    # choices, but this is a simple demo!)
+    sets = {
+        frozenset({(y, x)})
+        for y in range(height)
+        for x in range(width)
+    }
     walls = set()
     for y in range(height):
         for x in range(width):
@@ -116,8 +120,8 @@ def generate_walls(width, height):
                 set_b = s
             if set_a is not None and set_b is not None:
                 break
-        # If the sets aren't the same, the cells aren't reachable; remove the
-        # wall between them
+        # If the sets aren't the same, the cells aren't reachable;
+        # remove the wall between them
         if set_a is not set_b:
             sets.add(set_a | set_b)
             sets.remove(set_a)
@@ -126,7 +130,11 @@ def generate_walls(width, height):
         if len(sets) == 1:
             break
     assert len(sets) == 1
-    assert sets.pop() == {(y, x) for y in range(height) for x in range(width)}
+    assert sets.pop() == {
+        (y, x)
+        for y in range(height)
+        for x in range(width)
+    }
     return walls
 
 

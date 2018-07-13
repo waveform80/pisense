@@ -75,6 +75,15 @@ sys.modules['RTIMU'] = Mock()
 # -- General configuration ------------------------------------------------
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode', 'sphinx.ext.intersphinx']
+if on_rtd:
+    needs_sphinx = '1.4.0'
+    extensions.append('sphinx.ext.imgmath')
+    imgmath_image_format = 'svg'
+    tags.add('rtd')
+else:
+    extensions.append('sphinx.ext.mathjax')
+    mathjax_path = '/usr/share/javascript/mathjax/MathJax.js?config=TeX-AMS_HTML'
+
 templates_path = ['_templates']
 source_suffix = '.rst'
 #source_encoding = 'utf-8-sig'
