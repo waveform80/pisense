@@ -121,10 +121,10 @@ develop: tags
 	$(PIP) install -U pip
 	$(PIP) install -e .[doc,test]
 	@# If we're in a venv, link the system's RTIMULib into it
-ifeq($(VIRTUAL_ENV),)
+ifeq ($(VIRTUAL_ENV),)
 	@echo "Virtualenv not detected! You may need to link RTIMULib manually"
 else
-ifeq($(RTIMULIB),)
+ifeq ($(RTIMULIB),)
 	@echo "WARNING: RTIMULib not found. This is fine on non-Pi platforms"
 else
 	ln -sf $(RTIMULIB) $(VIRTUAL_ENV)/lib/python*/site-packages/
