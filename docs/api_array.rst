@@ -26,31 +26,39 @@ ScreenArray Class
     sections.
 
     Instances of this class should *not* be created directly. Rather, obtain
-    the current state of the screen from :attr:`SenseScreen.array` or use the
-    :func:`array` function to create instances from a variety of sources (a PIL
+    the current state of the screen from the :attr:`~SenseScreen.array`
+    attribute of :attr:`SenseHAT.screen` or use the :func:`array` function to
+    create a new instance from a variety of sources (a PIL
     :class:`~PIL.Image.Image`, another array, a list of
     :class:`~colorzero.Color` instances, etc).
 
 .. autofunction:: array
 
+
 Display Association
 ===================
 
-If the instance was obtained from :attr:`SenseScreen.array` it will be
+If the :class:`ScreenArray` instance was obtained from the
+:attr:`~SenseScreen.array` attribute of :attr:`SenseHAT.screen` it will be
 "associated" with the display. Manipulating the content of the array will
-manipulate the appearance of the display.
+manipulate the appearance of the display on the Sense HAT::
 
-Copying a screen array that is associated with a display (via the
+    >>> from pisense import *
+    >>> hat = SenseHAT()
+    >>> arr = hat.screen.array
+    >>> arr[0, 0] = (1, 0, 0)  # set the top-left pixel to red
+
+Copying an array that is associated with a display (via the
 :meth:`~numpy.ndarray.copy` method) breaks the association. This is a
 convenient way to take a copy of the current display, fiddle around with it
-without intermediate states displaying, and then update the display by
-copying it back::
+without intermediate states displaying, and then update the display by copying
+it back::
 
     >>> from pisense import *
     >>> hat = SenseHAT()
     >>> arr = hat.screen.array.copy()
-    >>> # Mess around with arr here
-    >>> hat.screen.array = arr
+    >>> arr[4:, :] = (1, 0, 1)  # HAT's pixels are *not* changed (yet)
+    >>> hat.screen.array = arr  # HAT's bottom pixels are changed to purple
 
 Operations in numpy that create a new array will also break the display
 association (e.g. adding two arrays together to create a new array; the new
@@ -62,13 +70,14 @@ update portions of the display using slices.
 Data Type
 =========
 
-The data-type is fixed and cannot be altered. Specifically the data-type is
-a 3-tuple of single-precision floating point values between 0.0 and 1.0,
-labelled "r", "g" and "b".
+The data-type of the array is fixed and cannot be altered. Specifically the
+data-type is a triple of single-precision floating point values between 0.0 and
+1.0, labelled "r", "g" and "b". In other words, each element of the array is
+a triple RGB value representing the color of a single pixel.
 
-The 0.0 to 1.0 range of color values is *not* enforced.  Hence if you add
-two screen arrays together you may wind up with values greater than 1.0 in
-one or more color planes. This is deliberate as intermediate values
+The 0.0 to 1.0 range of color values is *not* enforced.  Hence if you add two
+screen arrays together you may wind up with values greater than 1.0 or less
+than 0.0 in one or more color planes. This is deliberate as intermediate values
 exceeding this range can be useful in some calculations.
 
 .. hint::
@@ -79,9 +88,9 @@ exceeding this range can be useful in some calculations.
 Previews
 ========
 
-While you can see the state of the screen's array visually, what about arrays
-that you create separately with :func:`array`? For this, the
-:meth:`ScreenArray.show` method is provided:
+While you can see the state of the HAT's array visually, what about arrays that
+you create separately with the :func:`array` function? For this, the
+:meth:`~ScreenArray.show` method is provided:
 
 .. code-block:: pycon
 

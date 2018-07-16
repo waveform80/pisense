@@ -23,8 +23,8 @@ def main():
 
 def moves(imu):
     for reading in imu:
-        delta_x = round(max(-1, min(1, reading.accel.x)))
-        delta_y = round(max(-1, min(1, reading.accel.y)))
+        delta_x = int(round(max(-1, min(1, reading.accel.x))))
+        delta_y = int(round(max(-1, min(1, reading.accel.y))))
         if delta_x != 0 or delta_y != 0:
             yield delta_y, delta_x
         sleep(1/10)
