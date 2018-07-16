@@ -165,6 +165,8 @@ class SenseHAT(object):
                                              preexec_fn=setpgrp,
                                              stdin=devnull, stdout=devnull,
                                              stderr=devnull, close_fds=True)
+                            if not lock.wait(10):
+                                raise RuntimeError('Failed to launch emulator')
                 # pylint: disable=protected-access
                 self._settings = SenseSettings(settings, emulate=emulate)
                 self._screen = SenseScreen(fps, easing, emulate=emulate)
