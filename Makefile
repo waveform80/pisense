@@ -121,16 +121,15 @@ develop: tags
 	$(PIP) install -U pip
 	$(PIP) install -e .[doc,test]
 	@# If we're in a venv, link the system's RTIMULib into it
-	@if [ -z $(VIRTUAL_ENV) ]; then \
-		echo "Virtualenv not detected! You may need to link RTIMULib manually"; \
-	else \
-		if [ -n $(RTIMULIB) ]; then \
-			echo "Linking $(RTIMULIB) into virtualenv"; \
-			ln -sf $(RTIMULIB) $(VIRTUAL_ENV)/lib/python*/site-packages/; \
-		else \
-			echo "ERROR: RTIMULib not found. If this is a Pi, something is wrong"; \
-		fi; \
-	fi
+ifeq($(VIRTUAL_ENV),)
+	@echo "Virtualenv not detected! You may need to link RTIMULib manually"
+else
+ifeq($(RTIMULIB),)
+	@echo "WARNING: RTIMULib not found. This is fine on non-Pi platforms"
+else
+	ln -sf $(RTIMULIB) $(VIRTUAL_ENV)/lib/python*/site-packages/
+endif
+endif
 
 test:
 	$(COVERAGE) run --rcfile coverage.cfg -m $(PYTEST) tests
