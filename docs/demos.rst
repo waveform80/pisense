@@ -167,11 +167,11 @@ number (in a small font), and a very basic chart which lights more elements as
 the temperature increases.
 
 We'll start with a function that takes a *reading*, limits it to the range of
-temperatures we're interested in (0°C to 50°C), and distributes that over the
-range 0 <= n < 64 (representing all 64 elements of the HAT's display):
+temperatures we're interested in (0°C to 50°C), and distributes that evenly
+over the range 0 <= n < 64 (representing all 64 elements of the HAT's display):
 
 .. literalinclude:: examples/thermometer.py
-    :lines: 1-7
+    :lines: 1-8
 
 Next, we need to construct the crude chart representing the temperature. For
 this we call :func:`array` and pass it a list of 64 :class:`~colorzero.Color`
@@ -181,7 +181,7 @@ temperature, a scaled red for the element at the current temperature, and black
 as we want the chart to start at the bottom and work its way up:
 
 .. literalinclude:: examples/thermometer.py
-    :lines: 8-14
+    :lines: 9-15
 
 Next, we call :func:`draw_text` which will return us a small
 :class:`~PIL.Image.Image` object containing the rendered text (we've added some
@@ -191,7 +191,7 @@ and then clip the result to the range 0 to 1 (because where the text overlays
 the chart we'll probably exceed the bounds of the red channel):
 
 .. literalinclude:: examples/thermometer.py
-    :lines: 15-19
+    :lines: 16-20
 
 Finally, here's the whole thing put together:
 

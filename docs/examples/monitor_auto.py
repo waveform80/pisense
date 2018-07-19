@@ -62,10 +62,8 @@ def bounce(it):
 
 def switcher(readings):
     for transform in cycle((thermometer, hygrometer, barometer)):
-        for n, (offset, reading) in enumerate(zip(bounce(range(8)), readings)):
+        for offset, reading in zip(bounce(range(8)), readings):
             yield transform(offset, reading)
-            if n == 30:
-                break
             sleep(0.2)
 
 

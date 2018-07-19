@@ -97,8 +97,7 @@ sensor? We simply use the built-in :func:`zip` function:
 .. admonition:: Exercise
 
     Can you adjust the hygrometer script so that it scrolls "100" when that is
-    the reading, but smaller values stay static on the display?  Hint: this
-    makes the offset produced by bounce *dependant* on the reading.
+    the reading, but smaller values stay static on the display?
 
 
 Combining Screens

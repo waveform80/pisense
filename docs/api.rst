@@ -15,7 +15,7 @@ the top-level :class:`SenseHAT` class.
 SenseHAT
 ========
 
-.. autoclass:: SenseHAT(settings='/etc/RTIMULib.ini', \*, fps=15, easing=<function linear>, max_events=100, flush_input=True)
+.. autoclass:: SenseHAT(settings='/etc/RTIMULib.ini', \*, fps=15, easing=<function linear>, max_events=100, flush_input=True, emulate=None)
 
 
 Warnings

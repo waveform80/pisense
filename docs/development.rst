@@ -13,8 +13,7 @@ just to ask usage questions (I find this useful for gauging what questions
 ought to feature in the FAQ, for example).
 
 Even if you don’t feel up to hacking on the code, I’d love to hear suggestions
-from people of what you’d like the API to look like (even if the code itself
-isn’t particularly pythonic, the interface should be)!
+from people of what you’d like the API to look like!
 
 
 .. _dev_install:
@@ -27,8 +26,8 @@ cloning the GitHub repository and then use the "develop" target of the Makefile
 which will install the package as a link to the cloned repository allowing
 in-place development (it also builds a tags file for use with vim/emacs with
 Exuberant’s ctags utility, and links the Sense HAT's customized RTIMULib into
-your virtual environment). The following example demonstrates this method
-within a virtual Python environment:
+your virtual environment if it can find it). The following example demonstrates
+this method within a virtual Python environment:
 
 .. code-block:: console
 

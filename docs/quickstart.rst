@@ -237,11 +237,11 @@ The Joystick
 
 The miniature joystick at the bottom right of the Sense HAT is exceedingly
 useful as a basic interface for Raspberry Pis without a keyboard. The joystick
-actually emulates a keyboard (which in some circumstances is very annoying) but
-it's simpler, and more useful, to use the library's facilities to read the
-joystick rather than trying to read the keyboard. The :meth:`~SenseStick.read`
-method can be used to wait for an event from the joystick. Type the following
-then briefly tap the joystick to the right:
+actually emulates a keyboard (which in some circumstances is useful and in
+others, very annoying) but it's simpler to use the library's facilities to read
+the joystick rather than trying to treat it as a keyboard. The
+:meth:`~SenseStick.read` method can be used to wait for an event from the
+joystick. Type the following then briefly tap the joystick to the right:
 
 .. code-block:: pycon
 
@@ -249,10 +249,10 @@ then briefly tap the joystick to the right:
     StickEvent(timestamp=datetime.datetime(2018, 5, 4, 22, 52, 35, 961776),
     direction='right', pressed=True, held=False)
 
-As you've released the joystick there should be a "release" event waiting to be
-retrieved. Notice that its timestamp is shortly after the former event (because
-the timestamp is the time at which the event *occurred*, not when it was
-retrieved):
+As you've released the joystick there should be a "not pressed" event waiting
+to be retrieved. Notice that its timestamp is shortly after the former event
+(because the timestamp is the time at which the event *occurred*, not when it
+was retrieved):
 
 .. code-block:: pycon
 
@@ -391,8 +391,8 @@ configure it to take the average of the two readings:
     >>> hat.environ.temperature_source = pisense.temp_average
     27.206080436706543
 
-However, if you think this will give you more accuracy, `Dilbert`_ may have a
-pithy word or two!
+However, if you think this will give you more accuracy, I'd recommend referring
+to `Dilbert`_ first!
 
 Like the joystick, the environment sensor(s) can also be treated as an
 iterator:

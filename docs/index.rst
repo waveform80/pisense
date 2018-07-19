@@ -13,6 +13,7 @@ Table of Contents
     monitor
     maze
     faq
+    emulation
     development
     api
     api_screen

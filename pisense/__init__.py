@@ -99,7 +99,7 @@ class SenseHAT(object):
     environment variable: ``PISENSE_EMULATE``. If set, this must be an integer
     number, typically 0 or 1 (0 is assumed if the variable is not set). This
     argument indicates whether the instance should attach to the "real" Sense
-    HAT or the `desktop Sense HAT emulator`_. The environment variable is
+    HAT or the desktop `Sense HAT emulator`_. The environment variable is
     particularly useful as it means scripts can be tested against the emulator
     without alteration. For example:
 
@@ -114,7 +114,7 @@ class SenseHAT(object):
         to do so a :exc:`SenseHATReinit` warning will be raised and the
         existing instance will be returned.
 
-    .. _desktop Sense HAT emulator: https://sense-emu.readthedocs.io/
+    .. _Sense HAT emulator: https://sense-emu.readthedocs.io/
     """
     __slots__ = ('_settings', '_screen', '_stick', '_imu', '_environ')
     hat = None

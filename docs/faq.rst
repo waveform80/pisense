@@ -64,7 +64,7 @@ API`_, but here's what I *don't* like about it:
   *great*. The real stroke of genius in pisense (which sadly I can't take
   credit for: yet again, it was one of Ben Nuttall's fabulous notions) was
   separating ``held`` into its own value in the :class:`StickEvent` tuple so
-  that ``released`` events can tell if the button was *previously* held.
+  that release events can tell if the button was *previously* held.
 
 * Everything is conflated into a single class (except the joystick) so if you
   don't want certain functionality: tough, you still have to deal with all the
@@ -80,8 +80,9 @@ API`_, but here's what I *don't* like about it:
   (in g, because degrees really are useless for that) *and* the magnetometer
   readings. The only way to do this is to query ``accel_raw`` and
   ``compass_raw`` (or call their duplicated methods). However, under the covers
-  this causes two *separate* IMU reads with all the attendant overhead that
-  implies. There's no way to get this set of data from a single IMU read.
+  this causes two *separate* IMU reads with all the attendant overhead and
+  inconsistency that implies. There's no way to get this set of data from a
+  single IMU read.
 
 I'm not intending this to be the simplest interface to the Sense HAT. The
 official API is probably easier to get going with. My feeling is that I'd
@@ -134,3 +135,9 @@ actual class doesn't include such values.
 
 If it did, I'd likely name them things like ``roll_degrees`` at which point
 you're typing almost as much as ``degrees(roll)`` anyway!
+
+
+Can I use this with the Sense HAT emulator?
+===========================================
+
+Yes; see the :doc:`emulation` section.
