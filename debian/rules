@@ -12,6 +12,9 @@ export PYBUILD_NAME=pisense
 override_dh_auto_test:
 	# Don't run the tests!
 
+override_dh_sphinxdoc:
+	dh_sphinxdoc -Xmathjax
+
 override_dh_auto_build:
 	dh_auto_build
 	PYTHONPATH=. sphinx-build -N -bhtml docs/ build/html

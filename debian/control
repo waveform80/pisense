@@ -10,7 +10,8 @@ Build-Depends:
  python-setuptools,
  python3-all,
  python3-setuptools,
- python3-sphinx
+ python3-sphinx,
+ libjs-mathjax
 Standards-Version: 3.9.6
 Vcs-Git: https://github.com/waveform80/pisense.git
 Vcs-Browser: https://github.com/waveform80/pisense
@@ -20,11 +21,8 @@ X-Python3-Version: >= 3.3
 Package: python-pisense
 Architecture: all
 Section: python
-Depends:
- ${misc:Depends},
- ${python:Depends},
- python-pkg-resources
-Recommends: sense-emu-tools
+Depends: ${misc:Depends}, ${python:Depends}
+Suggests: sense-emu-tools
 Description: Alternative interface for the Raspberry Pi Sense HAT.
  pisense is an alternative API for the Raspberry Pi Sense HAT (or the desktop
  Sense HAT emulator). It represents each component of the HAT separately, and
@@ -36,11 +34,8 @@ Description: Alternative interface for the Raspberry Pi Sense HAT.
 Package: python3-pisense
 Architecture: all
 Section: python
-Depends:
- ${misc:Depends},
- ${python3:Depends},
- python3-pkg-resources
-Recommends: sense-emu-tools
+Depends: ${misc:Depends}, ${python3:Depends}
+Suggests: sense-emu-tools
 Description: Alternative interface for the Raspberry Pi Sense HAT.
  pisense is an alternative API for the Raspberry Pi Sense HAT (or the desktop
  Sense HAT emulator). It represents each component of the HAT separately, and
@@ -52,7 +47,7 @@ Description: Alternative interface for the Raspberry Pi Sense HAT.
 Package: python-pisense-doc
 Architecture: all
 Section: doc
-Depends: ${sphinxdoc:Depends}, ${misc:Depends}
+Depends: ${sphinxdoc:Depends}, ${misc:Depends}, libjs-mathjax
 Description: Documentation for the pisense API.
  pisense is an alternative API for the Raspberry Pi Sense HAT (or the desktop
  Sense HAT emulator). It represents each component of the HAT separately, and
