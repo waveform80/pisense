@@ -1,0 +1,9 @@
+Document: python-pisense
+Title: Sense HAT Alternative API Reference
+Author: Dave Jones <dave@waveform.org.uk>
+Abstract: An alternative API for the Raspberry Pi Sense HAT
+Section: Programming/Python
+
+Format: HTML
+Index: /usr/share/doc/python-pisense-doc/html/index.html
+Files: /usr/share/doc/python-pisense-doc/html/*

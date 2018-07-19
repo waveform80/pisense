@@ -1,0 +1,62 @@
+Source: pisense
+Maintainer: Dave Jones <dave@waveform.org.uk>
+Homepage: http://pisense.readthedocs.io/
+Section: python
+Priority: extra
+Build-Depends:
+ debhelper (>= 8),
+ dh-python,
+ python-all (>= 2.7),
+ python-setuptools,
+ python3-all,
+ python3-setuptools,
+ python3-sphinx
+Standards-Version: 3.9.6
+Vcs-Git: https://github.com/waveform80/pisense.git
+Vcs-Browser: https://github.com/waveform80/pisense
+X-Python-Version: >= 2.7
+X-Python3-Version: >= 3.3
+
+Package: python-pisense
+Architecture: all
+Section: python
+Depends:
+ ${misc:Depends},
+ ${python:Depends},
+ python-pkg-resources
+Recommends: sense-emu-tools
+Description: Alternative interface for the Raspberry Pi Sense HAT.
+ pisense is an alternative API for the Raspberry Pi Sense HAT (or the desktop
+ Sense HAT emulator). It represents each component of the HAT separately, and
+ uses numpy and PIL for more advanced display capabilities. The interface also
+ fully supports using sensors on the HAT as iterators.
+ .
+ This is the Python 2 version of the package.
+
+Package: python3-pisense
+Architecture: all
+Section: python
+Depends:
+ ${misc:Depends},
+ ${python3:Depends},
+ python3-pkg-resources
+Recommends: sense-emu-tools
+Description: Alternative interface for the Raspberry Pi Sense HAT.
+ pisense is an alternative API for the Raspberry Pi Sense HAT (or the desktop
+ Sense HAT emulator). It represents each component of the HAT separately, and
+ uses numpy and PIL for more advanced display capabilities. The interface also
+ fully supports using sensors on the HAT as iterators.
+ .
+ This is the Python 3 version of the package.
+
+Package: python-pisense-doc
+Architecture: all
+Section: doc
+Depends: ${sphinxdoc:Depends}, ${misc:Depends}
+Description: Documentation for the pisense API.
+ pisense is an alternative API for the Raspberry Pi Sense HAT (or the desktop
+ Sense HAT emulator). It represents each component of the HAT separately, and
+ uses numpy and PIL for more advanced display capabilities. The interface also
+ fully supports using sensors on the HAT as iterators.
+ .
+ This is the version independent documentation for the package.
