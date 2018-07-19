@@ -46,7 +46,7 @@ import struct
 import fcntl
 import termios
 
-from pkg_resources import require, VersionConflict
+from pkg_resources import require, VersionConflict, DistributionNotFound
 try:
     # Check whether we're dealing with an old numpy version which doesn't
     # implement ndarray.__array_ufunc__; in this case we have to do something
