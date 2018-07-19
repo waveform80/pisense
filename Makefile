@@ -185,7 +185,7 @@ changelog: $(PY_SOURCES) $(DOC_SOURCES) $(DEB_SOURCES)
 	# commit the changes and add a new tag
 	git commit debian/changelog -m "Updated changelog for release $(VER)"
 
-release: $(DIST_DEB) $(DIST_DSC) $(DIST_TAR) $(DIST_WHEEL)
+release-pi: $(DIST_DEB) $(DIST_DSC) $(DIST_TAR) $(DIST_WHEEL)
 	git tag -s release-$(VER) -m "Release $(VER)"
 	git push --tags
 	# build a source archive and upload to PyPI
@@ -194,4 +194,8 @@ release: $(DIST_DEB) $(DIST_DSC) $(DIST_TAR) $(DIST_WHEEL)
 	dput raspberrypi dist/$(NAME)_$(VER)$(DEB_SUFFIX)_source.changes
 	dput raspberrypi dist/$(NAME)_$(VER)$(DEB_SUFFIX)_$(DEB_ARCH).changes
 
-.PHONY: all install develop test doc source wheel zip tar deb dist clean tags changelog release $(SUBDIRS)
+release-ubuntu: $(DIST_DEB) $(DIST_DSC)
+	# build the deb source archive and upload to the PPA
+	dput waveform-ppa dist/$(NAME)_$(VER)$(DEB_SUFFIX)_source.changes
+
+.PHONY: all install develop test doc source wheel zip tar deb dist clean tags changelog release-pi release-ubuntu $(SUBDIRS)
