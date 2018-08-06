@@ -158,16 +158,20 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
     if not isinstance(background, Color):
         background = Color(*background)
     f = _load_font(font, size)
-    width, height = f.getsize(text)
+    # Rather annoyingly, ImageDraw's textsize method isn't static (or a class
+    # method), so we have to construct a pointless image to measure the size
+    # of image we want to create...
+    img = Image.new('RGB', (1, 1))
+    draw = ImageDraw.Draw(img)
+    width, height = draw.textsize(text, f, spacing=1)
     pad_left, pad_top, pad_right, pad_bottom = padding
     pad_top = max(pad_top, min_height - (pad_top + height + pad_bottom))
     img = Image.new('RGB', (
         pad_left + width + pad_right,
         pad_top + height + pad_bottom
-    ))
+    ), background.rgb_bytes)
     draw = ImageDraw.Draw(img)
-    draw.rectangle(((0, 0), img.size), background.rgb_bytes)
-    draw.text((pad_left, pad_top), text, foreground.rgb_bytes, f)
+    draw.text((pad_left, pad_top), text, foreground.rgb_bytes, f, spacing=1)
     return img
 
 
