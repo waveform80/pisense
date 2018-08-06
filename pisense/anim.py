@@ -166,6 +166,8 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
     width, height = draw.textsize(text, f, spacing=1)
     pad_left, pad_top, pad_right, pad_bottom = padding
     pad_top = max(pad_top, min_height - (pad_top + height + pad_bottom))
+    if pad_left + width + pad_right == 0 or pad_top + height + pad_bottom == 0:
+        raise ValueError('Cannot generate an image with 0 width or height')
     img = Image.new('RGB', (
         pad_left + width + pad_right,
         pad_top + height + pad_bottom
