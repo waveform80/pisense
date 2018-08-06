@@ -267,16 +267,16 @@ class SenseStick(object):
                         code,
                         value,
                     ) = struct.unpack(SenseStick.EVENT_FORMAT, event)
-                    r = self._rotation
-                    while r:
-                        code = self._rot_map[code]
-                        r -= 90
                     if evt_type == SenseStick.EV_KEY:
                         if self._buffer.full():
                             warnings.warn(SenseStickBufferFull(
                                 "The internal SenseStick buffer is full; "
                                 "try reading some events!"))
                             self._buffer.get()
+                        r = self._rotation
+                        while r:
+                            code = self._rot_map[code]
+                            r -= 90
                         evt = StickEvent(
                             timestamp=datetime.fromtimestamp(
                                 tv_sec + (tv_usec / 1000000)
