@@ -188,6 +188,7 @@ changelog: $(PY_SOURCES) $(DOC_SOURCES) $(DEB_SOURCES)
 release-pi: $(DIST_DEB) $(DIST_DSC) $(DIST_TAR) $(DIST_WHEEL)
 	git tag -s release-$(VER) -m "Release $(VER)"
 	git push --tags
+	git push
 	# build a source archive and upload to PyPI
 	$(TWINE) upload $(DIST_TAR) $(DIST_WHEEL)
 	# build the deb source archive and upload to Raspbian

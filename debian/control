@@ -20,7 +20,6 @@ X-Python3-Version: >= 3.3
 
 Package: python-pisense
 Architecture: all
-Section: python
 Depends: ${misc:Depends}, ${python:Depends}
 Suggests: sense-emu-tools
 Description: Alternative interface for the Raspberry Pi Sense HAT.
@@ -33,7 +32,6 @@ Description: Alternative interface for the Raspberry Pi Sense HAT.
 
 Package: python3-pisense
 Architecture: all
-Section: python
 Depends: ${misc:Depends}, ${python3:Depends}
 Suggests: sense-emu-tools
 Description: Alternative interface for the Raspberry Pi Sense HAT.
