@@ -1,3 +1,9 @@
+pisense (0.2ubuntu1) xenial; urgency=medium
+
+  * Release for 0.2 on Ubuntu.
+
+ -- Dave Jones <dave@waveform.org.uk>  Sat, 22 Dec 2018 15:57:20 +0000
+
 pisense (0.2) stable; urgency=low
 
   * Setting a non-zero rotation on the joystick failed on the next event that
