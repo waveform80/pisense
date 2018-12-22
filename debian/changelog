@@ -1,3 +1,11 @@
+pisense (0.2) stable; urgency=low
+
+  * Setting a non-zero rotation on the joystick failed on the next event that
+    occurred (#1)
+  * Multiline text rendering was broken (#2)
+
+ -- Dave Jones <dave@waveform.org.uk>  Sat, 22 Dec 2018 15:52:05 +0000
+
 pisense (0.1ubuntu1) xenial; urgency=medium
 
   * Initial release on Ubuntu.
