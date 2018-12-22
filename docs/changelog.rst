@@ -5,6 +5,20 @@ Change log
 .. currentmodule:: pisense
 
 
+Release 0.2 (2018-12-22)
+========================
+
+Reasonably happy with the API now, so this will probably be the final 0.x
+release before 1.0. Nonetheless, a few bugs fixed:
+
+* Setting a non-zero rotation on the joystick failed on the next event that
+  occurred (`#1`_)
+* Multiline text rendering was broken (`#2`_)
+
+.. _#1: https://github.com/waveform80/pisense/issues/1
+.. _#2: https://github.com/waveform80/pisense/issues/2
+
+
 Release 0.1 (2018-07-19)
 ========================
 

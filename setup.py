@@ -52,7 +52,7 @@ except ImportError:
     pass
 
 __project__      = 'pisense'
-__version__      = '0.1'
+__version__      = '0.2'
 __author__       = 'Dave Jones'
 __author_email__ = 'dave@waveform.org.uk'
 __url__          = 'http://pisense.readthedocs.io/'
