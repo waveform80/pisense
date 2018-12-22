@@ -153,6 +153,7 @@ def draw_text(text, font='default.pil', size=8, foreground=Color('white'),
     worrying about the vertical slicing.
     """
     # pylint: disable=too-many-arguments,too-many-locals
+    text = str(text)
     if not isinstance(foreground, Color):
         foreground = Color(*foreground)
     if not isinstance(background, Color):
