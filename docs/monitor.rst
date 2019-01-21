@@ -202,14 +202,14 @@ follows:
 
 .. literalinclude:: examples/monitor_final.py
     :caption:
-    :emphasize-lines: 64-88,92,100,110-114
+    :emphasize-lines: 65-89,93,101,111-115
 
 .. admonition:: Exercise
 
     At the moment, it's too easy to accidentally exit the script.  Can you make
     the application rotate around the screens (i.e. moving right from the
     barometer screen takes the user back to the thermometer screen, and
-    vice-versa) and pressed the joystick is required to exit the application?
+    vice-versa) and pressing the joystick is required to exit the application?
 
 Finally, let's whip up a little web-server that we can run alongside the Sense
 HAT script to allow remote clients to query our environmental data and see some
