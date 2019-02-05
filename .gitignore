@@ -16,8 +16,9 @@ tags
 dist
 build
 man
+
 # Unit test / coverage reports
 coverage
-.coverage
+.coverage*
 .tox
 .pytest_cache
