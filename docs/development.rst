@@ -33,6 +33,13 @@ this method within a virtual Python environment:
 
     $ sudo apt install lsb-release build-essential git git-core \
         exuberant-ctags virtualenvwrapper python-virtualenv python3-virtualenv
+
+After installing ``virtualenvwrapper`` you'll need to restart your shell before
+commands like :command:`mkvirtualenv` will operate correctly. Once you've
+restarted your shell, continue:
+
+.. code-block:: console
+
     $ cd
     $ mkvirtualenv -p /usr/bin/python3 pisense
     $ workon pisense
@@ -70,7 +77,7 @@ command should install all required dependencies:
 .. code-block:: console
 
     $ sudo apt install texlive-latex-recommended texlive-latex-extra \
-        texlive-fonts-recommended graphviz inkscape
+        texlive-fonts-recommended graphviz inkscape gnuplot
 
 Once these are installed, you can use the "doc" target to build the
 documentation:

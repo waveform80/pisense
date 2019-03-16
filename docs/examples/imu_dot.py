@@ -5,8 +5,8 @@ from time import sleep
 
 def movements(imu):
     for reading in imu:
-        delta_x = int(round(max(-1, min(1, imu.accel.x))))
-        delta_y = int(round(max(-1, min(1, imu.accel.y))))
+        delta_x = int(round(max(-1, min(1, reading.accel.x))))
+        delta_y = int(round(max(-1, min(1, reading.accel.y))))
         if delta_x != 0 or delta_y != 0:
             yield delta_x, delta_y
         sleep(1/10)

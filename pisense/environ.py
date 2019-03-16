@@ -60,7 +60,7 @@ class EnvironReadings(namedtuple('EnvironReadings', ('pressure', 'humidity', 'te
 def temp_pressure(p_temp, h_temp):
     """
     Use this function as :attr:`~SenseEnviron.temp_source` if you want
-    to read temperature from the pressure sensor only. This is the default.
+    to read temperature from the pressure sensor only.
     """
     # pylint: disable=unused-argument
     return p_temp
@@ -69,7 +69,7 @@ def temp_pressure(p_temp, h_temp):
 def temp_humidity(p_temp, h_temp):
     """
     Use this function as :attr:`~SenseEnviron.temp_source` if you want
-    to read temperature from the humidity sensor only.
+    to read temperature from the humidity sensor only. This is the default.
     """
     # pylint: disable=unused-argument
     return h_temp
