@@ -184,23 +184,22 @@ class SenseEnviron(object):
         while True:
             yield self.read()
 
-    def read(self):
+    def read(self, wait=True):
         """
         Return the current state of all environmental sensors as an
         :class:`EnvironReadings` tuple.
 
+        The parameter *wait* determines if the method will wait for 
+        the next reading or return quickly to avoid blocking. By default, 
+        the method will wait until the next set of readings are available,
+        and then return them. 
+
         .. note::
 
-            This method will wait until the next set of readings are available,
-            and then return them. Hence it is suitable for use in a loop
-            without additional waits, although it may be simpler to simply
-            treat the instance as an iterator in that case.
-
-            This is in contrast to reading the :attr:`pressure`,
-            :attr:`humidity`, and :attr:`temperature` attributes which always
-            return immediately.
+            Reading the :attr:`pressure`, :attr:`humidity`, and :attr:`temperature` 
+            attributes always return immediately.
         """
-        self._read(True)
+        self._read(wait)
         return self._readings
 
     def _read(self, wait):
