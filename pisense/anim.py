@@ -376,15 +376,62 @@ def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
             f = 1 - f
         mask[...] = int(255 * f)
         frame = base.copy()
-        frame.paste(top, (center[0] * size[0], center[1] * size[1]), mask_img)
+        frame.paste(top, (cx * size[0], cy * size[1]), mask_img)
         frame = frame.crop((
-            int(center[0] * f * size[0]),
-            int(center[1] * f * size[1]),
-            int(canvas_size[0] - f * size[0] * (size[0] - (center[0] + 1))),
-            int(canvas_size[1] - f * size[1] * (size[1] - (center[1] + 1))),
+            int(cx * f * size[0]),
+            int(cy * f * size[1]),
+            int(w - f * size[0] * (size[0] - (cx + 1))),
+            int(h - f * size[1] * (size[1] - (cy + 1))),
         ))
         if (direction == 'in' and f == 1) or (direction == 'out' and f == 0):
             # Ensure the final frame is the finish image (no resizing blur)
             yield final
         else:
             yield frame.resize(size, Image.BOX)
+
+
+def wipe_to(start, finish, direction='right', duration=1, fps=15,
+            easing=linear):
+    """
+    Generator function which yields a series of frames depicting the *finish*
+    frame gradually replacing the *start* frame. Each frame will be a
+    :class:`~PIL.Image.Image` with the same size as the *start* and *finish*
+    frames (which must be the same size).
+
+    The *direction* parameter controls which way the *finish* frame appears
+    to replace the rows or columns of the start. It defaults to 'right' but
+    can also be 'right', 'up', or 'down'.
+
+    The *duration* and *fps* parameters control how many frames will be yielded
+    by the function. The *duration* parameter measures the length of the
+    animation in seconds, while *fps* controls how many frames should be shown
+    per second. Hence, if *duration* is 1 (the default) and *fps* is 15 (the
+    default), the generator will yield 15 frames.
+
+    The *easing* parameter specifies a function which controls the progression
+    of the fade. See :ref:`easing` for more information.
+    """
+    # pylint: disable=too-many-arguments
+    if direction not in {'left', 'right', 'up', 'down'}:
+        raise ValueError('invalid direction: %s' % direction)
+    start = buf_to_image(start)
+    finish_small = buf_to_image(finish)
+    if start.size != finish_small.size:
+        raise ValueError("start and finish frames must be the same size")
+    size = start.size
+    w, h = (size[0] * 4, size[1] * 4)
+    canvas = start.resize((w, h))
+    finish = finish_small.resize((w, h))
+    for f in easing(int(duration * fps)):
+        bbox = (
+            int((1 - f) * w) if direction == 'left'   else 0,
+            int((1 - f) * h) if direction == 'up'     else 0,
+            int(f * w)       if direction == 'right'  else w,
+            int(f * h)       if direction == 'bottom' else h,
+        )
+        canvas.paste(finish.crop(bbox), bbox)
+        if f == 1:
+            # Ensure the final frame is the finish image (no resizing blur)
+            yield finish_small
+        else:
+            yield canvas.resize(size, Image.BOX)

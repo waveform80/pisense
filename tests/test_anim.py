@@ -318,3 +318,39 @@ def test_zoom_bad():
         list(zoom_to(start, finish, direction='foo'))
     with pytest.raises(ValueError):
         list(zoom_to(start, finish.crop((0, 0, 2, 2))))
+
+
+def test_wipe_to():
+    r = (255, 0, 0)
+    g = (0, 255, 0)
+    b = (0, 0, 255)
+    W = (255, 255, 255)
+    start = Image.new('RGB', (4, 4))
+    start.putdata([
+        r, g, b, W,
+        r, g, b, W,
+        r, g, b, W,
+        r, g, b, W,
+    ])
+    middle = Image.new('RGB', (4, 4))
+    middle.putdata([
+        r, r, b, W,
+        r, r, b, W,
+        r, r, b, W,
+        r, r, b, W,
+    ])
+    finish = Image.new('RGB', (4, 4), r)
+    frames = list(wipe_to(start, finish, direction='right', duration=3, fps=1))
+    assert len(frames) == 3
+    compare_images(start, frames[0])
+    compare_images(middle, frames[1])
+    compare_images(finish, frames[2])
+
+
+def test_wipe_bad():
+    start = Image.new('RGB', (5, 5))
+    finish = Image.new('RGB', (5, 5))
+    with pytest.raises(ValueError):
+        list(wipe_to(start, finish, direction='foo'))
+    with pytest.raises(ValueError):
+        list(wipe_to(start, finish.crop((0, 0, 2, 2))))

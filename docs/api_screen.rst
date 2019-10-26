@@ -40,6 +40,8 @@ for each frame of the animation.
 
 .. autofunction:: zoom_to
 
+.. autofunction:: wipe_to
+
 .. autofunction:: draw_text
 
 

@@ -66,7 +66,7 @@ from .formats import (
 from .array import ScreenArray, array
 from .screen import SenseScreen, DEFAULT_GAMMA, LOW_GAMMA
 from .easings import linear, ease_in, ease_out, ease_in_out
-from .anim import draw_text, scroll_text, fade_to, slide_to, zoom_to
+from .anim import draw_text, scroll_text, fade_to, slide_to, zoom_to, wipe_to
 from .stick import SenseStick, StickEvent
 from .imu import SenseIMU, IMUState, IMUVector, IMUOrient
 from .environ import (

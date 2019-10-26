@@ -521,3 +521,21 @@ class SenseScreen(object):
                          self.easing if easing is None else easing)
         frames = [image_to_rgb565(frame) for frame in frames]
         self.play(frames)
+
+    def wipe_to(self, image, direction='right', duration=1, fps=None,
+                easing=None):
+        """
+        Wipe *image* (which can be anything compatible with :meth:`draw`) over
+        the display.
+
+        See the :func:`wipe_to` function for more information on the meaning
+        of the parameters. This method simply calls that function with the
+        current state of the display (via :meth:`image`) and the provided
+        parameters, and passes the result to :meth:`play`.
+        """
+        # pylint: disable=too-many-arguments
+        frames = wipe_to(self.image(), image, direction, duration,
+                         self.fps if fps is None else fps,
+                         self.easing if easing is None else easing)
+        frames = [image_to_rgb565(frame) for frame in frames]
+        self.play(frames)
