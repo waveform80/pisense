@@ -36,33 +36,30 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 import setup as _setup
 
 # Mock out certain modules while building documentation
-class Mock(object):
-    __all__ = []
-
-    def __init__(self, *args, **kw):
-        pass
-
-    def __call__(self, *args, **kw):
-        return Mock()
-
-    def __mul__(self, other):
-        return Mock()
-
-    def __and__(self, other):
-        return Mock()
-
-    def __bool__(self):
-        return False
-
-    def __nonzero__(self):
-        return False
-
-    @classmethod
-    def __getattr__(cls, name):
-        if name in ('__file__', '__path__'):
-            return '/dev/null'
-        else:
+try:
+    from unittest.mock import Mock
+except ImportError:
+    # On Py2.7 make our own Mock
+    class Mock(object):
+        __all__ = []
+        def __init__(self, *args, **kw):
+            pass
+        def __call__(self, *args, **kw):
             return Mock()
+        def __mul__(self, other):
+            return Mock()
+        def __and__(self, other):
+            return Mock()
+        def __bool__(self):
+            return False
+        def __nonzero__(self):
+            return False
+        @classmethod
+        def __getattr__(cls, name):
+            if name in ('__file__', '__path__'):
+                return '/dev/null'
+            else:
+                return Mock()
 
 sys.modules['colorzero'] = Mock()
 sys.modules['numpy'] = Mock()

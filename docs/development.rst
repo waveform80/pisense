@@ -103,3 +103,33 @@ If you wish to run the pisense test suite, follow the instructions in
     $ workon pisense
     (pisense) $ cd ~/pisense
     (pisense) $ make test
+
+A tox configuration is also provided that will test the library against all
+supported Python and numpy versions. Be aware that this can take some
+considerable time on first run (when the venvs are being created), even on a
+fast machine. Subsequent runs will be quicker but you may wish to consider
+using the "-p" option for parallelism::
+
+    $ workon pisense
+    (pisense) $ cd ~/pisense
+    (pisense) $ pip install tox
+    ...
+    (pisense) $ tox -p auto
+
+Measuring the extremes, on a reasonable Core i7 machine:
+
+* An initial run, creating the venvs with no parallelism, takes >10 minutes.
+
+* A subsequent run, re-using the existing venvs with the auto-parallel option
+  takes ~30 seconds.
+
+You can expect your own tox runs to come in somewhere within the boundaries,
+depending on the parameters you use, and whether or not you're re-using
+existing vens.
+
+.. note::
+
+    If developing under Ubuntu, the `Dead Snakes PPA`_ is particularly useful
+    for obtaining additional Python installations for testing.
+
+.. Dead Snakes PPA: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
