@@ -273,7 +273,7 @@ def slide_to(start, finish, direction='left', cover=False, duration=1, fps=15,
              easing=linear):
     """
     Generator function which yields a series of frames depicting the *finish*
-    sliding onto the display, covering or displacing the *start* frame.  Each
+    sliding onto the display, covering or displacing the *start* frame. Each
     frame will be a :class:`~PIL.Image.Image` with the same size as the *start*
     and *finish* frames (which must be the same size).
 
@@ -308,20 +308,19 @@ def slide_to(start, finish, direction='left', cover=False, duration=1, fps=15,
     if start.size != finish_small.size:
         raise ValueError("start and finish frames must be the same size")
     size = start.size
-    canvas_size = (size[0] * 4, size[1] * 4)
-    start = start.resize(canvas_size)
-    finish = finish_small.resize(canvas_size)
+    w, h = (size[0] * 4, size[1] * 4)
+    start = start.resize((w, h))
+    finish = finish_small.resize((w, h))
     if not cover:
-        canvas = Image.new('RGB', canvas_size)
+        canvas = Image.new('RGB', (w, h))
     for f in easing(int(duration * fps)):
-        x = int(delta_x * f * canvas_size[0])
-        y = int(delta_y * f * canvas_size[1])
+        x = int(delta_x * f * w)
+        y = int(delta_y * f * h)
         if cover:
             canvas = start.copy()
         else:
             canvas.paste(start, (x, y))
-        canvas.paste(finish, (canvas_size[0] * -delta_x + x,
-                              canvas_size[1] * -delta_y + y))
+        canvas.paste(finish, (w * -delta_x + x, h * -delta_y + y))
         if f == 1:
             # Ensure the final frame is the finish image (no resizing blur)
             yield finish_small
@@ -367,8 +366,9 @@ def zoom_to(start, finish, center=(4, 4), direction='in', duration=1, fps=15,
     size = base.size
     if top.size != size:
         raise ValueError("start and finish frames must be the same size")
-    canvas_size = (size[0] ** 2, size[1] ** 2)
-    base = base.resize(canvas_size)
+    cx, cy = center
+    w, h = (size[0] ** 2, size[1] ** 2)
+    base = base.resize((w, h))
     mask = np.empty(size[::-1], np.uint8)
     mask_img = Image.frombuffer('L', size, mask, 'raw', 'L', 0, 1)
     for f in easing(int(duration * fps)):
