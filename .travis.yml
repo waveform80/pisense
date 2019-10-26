@@ -1,36 +1,88 @@
 language: python
-env:
-    - NUMPY_VERSION=11
-    - NUMPY_VERSION=12
-    - NUMPY_VERSION=13
-    - NUMPY_VERSION=14
-python:
-    - "3.6"
-    - "3.5"
-    - "3.4"
-    - "3.3"
-    - "2.7"
-    - "pypy"
-    - "pypy3"
 matrix:
-    exclude:
-        - python: "3.3"
-          env: NUMPY_VERSION=12
-        - python: "3.3"
-          env: NUMPY_VERSION=13
-        - python: "3.3"
-          env: NUMPY_VERSION=14
+    include:
+        - python: "2.7"
+          env: NUMPY_VERSION=1.11
+        - python: "2.7"
+          env: NUMPY_VERSION=1.12
+        - python: "2.7"
+          env: NUMPY_VERSION=1.13
+        - python: "2.7"
+          env: NUMPY_VERSION=1.14
+        - python: "2.7"
+          env: NUMPY_VERSION=1.15
+        - python: "2.7"
+          env: NUMPY_VERSION=1.16
         - python: "pypy"
-          env: NUMPY_VERSION=11
+          env: NUMPY_VERSION=1.11
         - python: "pypy"
-          env: NUMPY_VERSION=12
+          env: NUMPY_VERSION=1.12
+        - python: "pypy"
+          env: NUMPY_VERSION=1.13
+        - python: "pypy"
+          env: NUMPY_VERSION=1.14
+        - python: "pypy"
+          env: NUMPY_VERSION=1.15
+        - python: "pypy"
+          env: NUMPY_VERSION=1.16
+        - python: "3.3"
+          env: NUMPY_VERSION=1.11 PIL_VERSION=4.3
+        - python: "3.4"
+          env: NUMPY_VERSION=1.11 PIL_VERSION=5.4
+        - python: "3.4"
+          env: NUMPY_VERSION=1.12 PIL_VERSION=5.4
+        - python: "3.4"
+          env: NUMPY_VERSION=1.13 PIL_VERSION=5.4
+        - python: "3.4"
+          env: NUMPY_VERSION=1.14 PIL_VERSION=5.4
+        - python: "3.4"
+          env: NUMPY_VERSION=1.15 PIL_VERSION=5.4
+        - python: "3.4"
+          env: NUMPY_VERSION=1.16 PIL_VERSION=5.4
+        - python: "3.5"
+          env: NUMPY_VERSION=1.12
+        - python: "3.5"
+          env: NUMPY_VERSION=1.13
+        - python: "3.5"
+          env: NUMPY_VERSION=1.14
+        - python: "3.5"
+          env: NUMPY_VERSION=1.15
+        - python: "3.5"
+          env: NUMPY_VERSION=1.16
+        - python: "3.6"
+          env: NUMPY_VERSION=1.12
+        - python: "3.6"
+          env: NUMPY_VERSION=1.13
+        - python: "3.6"
+          env: NUMPY_VERSION=1.14
+        - python: "3.6"
+          env: NUMPY_VERSION=1.15
+        - python: "3.6"
+          env: NUMPY_VERSION=1.16
+        - python: "3.6"
+          env: NUMPY_VERSION=1.17
+        - python: "3.7"
+          env: NUMPY_VERSION=1.15
+        - python: "3.7"
+          env: NUMPY_VERSION=1.16
+        - python: "3.7"
+          env: NUMPY_VERSION=1.17
         - python: "pypy3"
-          env: NUMPY_VERSION=11
+          env: NUMPY_VERSION=1.12
         - python: "pypy3"
-          env: NUMPY_VERSION=12
+          env: NUMPY_VERSION=1.13
+        - python: "pypy3"
+          env: NUMPY_VERSION=1.14
+        - python: "pypy3"
+          env: NUMPY_VERSION=1.15
+        - python: "pypy3"
+          env: NUMPY_VERSION=1.16
+        - python: "pypy3"
+          env: NUMPY_VERSION=1.17
 install:
-    - "pip install numpy==1.${NUMPY_VERSION}.*"
-    - "pip install -e .[test]"
+    - travis_retry pip install "numpy==${NUMPY_VERSION}.*"
+    - if [[ -n "${PIL_VERSION}" ]]; then travis_retry pip install "pillow==${PIL_VERSION}.*"; fi
+    - travis_retry pip install -e .[test]
 script: make test
 before_install:
     - pip install codecov
