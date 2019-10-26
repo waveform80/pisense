@@ -32,17 +32,17 @@ with other sequences.
 Each function is a generator function which yields an :class:`~PIL.Image.Image`
 for each frame of the animation.
 
-.. autofunction:: scroll_text
+.. autofunction:: draw_text
 
 .. autofunction:: fade_to
 
-.. autofunction:: slide_to
+.. autofunction:: scroll_text
 
-.. autofunction:: zoom_to
+.. autofunction:: slide_to
 
 .. autofunction:: wipe_to
 
-.. autofunction:: draw_text
+.. autofunction:: zoom_to
 
 
 .. _easing:
