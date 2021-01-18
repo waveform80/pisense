@@ -125,6 +125,9 @@ class SenseEnviron(object):
     the *emulate* parameter is ``True``, the instance will connect to the
     environment sensors in the `desktop Sense HAT emulator`_ instead of the
     "real" Sense HAT's sensors.
+    The *interval* parameter is used to determine how often to read from the 
+    state of the sensors. This can be used injunction with the iterator or read
+    to control how often a reading is taken.
 
     .. _desktop Sense HAT emulator: https://sense-emu.readthedocs.io/
     """
@@ -139,7 +142,7 @@ class SenseEnviron(object):
         '_last_read',
     )
 
-    def __init__(self, settings=None, temp_source=temp_humidity,
+    def __init__(self, settings=None, temp_source=temp_humidity, interval=0.04,
                  emulate=False):
         if emulate:
             from sense_emu import RTIMU
@@ -156,7 +159,7 @@ class SenseEnviron(object):
             raise RuntimeError('Humidity sensor initialization failed')
         self._readings = EnvironReadings(None, None, None)
         self._temp_source = temp_source
-        self._interval = 0.04
+        self._interval = interval
         self._last_read = None
 
     def close(self):
@@ -181,23 +184,22 @@ class SenseEnviron(object):
         while True:
             yield self.read()
 
-    def read(self):
+    def read(self, wait=True):
         """
         Return the current state of all environmental sensors as an
         :class:`EnvironReadings` tuple.
 
+        The parameter *wait* determines if the method will wait for 
+        the next reading or return quickly to avoid blocking. By default, 
+        the method will wait until the next set of readings are available,
+        and then return them. 
+
         .. note::
 
-            This method will wait until the next set of readings are available,
-            and then return them. Hence it is suitable for use in a loop
-            without additional waits, although it may be simpler to simply
-            treat the instance as an iterator in that case.
-
-            This is in contrast to reading the :attr:`pressure`,
-            :attr:`humidity`, and :attr:`temperature` attributes which always
-            return immediately.
+            Reading the :attr:`pressure`, :attr:`humidity`, and :attr:`temperature` 
+            attributes always return immediately.
         """
-        self._read(True)
+        self._read(wait)
         return self._readings
 
     def _read(self, wait):
