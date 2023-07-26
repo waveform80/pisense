@@ -86,7 +86,7 @@ __keywords__ = [
 __requires__ = [
     'setuptools',
     'numpy',
-    'pillow>=3.4.0',
+    'pillow>=3.4.0,<10.0.0',
     'colorzero>=1.1',
 ]
 
